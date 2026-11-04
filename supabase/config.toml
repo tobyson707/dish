@@ -1,0 +1,56 @@
+# Supabase CLI configuration (https://supabase.com/docs/guides/local-development)
+project_id = "dish"
+
+[api]
+port = 54321
+schemas = ["public"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[storage]
+file_size_limit = "6MiB"
+
+[auth]
+site_url = "http://localhost:5173"
+additional_redirect_urls = ["http://localhost:5173/**", "http://localhost:4173/**"]
+jwt_expiry = 3600
+enable_signup = true
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+enable_confirmations = true
+double_confirm_changes = true
+
+[auth.external.google]
+enabled = false
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+
+[edge_runtime]
+policy = "per_worker"
+
+# Functions authenticate the caller themselves (and send-reminders requires the service key).
+[functions.plan-generate]
+verify_jwt = true
+[functions.meal-replace]
+verify_jwt = true
+[functions.surprise]
+verify_jwt = true
+[functions.kitchen-suggest]
+verify_jwt = true
+[functions.scan-food]
+verify_jwt = true
+[functions.ai-status]
+verify_jwt = true
+[functions.account-delete]
+verify_jwt = true
+[functions.send-reminders]
+verify_jwt = true

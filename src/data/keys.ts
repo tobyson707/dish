@@ -1,0 +1,26 @@
+export const qk = {
+  profile: (uid: string) => ['profile', uid],
+  prefs: (uid: string) => ['prefs', uid],
+  goal: (uid: string) => ['goal', uid],
+  notif: (uid: string) => ['notif', uid],
+  catalogue: () => ['catalogue'],
+  ingredients: () => ['ingredients'],
+  activePlan: (uid: string) => ['plan', 'active', uid],
+  plans: (uid: string) => ['plans', uid],
+  planned: (uid: string) => ['planned', uid],
+  plannedRange: (uid: string, from: string, to: string) => ['planned', uid, from, to],
+  plannedMeal: (uid: string, id: string) => ['planned', uid, 'one', id],
+  diary: (uid: string) => ['diary', uid],
+  diaryRange: (uid: string, from: string, to: string) => ['diary', uid, from, to],
+  groceryLists: (uid: string) => ['grocery', uid, 'lists'],
+  groceryItems: (uid: string, listId: string) => ['grocery', uid, 'items', listId],
+  kitchen: (uid: string) => ['kitchen', uid],
+  budget: (uid: string) => ['budget', uid],
+  budgetRange: (uid: string, from: string, to: string) => ['budget', uid, from, to],
+  favourites: (uid: string) => ['favourites', uid],
+  prices: (uid: string) => ['prices', uid],
+  history: (uid: string) => ['history', uid],
+  aiStatus: () => ['ai-status'],
+}
+
+export const persistMeta = (userId: string) => ({ persist: true, userId })

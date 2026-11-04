@@ -1,0 +1,12 @@
+node_modules
+dist
+dev-dist
+.env
+.env.local
+.env.*.local
+supabase/.temp
+test-results
+playwright-report
+*.log
+.local-stack
+supabase/functions/.env
