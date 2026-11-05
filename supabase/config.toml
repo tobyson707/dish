@@ -40,17 +40,25 @@ policy = "per_worker"
 # Functions authenticate the caller themselves (and send-reminders requires the service key).
 [functions.plan-generate]
 verify_jwt = true
+import_map = "./functions/deno.json"
 [functions.meal-replace]
 verify_jwt = true
+import_map = "./functions/deno.json"
 [functions.surprise]
 verify_jwt = true
+import_map = "./functions/deno.json"
 [functions.kitchen-suggest]
 verify_jwt = true
+import_map = "./functions/deno.json"
 [functions.scan-food]
 verify_jwt = true
+import_map = "./functions/deno.json"
 [functions.ai-status]
 verify_jwt = true
+import_map = "./functions/deno.json"
 [functions.account-delete]
 verify_jwt = true
+import_map = "./functions/deno.json"
 [functions.send-reminders]
 verify_jwt = true
+import_map = "./functions/deno.json"

@@ -1,4 +1,4 @@
-import { FunctionsHttpError } from '@supabase/supabase-js'
+import { FunctionsFetchError, FunctionsHttpError, FunctionsRelayError } from '@supabase/supabase-js'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { AppError } from '@/lib/errors'
@@ -22,6 +22,10 @@ export async function invokeFn<T>(name: string, body: unknown): Promise<T> {
         /* non-JSON */
       }
       throw new AppError(payload.error ?? 'The server could not complete that request.', payload.code ?? String(error.context.status))
+    }
+    if (error instanceof FunctionsFetchError || error instanceof FunctionsRelayError) {
+      // The function couldn't be reached at all (not deployed yet, or a network/CORS failure).
+      throw new AppError("DISH's server functions aren't reachable right now. If you run this app, check that the Supabase Edge Functions are deployed. Everything else still works.", 'functions_unreachable')
     }
     throw error
   }
