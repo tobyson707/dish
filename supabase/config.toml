@@ -29,10 +29,8 @@ enable_signup = true
 enable_confirmations = true
 double_confirm_changes = true
 
-[auth.external.google]
-enabled = false
-client_id = "env(GOOGLE_CLIENT_ID)"
-secret = "env(GOOGLE_CLIENT_SECRET)"
+# Google sign-in: enable it in the Supabase dashboard (Authentication → Providers)
+# and set VITE_ENABLE_GOOGLE_AUTH=true for the frontend.
 
 [edge_runtime]
 policy = "per_worker"
