@@ -134,3 +134,11 @@ Device access is isolated in `src/platform/*` (camera, notifications, haptics). 
 - **Persistence:** `src/theme/ThemeSync.tsx` saves to `profiles.theme_preference` (retries on reconnect) and adopts the account value on sign-in, so the choice follows the user across devices and sign-outs.
 - **Settings:** Profile → Settings → Appearance (Light / Dark / System default).
 - Food photos are never filtered; in dark mode they get a faint hairline so they stay distinct from surfaces.
+
+## Visual design & interaction layer
+
+- **Tokens** live in `src/styles/index.css` (`:root` light, `:root[data-theme='dark']`): warm cream/sage canvas, deep olive ink, peach accent, glass tokens (`--c-glass`, `--c-glass-dark`, `--c-nav`) and the `--g-*` plate gradients. Headlines use DM Serif Display (`font-serif`); UI text stays Manrope.
+- **Canvas components** (`src/components/canvas/`): `FloatingToolbar`, `CategoryRail`, `NextMealPanel`, `UtilityDock`, `CategoryWorkspace`, `SearchWorkspace`, `RecipePreviewWorkspace`, `AppearanceSheet`. Meal options come from `useRankedMeals` (the shared planner's `rankCandidates` against the user's allergies/diet/exclusions/budget/goal); adding goes through `useAddToToday` → the existing replace/create planned-meal flows. Nothing is mocked.
+- **Surfaces**: `Sheet` (rising bottom sheet, swipe-down to dismiss) and `Workspace` (side-entering dark glass panel; while open, `.recede-target` content shifts/scales/dims). Both are `<dialog>`-based (focus trap, Esc, inert background) with `usePresence` exit animations. `FloatingActions` and the shopping dock are portalled to `<body>` so page transforms can't trap `position: fixed`.
+- **Motion** is CSS only (no animation library): spring easing `--ease-spring`, keyframes in `index.css`; `prefers-reduced-motion` collapses all of it.
+- **Food imagery**: `FoodImage`/`HeroFood` resolve a Supabase storage image, then a bundled licensed photo from `src/data/meal-photos.json` (filled by `node scripts/fetch-meal-photos.mjs`, Wikimedia Commons CC0/PD/CC BY/BY-SA with credits), else a tasteful plate composition with the dish initials. Photos are never filtered.

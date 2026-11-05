@@ -1,5 +1,7 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/manrope';
+@import '@fontsource/dm-serif-display/latin-400.css';
+@import '@fontsource/dm-serif-display/latin-400-italic.css';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DISH design tokens — the ONLY place literal colours live.
@@ -12,37 +14,49 @@
    Contrast pairs are WCAG AA-checked (text ≥ 4.5:1, focus/borders ≥ 3:1).
    ───────────────────────────────────────────────────────────────────────────── */
 :root {
-  /* surfaces */
-  --c-bg: #e6e3df; /* application background */
-  --c-surface: #eeece9; /* secondary surface */
-  --c-elevated: #f8f7f5; /* primary / elevated surface (cards, sheets) */
-  --c-input: #fbfaf8; /* input background */
-  --c-input-border: #8f8a84; /* 3.3:1 on input — form controls stay identifiable */
-  --c-nav: #f8f7f5; /* navigation background */
-  --c-scrim: rgb(22 21 20 / 0.45); /* modal / sheet overlay */
+  /* surfaces — warm cream base */
+  --c-bg: #f3eee6; /* application background */
+  --c-surface: #ece5da; /* secondary surface */
+  --c-elevated: #fbf8f3; /* primary / elevated surface (cards, sheets) */
+  --c-input: #fdfbf7; /* input background */
+  --c-input-border: #878f80; /* 3.2:1 on elevated — form controls stay identifiable */
+  --c-nav: rgb(30 31 26 / 0.92); /* floating dark dock */
+  --c-scrim: rgb(24 26 22 / 0.42); /* modal / sheet overlay */
   --c-image-ring: transparent; /* separates food photos from surfaces (dark only) */
-  /* text */
-  --c-ink: #161514; /* primary text */
-  --c-ink-2: #55514c; /* secondary text */
-  --c-muted: #65605a; /* muted text: 4.9:1 on bg, 5.8:1 on elevated */
-  --c-on-ink: #f3f1ee; /* text on ink (inverse) */
+  /* text — forest charcoal */
+  --c-ink: #1d2a21; /* primary text */
+  --c-ink-2: #465245; /* secondary text */
+  --c-muted: #5f685b; /* muted text: 5.0:1 on bg */
+  --c-on-ink: #f6f1ea; /* text on ink (inverse) */
   /* lines & dots */
-  --c-line: #d3cfca; /* borders and dividers */
-  --c-dot: #c8c4bf;
-  --c-dot-soft: #d8d5d1;
+  --c-line: #ddd5c8; /* borders and dividers */
+  --c-dot: #cfc6b8;
+  --c-dot-soft: #e3dccf;
   /* brand */
-  --c-accent: #f26a0f; /* primary accent */
-  --c-accent-ink: #161514;
-  --c-accent-soft: #f9d6bd;
-  --c-accent-2: #7a4a2a; /* secondary accent (warm cocoa) */
+  --c-accent: #f29b62; /* peach — active controls, key actions, selection */
+  --c-accent-ink: #1d2a21;
+  --c-accent-soft: #f7d8c1;
+  --c-accent-2: #5d7a52; /* secondary accent: botanical green */
+  --c-sage: #c4cfb4;
+  /* glass — floating controls over the canvas */
+  --c-glass: rgb(255 251 245 / 0.62); /* light translucent pills/buttons */
+  --c-glass-line: rgb(255 255 255 / 0.55);
+  --c-glass-dark: rgb(30 31 26 / 0.86); /* dark translucent rail, dock, workspaces */
+  --c-on-glass-dark: #f3eee6;
+  --c-on-glass-dark-muted: #b9b6ad;
+  /* canvas gradient — peach · cream · sage */
+  --g-peach: #f6d2b6;
+  --g-cream: #f5ede1;
+  --g-sage: #c9d3b9;
+  --g-leaf: #a9bb98;
   /* states */
-  --c-focus: #c25200; /* 3.6:1 on bg */
-  --c-success: #2c7a4b;
-  --c-warning: #8a560c;
-  --c-error: #b0341b; /* 4.9:1 on bg */
+  --c-focus: #b8541b; /* 4.2:1 on bg */
+  --c-success: #2e6b45;
+  --c-warning: #7f5410;
+  --c-error: #a8341c;
   --c-on-error: #ffffff;
   --c-error-soft: #f6dcd5;
-  --c-shadow: rgb(0 0 0 / 0.12);
+  --c-shadow: rgb(40 32 20 / 0.14);
 
   --radius-sm: 6px;
   --radius-md: 12px;
@@ -51,10 +65,13 @@
 
   --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  /* spring-like: slight settle without bounce-back */
+  --ease-spring: cubic-bezier(0.22, 1.12, 0.36, 1);
   --t-micro: 150ms;
   --t-small: 220ms;
   --t-page: 280ms;
   --t-reveal: 400ms;
+  --t-panel: 460ms;
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -63,40 +80,56 @@
   color-scheme: light;
 }
 
-/* Dark: deep warm charcoal (never pure black), lifted surfaces, soft white text,
-   the same orange brought slightly brighter so it reads on dark. */
+/* Dark: deep charcoal and warm black with olive undertones, soft white type,
+   the same peach used sparingly. Same composition, not an inversion. */
 :root[data-theme='dark'] {
-  --c-bg: #141312;
-  --c-surface: #1c1b19;
-  --c-elevated: #252321;
-  --c-input: #2b2926;
-  --c-input-border: #79746d;
-  --c-nav: #211f1d;
-  --c-scrim: rgb(0 0 0 / 0.62);
+  --c-bg: #141412;
+  --c-surface: #1c1c19;
+  --c-elevated: #24241f;
+  --c-input: #2a2a24;
+  --c-input-border: #7a766e;
+  --c-nav: rgb(22 22 19 / 0.9);
+  --c-scrim: rgb(0 0 0 / 0.55);
   --c-image-ring: rgb(255 255 255 / 0.07);
-  --c-ink: #eeebe6;
-  --c-ink-2: #c2bdb6;
-  --c-muted: #a39d95;
-  --c-on-ink: #141312;
-  --c-line: #353230;
-  --c-dot: #3d3a37;
-  --c-dot-soft: #2c2a28;
-  --c-accent: #ff7b24;
-  --c-accent-ink: #141312;
-  --c-accent-soft: #4a2a14;
-  --c-accent-2: #e0a37a;
-  --c-focus: #ff7b24;
-  --c-success: #6fcf95;
+  --c-ink: #f1ece4;
+  --c-ink-2: #c8c2b8;
+  --c-muted: #a29d93;
+  --c-on-ink: #161613;
+  --c-line: #33332c;
+  --c-dot: #3c3b34;
+  --c-dot-soft: #2b2a25;
+  --c-accent: #f2a77a;
+  --c-accent-ink: #1a1a17;
+  --c-accent-soft: #4a3022;
+  --c-accent-2: #9fbd8f;
+  --c-sage: #2c3326;
+  --c-glass: rgb(44 43 37 / 0.6);
+  --c-glass-line: rgb(255 255 255 / 0.08);
+  --c-glass-dark: rgb(20 20 17 / 0.84);
+  --c-on-glass-dark: #f1ece4;
+  --c-on-glass-dark-muted: #a8a39a;
+  --g-peach: #3a2a20;
+  --g-cream: #1f1e1a;
+  --g-sage: #262d21;
+  --g-leaf: #303a28;
+  --c-focus: #f2a77a;
+  --c-success: #7fd1a0;
   --c-warning: #e8b25a;
-  --c-error: #ff8466;
-  --c-on-error: #141312;
+  --c-error: #ff8a6e;
+  --c-on-error: #161613;
   --c-error-soft: #3d1d16;
-  --c-shadow: rgb(0 0 0 / 0.45);
+  --c-shadow: rgb(0 0 0 / 0.5);
   color-scheme: dark;
 }
 
 @theme inline {
   --font-sans: 'Manrope Variable', 'Manrope', ui-sans-serif, system-ui, sans-serif;
+  --font-serif: 'DM Serif Display', 'Iowan Old Style', Georgia, serif;
+  --color-sage: var(--c-sage);
+  --color-glass: var(--c-glass);
+  --color-glass-dark: var(--c-glass-dark);
+  --color-on-glass-dark: var(--c-on-glass-dark);
+  --color-on-glass-dark-muted: var(--c-on-glass-dark-muted);
   --color-bg: var(--c-bg);
   --color-surface: var(--c-surface);
   --color-elevated: var(--c-elevated);
@@ -212,6 +245,40 @@
   }
 }
 
+/* ── Motion system: sheets, workspaces, canvas ───────────────────────────── */
+.sheet-dialog::backdrop {
+  background: var(--c-scrim);
+  backdrop-filter: blur(6px);
+  animation: fade var(--t-small) var(--ease-out);
+}
+.sheet-dialog[data-closing]::backdrop { animation: fade-out 240ms var(--ease-out) forwards; }
+.sheet-panel { animation: sheet-up var(--t-panel) var(--ease-spring); transition: transform 240ms var(--ease-out); }
+.sheet-dialog[data-closing] .sheet-panel { animation: sheet-down 240ms var(--ease-in-out) forwards; }
+@media (min-width: 640px) {
+  .sheet-panel { animation: rise var(--t-small) var(--ease-out); }
+  .sheet-dialog[data-closing] .sheet-panel { animation: fade-out 200ms var(--ease-out) forwards; }
+}
+
+.workspace-dialog::backdrop { background: transparent; }
+.workspace-panel { animation: ws-in var(--t-panel) var(--ease-spring); transition: transform 260ms var(--ease-out); }
+.workspace-dialog[data-closing] .workspace-panel { animation: ws-out 340ms var(--ease-in-out) forwards; }
+
+/* The page behind a workspace recedes but stays recognisable. */
+.recede-target {
+  transition: transform var(--t-panel) var(--ease-spring), filter var(--t-panel) var(--ease-out), border-radius var(--t-panel) var(--ease-out);
+  transform-origin: 0% 50%;
+}
+html[data-workspace] .recede-target {
+  transform: translateX(-7%) scale(0.93);
+  filter: brightness(0.62) saturate(0.85) blur(1.5px);
+  border-radius: 34px;
+  overflow: hidden;
+  pointer-events: none;
+}
+@media (min-width: 1024px) {
+  html[data-workspace] .recede-target { transform: translateX(-4%) scale(0.97); filter: brightness(0.7) blur(1px); }
+}
+
 /* Theme change: one root cross-fade via the View Transitions API (no per-component animation). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
@@ -232,6 +299,12 @@
   100% { opacity: 1; letter-spacing: -0.04em; transform: none; }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes fade-out { to { opacity: 0; } }
+@keyframes sheet-down { to { transform: translateY(105%); } }
+@keyframes ws-in { from { transform: translateX(104%); opacity: 0.6; } to { transform: none; opacity: 1; } }
+@keyframes ws-out { to { transform: translateX(104%); opacity: 0.4; } }
+@keyframes hero-in { from { opacity: 0; transform: scale(1.03); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+@keyframes info-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes xp-rise { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
 @keyframes badge-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
 @keyframes pulse-bar { 0% { filter: brightness(1); } 40% { filter: brightness(1.35); } 100% { filter: brightness(1); } }

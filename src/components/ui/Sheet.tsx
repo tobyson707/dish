@@ -1,23 +1,27 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import { cn } from '@/lib/cn'
 import { IconButton } from './Button'
+import { useDragDismiss, usePresence } from './usePresence'
 
 /**
- * Bottom sheet on phones, centred panel on larger screens. Built on <dialog>
- * for native focus trapping, Esc-to-close and inert background.
+ * Rising bottom sheet on phones, centred panel on larger screens. Built on
+ * <dialog> (focus trap, Esc, inert background). The page behind stays visible
+ * under a gentle dim + blur; the sheet springs up, can be swiped down to dismiss,
+ * and animates out instead of vanishing.
  */
-export function Sheet({ open, onClose, title, children, footer, size = 'md', description }: { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode; size?: 'md' | 'lg'; description?: string }) {
+export function Sheet({ open, onClose, title, children, footer, size = 'md', description, tone = 'default' }: { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode; size?: 'md' | 'lg'; description?: string; tone?: 'default' | 'glass' }) {
   const ref = useRef<HTMLDialogElement>(null)
+  const { mounted, closing } = usePresence(open, 260)
+  const drag = useDragDismiss('y', onClose)
   useEffect(() => {
     const d = ref.current
     if (!d) return
-    if (open && !d.open) d.showModal()
-    if (!open && d.open) d.close()
-  }, [open])
+    if (mounted && !d.open) d.showModal()
+    if (!mounted && d.open) d.close()
+  }, [mounted])
   return (
     <dialog
       ref={ref}
-      onClose={onClose}
       onCancel={(e) => {
         e.preventDefault()
         onClose()
@@ -26,29 +30,35 @@ export function Sheet({ open, onClose, title, children, footer, size = 'md', des
         if (e.target === ref.current) onClose()
       }}
       aria-labelledby="sheet-title"
+      data-closing={closing || undefined}
       className={cn(
-        'm-0 mt-auto w-full max-w-none bg-transparent p-0 backdrop:bg-[var(--c-scrim)] backdrop:animate-[fade_200ms_ease-out]',
+        'sheet-dialog m-0 mt-auto w-full max-w-none bg-transparent p-0',
         'sm:m-auto sm:max-w-lg',
         size === 'lg' && 'sm:max-w-2xl',
       )}
     >
-      {open && (
+      {mounted && (
         <div
-          className="flex max-h-[88dvh] flex-col rounded-t-xl bg-bg text-ink animate-[sheet-up_280ms_var(--ease-out)] sm:rounded-xl sm:animate-[rise_220ms_var(--ease-out)]"
-          style={{ paddingBottom: 'var(--safe-bottom)' }}
+          className={cn(
+            'sheet-panel flex max-h-[88dvh] flex-col rounded-t-[32px] sm:rounded-[28px]',
+            tone === 'glass' ? 'bg-[var(--c-glass-dark)] text-on-glass-dark ring-1 ring-white/10 backdrop-blur-2xl' : 'bg-bg text-ink',
+          )}
+          style={{ paddingBottom: 'var(--safe-bottom)', transform: drag.offset ? `translateY(${drag.offset}px)` : undefined, transition: drag.dragging ? 'none' : undefined }}
         >
-          <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-dot sm:hidden" aria-hidden="true" />
-          <div className="flex items-start justify-between gap-3 px-5 pb-2 pt-4">
+          <div className="flex cursor-grab touch-none justify-center pb-1 pt-3 sm:hidden" {...drag.handlers} aria-hidden="true">
+            <span className={cn('h-1.5 w-12 rounded-full', tone === 'glass' ? 'bg-white/25' : 'bg-dot')} />
+          </div>
+          <div className="flex items-start justify-between gap-3 px-6 pb-2 pt-3 sm:pt-5">
             <div>
-              <h2 id="sheet-title" className="text-xl font-bold tracking-tight">
+              <h2 id="sheet-title" className={cn('font-serif text-[1.9rem] leading-tight', tone === 'glass' && 'text-on-glass-dark')}>
                 {title}
               </h2>
-              {description && <p className="mt-1 text-sm text-muted">{description}</p>}
+              {description && <p className={cn('mt-1 text-sm', tone === 'glass' ? 'text-on-glass-dark-muted' : 'text-muted')}>{description}</p>}
             </div>
-            <IconButton icon="x" label="Close" onClick={onClose} size={40} />
+            <IconButton icon="x" label="Close" onClick={onClose} size={40} className={tone === 'glass' ? 'text-on-glass-dark hover:bg-white/10' : undefined} />
           </div>
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-4">{children}</div>
-          {footer && <div className="border-t border-line px-5 py-3">{footer}</div>}
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-5">{children}</div>
+          {footer && <div className={cn('border-t px-6 py-3', tone === 'glass' ? 'border-white/10' : 'border-line')}>{footer}</div>}
         </div>
       )}
     </dialog>

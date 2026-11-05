@@ -11,6 +11,7 @@ import { useToday } from '@/hooks/useToday'
 import { dayLabel, monthName } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { Button, ButtonLink, IconButton } from '@/components/ui/Button'
+import { FloatingActions, FloatingButton } from '@/components/ui/FloatingAction'
 import { PageHeader } from '@/components/ui/Layout'
 import { Segmented } from '@/components/ui/Inputs'
 import { DateStrip, DotMonth, type DayState } from '@/components/ui/Calendar'
@@ -139,9 +140,6 @@ export function PlanPage() {
             <div className="mt-4">
               <DayBlock date={date} today={today} meals={byDate[date] ?? []} slots={prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']} onActions={setActionsFor} onAdd={(s) => { setAddSlot(s); setAddOpen(true) }} notGenerated={notGenerated(date)} />
               <div className="mt-4 flex flex-wrap gap-2">
-                <Button variant="secondary" icon="plus" onClick={() => { setAddSlot(undefined); setAddOpen(true) }}>
-                  Add meal
-                </Button>
                 {p && date >= p.start_date && date <= p.end_date && (
                   <Button variant="ghost" icon="refresh" onClick={() => setRegen({ from: date, to: date, label: dayLabel(date, today).toLowerCase() })}>
                     Regenerate day
@@ -163,6 +161,11 @@ export function PlanPage() {
       )}
 
       <MealActionsSheet meal={actionsFor} onClose={() => setActionsFor(null)} />
+      {(p || (meals.data ?? []).length > 0) && (
+        <FloatingActions>
+          <FloatingButton icon="plus" label="Add meal" primary onClick={() => { setAddSlot(undefined); setAddOpen(true) }} />
+        </FloatingActions>
+      )}
       <AddMealSheet key={`${date}-${addSlot}-${addOpen}`} open={addOpen} onClose={() => setAddOpen(false)} date={date} slot={addSlot} planId={p && date >= p.start_date && date <= p.end_date ? p.id : null} />
       <ConfirmDialog
         open={!!regen}

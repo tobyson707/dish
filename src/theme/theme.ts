@@ -5,7 +5,8 @@ export type ResolvedTheme = 'light' | 'dark'
 
 export const THEME_KEY = 'dish-theme'
 export const THEME_DIRTY_KEY = 'dish-theme-dirty' // local change not yet saved to the profile
-const META_COLOR: Record<ResolvedTheme, string> = { light: '#E6E3DF', dark: '#141312' }
+export const THEME_SAVED_AT_KEY = 'dish-theme-saved-at' // when the local choice last reached the profile
+const META_COLOR: Record<ResolvedTheme, string> = { light: '#F3EEE6', dark: '#141412' }
 
 export const isPreference = (v: unknown): v is ThemePreference => v === 'light' || v === 'dark' || v === 'system'
 
@@ -34,13 +35,19 @@ export function storePreference(pref: ThemePreference): void {
   }
 }
 
+let target: ResolvedTheme | null = null // latest requested theme (a cross-fade may still be pending)
+
 export function applyTheme(theme: ResolvedTheme, opts: { animate?: boolean } = {}): void {
   const root = document.documentElement
-  if (root.dataset.theme === theme) return
+  const current = target ?? root.dataset.theme
+  target = theme
+  if (current === theme && root.dataset.theme === theme) return
+  // Always apply the LATEST request: a deferred cross-fade must never land a superseded theme.
   const swap = () => {
-    root.dataset.theme = theme
-    root.style.colorScheme = theme
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', META_COLOR[theme])
+    const t = target ?? theme
+    root.dataset.theme = t
+    root.style.colorScheme = t
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', META_COLOR[t])
   }
   const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
   const doc = document as Document & { startViewTransition?: (cb: () => void) => ViewTransitionLike }

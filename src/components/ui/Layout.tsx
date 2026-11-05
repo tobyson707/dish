@@ -21,7 +21,7 @@ export function PageHeader({ title, eyebrow, back, actions, large }: { title: st
         <div className="flex items-center gap-1">{actions}</div>
       </div>
       {eyebrow && <p className="label-caps">{eyebrow}</p>}
-      <h1 className={cn('display text-balance', large ? 'text-[clamp(2.75rem,13vw,4.5rem)]' : 'text-[clamp(2rem,9vw,2.75rem)]')}>{title}</h1>
+      <h1 className={cn('text-balance font-serif leading-[0.95] tracking-[-0.01em]', large ? 'text-[clamp(3rem,14vw,5rem)]' : 'text-[clamp(2.3rem,10vw,3.2rem)]')}>{title}</h1>
     </header>
   )
 }

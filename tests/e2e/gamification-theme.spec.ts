@@ -106,8 +106,8 @@ test.describe('gamification', () => {
 
 test.describe('appearance', () => {
   const bg = (page: Page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
-  const DARK_BG = 'rgb(20, 19, 18)'
-  const LIGHT_BG = 'rgb(230, 227, 223)'
+  const DARK_BG = 'rgb(20, 20, 18)'
+  const LIGHT_BG = 'rgb(243, 238, 230)'
 
   test('pre-paint script applies the stored theme before the app bundle runs (no flash)', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' })
@@ -126,7 +126,7 @@ test.describe('appearance', () => {
     const uid = await createUser(email)
     await completeOnboardingFor(uid)
     await signIn(page, email)
-    await expect(page.getByRole('heading', { name: /COOKING/ })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
     await expect.poll(() => bg(page)).toBe(DARK_BG) // new user default: System → dark device
     await page.emulateMedia({ colorScheme: 'light' })
     await expect.poll(() => bg(page)).toBe(LIGHT_BG) // follows device change live
@@ -163,7 +163,7 @@ test.describe('appearance', () => {
     const fresh = await browser.newContext({ colorScheme: 'dark', viewport: page.viewportSize() ?? undefined })
     const p2 = await fresh.newPage()
     await signIn(p2, email)
-    await expect(p2.getByRole('heading', { name: /COOKING/ })).toBeVisible()
+    await expect(p2.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
     await expect.poll(() => bg(p2)).toBe(LIGHT_BG)
     // and after sign-out → sign-in it is still there
     await p2.goto('/profile')

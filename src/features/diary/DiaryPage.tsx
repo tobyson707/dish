@@ -11,6 +11,7 @@ import { useToday } from '@/hooks/useToday'
 import { dayLabel, formatKcal } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { ButtonLink, IconButton } from '@/components/ui/Button'
+import { FloatingActions, FloatingLink } from '@/components/ui/FloatingAction'
 import { PageHeader, Section } from '@/components/ui/Layout'
 import { DateStrip } from '@/components/ui/Calendar'
 import { NutritionSummary } from '@/components/ui/Nutrition'
@@ -49,16 +50,6 @@ export function DiaryPage() {
       <PageHeader
         eyebrow={dayLabel(date, today)}
         title="Food diary"
-        actions={
-          <>
-            <ButtonLink to="/scan" size="sm" variant="secondary" icon="camera">
-              Scan
-            </ButtonLink>
-            <ButtonLink to={`/diary/add?date=${date}`} size="sm" icon="plus">
-              Add
-            </ButtonLink>
-          </>
-        }
       />
       <DateStrip selected={date} today={today} onSelect={setDate} onPrev={() => setDate(addDays(date, -7))} onNext={() => setDate(addDays(date, 7))} />
 
@@ -134,6 +125,10 @@ export function DiaryPage() {
           </Section>
         </>
       )}
+      <FloatingActions>
+        <FloatingLink to="/scan" icon="camera" label="Scan food" />
+        <FloatingLink to={`/diary/add?date=${date}`} icon="plus" label="Add food" primary />
+      </FloatingActions>
       <ConfirmDialog open={!!deleting} title="Delete this entry?" message={`${deleting?.name ?? ''} will be removed from your diary.${deleting?.planned_meal_id ? ' The planned meal stays in your plan.' : ''}`} confirmLabel="Delete" danger onCancel={() => setDeleting(null)} onConfirm={async () => { await del.mutateAsync(deleting!); setDeleting(null); toast.show('Deleted.') }} />
     </div>
   )
