@@ -39,15 +39,15 @@ export function CataloguePicker({ slot, onPick }: { slot?: MealSlot; onPick: (f:
                   <FoodImage path={f.image_path} name={f.name} shape="circle" className="h-12 w-12 shrink-0" width={100} />
                   <span className="min-w-0 flex-1">
                     <span className="block truncate font-semibold">{f.name}</span>
-                    <span className="num block text-[13px] text-muted">
+                    <span className="num block text-footnote text-muted">
                       {f.cuisine} · {f.calories != null ? `≈ ${formatKcal(f.calories)}` : 'no estimate'} per {f.serving_unit}
                     </span>
                     {verdict?.status === 'conflict' && (
-                      <span className="mt-0.5 flex items-center gap-1 text-[12px] font-semibold text-error">
+                      <span className="mt-0.5 flex items-center gap-1 text-caption font-semibold text-error">
                         <Icon name="alert" size={12} /> Contains your allergen: {verdict.hits.join(', ')}
                       </span>
                     )}
-                    {verdict?.status === 'unknown' && <span className="mt-0.5 block text-[12px] font-medium text-warning">Ingredients vary — allergens can't be ruled out</span>}
+                    {verdict?.status === 'unknown' && <span className="mt-0.5 block text-caption font-medium text-warning">Ingredients vary, so allergens can't be ruled out</span>}
                   </span>
                   <Icon name="plus" size={18} />
                 </button>

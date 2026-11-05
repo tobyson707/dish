@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router'
-import type { MealSlot } from '@domain/types.ts'
-import type { FoodItem } from '@/types/db'
 import { usePreferences } from '@/data/profile'
 import { IconButton } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
@@ -11,7 +9,7 @@ import { cn } from '@/lib/cn'
 import { CATEGORIES, categoryIcon, categoryLabel, type Category } from './categories'
 import { MealOptionList } from './MealOptionList'
 import { useAddToToday } from './useAddToToday'
-import { slotForNow, useRankedMeals } from './useRankedMeals'
+import { slotFor, useRankedMeals } from './useRankedMeals'
 
 type Tab = 'foryou' | 'quick' | 'healthy'
 const TABS: { id: Tab; label: string }[] = [
@@ -21,7 +19,7 @@ const TABS: { id: Tab; label: string }[] = [
 ]
 const TAB_HINT: Record<Tab, string> = {
   foryou: 'Matched to your tastes, allergies and diet.',
-  quick: 'Ready in 20 minutes or less — or easy to buy.',
+  quick: 'Ready in 20 minutes or less, or easy to buy.',
   healthy: 'Lighter, vegetable-forward options (≈550 kcal or less).',
 }
 const CATEGORY_LINE: Record<Category, string> = {
@@ -32,12 +30,6 @@ const CATEGORY_LINE: Record<Category, string> = {
   snack: 'Light bites and small plates between meals.',
 }
 
-/** Which of today's meal times an item from "All" should go to. */
-function slotFor(f: FoodItem, userSlots: MealSlot[]): MealSlot {
-  const now = slotForNow()
-  const fits = f.meal_types.filter((t) => userSlots.includes(t))
-  return fits.includes(now) ? now : (fits[0] ?? f.meal_types[0] ?? 'lunch')
-}
 
 /**
  * Partial category workspace: a dark glass layer that slides in from the right
@@ -129,11 +121,11 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
           <div key={category} className="ws-swap min-w-0 flex-1 pt-2" style={{ ['--swap-dir' as string]: dir }}>
             <div className="flex items-center gap-2.5">
               <Icon name={categoryIcon(category)} size={26} />
-              <h2 ref={heading} tabIndex={-1} className="truncate font-serif text-[clamp(1.75rem,7.5vw,2.3rem)] leading-none outline-none">
+              <h2 ref={heading} tabIndex={-1} className="truncate font-serif text-title-2 leading-none outline-none">
                 {categoryLabel(category)}
               </h2>
             </div>
-            <p className="mt-2 text-[13px] text-on-glass-dark-muted">{CATEGORY_LINE[category]}</p>
+            <p className="mt-2 text-footnote text-on-glass-dark-muted">{CATEGORY_LINE[category]}</p>
           </div>
           <IconButton icon="x" label="Close" onClick={onClose} className="-mr-1 shrink-0 text-on-glass-dark hover:bg-white/10" />
         </header>
@@ -146,13 +138,13 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
                 type="button"
                 aria-selected={tab === t.id}
                 onClick={() => setTab(t.id)}
-                className={cn('press h-10 rounded-full px-4 text-[14px] font-semibold transition-colors duration-300', tab === t.id ? 'bg-accent text-accent-ink' : 'text-on-glass-dark-muted hover:text-on-glass-dark')}
+                className={cn('press h-10 rounded-full px-4 text-sm font-semibold transition-colors duration-300', tab === t.id ? 'bg-accent text-accent-ink' : 'text-on-glass-dark-muted hover:text-on-glass-dark')}
               >
                 {t.label}
               </button>
             ))}
           </div>
-          <p className="mt-2.5 text-[12px] text-on-glass-dark-muted">{TAB_HINT[tab]}</p>
+          <p className="mt-2.5 text-caption text-on-glass-dark-muted">{TAB_HINT[tab]}</p>
           <div className="ws-swap mt-4" key={`${category}:${tab}`} style={{ ['--swap-dir' as string]: dir }}>
             {ranked.pending ? (
               <div className="flex flex-col gap-3">{[0, 1, 2].map((i) => <div key={i} className="h-[84px] animate-pulse rounded-[22px] bg-white/[0.06]" />)}</div>
@@ -193,7 +185,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
               />
             )}
           </div>
-          <p className="mt-6 text-[11px] text-on-glass-dark-muted">Nutrition values are estimates. Allergens are filtered, but always check ingredients.</p>
+          <p className="mt-6 text-micro text-on-glass-dark-muted">Nutrition values are estimates. Allergens are filtered, but always check ingredients.</p>
         </div>
       </section>
     </>,

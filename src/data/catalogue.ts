@@ -72,4 +72,4 @@ export function toCatalogueMeal(f: FoodItem): CatalogueMeal {
   }
 }
 
-export const CUISINES = ['Nigerian', 'West African', 'International', 'British', 'Italian', 'Mediterranean', 'Asian', 'Indian', 'Mexican', 'American']
+export const CUISINES = ['Nigerian', 'West African', 'British', 'American', 'Italian', 'Spanish', 'Mediterranean', 'Indian', 'Asian', 'Mexican', 'International']

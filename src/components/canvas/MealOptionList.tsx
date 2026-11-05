@@ -28,12 +28,12 @@ export function MealOptionList({ items, onOpen, onAdd, addedIds, busyId, addLabe
               <button type="button" onClick={() => onOpen(f)} className="press flex min-w-0 flex-1 items-center gap-3.5 text-left">
                 <FoodImage path={f.image_path} name={f.name} slug={f.slug} className={compact ? "h-[64px] w-[64px] shrink-0 rounded-[16px]" : "h-[76px] w-[86px] shrink-0 rounded-[18px]"} width={200} />
                 <span className="min-w-0">
-                  <span className={cn("block font-serif leading-tight text-on-glass-dark", compact ? "line-clamp-2 text-[15px]" : "text-[17px]")}>{f.name}</span>
-                  <span className="num mt-2 flex flex-wrap gap-x-3.5 gap-y-1 text-[12px] text-on-glass-dark-muted">
+                  <span className={cn("block font-serif leading-tight text-on-glass-dark", compact ? "line-clamp-2 text-callout" : "text-headline")}>{f.name}</span>
+                  <span className="num mt-2 flex flex-wrap gap-x-3.5 gap-y-1 text-caption text-on-glass-dark-muted">
                     <span className="inline-flex items-center gap-1"><Icon name="clock" size={13} /> {mins != null ? `${mins} min` : 'Buy'}</span>
                     {f.calories != null && <span className="inline-flex items-center gap-1"><Icon name="flame" size={13} /> {f.calories} kcal</span>}
                   </span>
-                  {dietLabel(f) && <span className="mt-1.5 inline-block rounded-full bg-white/[0.08] px-2 py-0.5 text-[11px] font-semibold text-on-glass-dark-muted">{dietLabel(f)}</span>}
+                  {dietLabel(f) && <span className="mt-1.5 inline-block rounded-full bg-white/[0.08] px-2 py-0.5 text-micro font-semibold text-on-glass-dark-muted">{dietLabel(f)}</span>}
                 </span>
               </button>
               <button

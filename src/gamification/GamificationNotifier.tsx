@@ -6,6 +6,7 @@ import { useUserId } from '@/features/auth/AuthProvider'
 import { Icon } from '@/components/ui/Icon'
 import { AchievementBadge } from '@/components/gamification/Achievements'
 import { onGamificationCheck } from './bus'
+import { queueLevelCelebration } from './Celebrations'
 
 type Notice =
   | { id: string; kind: 'xp'; amount: number; label: string }
@@ -88,7 +89,11 @@ export function GamificationNotifier() {
       }
       const { notices: fresh, seen: next } = diffAwards(s, seen)
       writeSeen(uid, next)
-      if (fresh.length && s.feedback_enabled) setNotices((n) => [...n, ...fresh].slice(-3))
+      if (!s.feedback_enabled) return
+      for (const f of fresh) if (f.kind === 'level') queueLevelCelebration({ id: f.id, title: f.title, at: new Date().toISOString() })
+      // achievements and level-ups get a full celebration; small notes stay small
+      const small = fresh.filter((f) => f.kind === 'xp' || f.kind === 'streak')
+      if (small.length) setNotices((n) => [...n, ...small].slice(-3))
     }
     return qc.getQueryCache().subscribe((e) => {
       if (e.type === 'updated' && e.action.type === 'success' && JSON.stringify(e.query.queryKey) === key) handle(e.query.state.data as GamificationSummary)
@@ -108,7 +113,7 @@ export function GamificationNotifier() {
           return (
             <div key={n.id} role="status" className="flex items-center gap-2 rounded-full bg-ink px-3.5 py-2 text-sm text-on-ink shadow-lg animate-[xp-rise_420ms_var(--ease-out)_both]">
               <span className="num font-extrabold text-accent-on-ink">+{n.amount} XP</span>
-              <span className="opacity-80">— {n.label}</span>
+              <span className="opacity-80">{n.label}</span>
             </div>
           )
         if (n.kind === 'level')
@@ -135,7 +140,7 @@ export function GamificationNotifier() {
             <span>
               <span className="label-caps block">Achievement unlocked</span>
               <span className="font-bold">{def.name}</span>
-              <span className="block text-[13px] text-muted">{def.description}</span>
+              <span className="block text-footnote text-muted">{def.description}</span>
             </span>
           </div>
         )

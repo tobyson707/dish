@@ -40,10 +40,21 @@ export async function createUser(email: string, password = 'test-pass-123'): Pro
   return j.id
 }
 
+/**
+ * Achievement celebrations are modal; when one would block a test's next action,
+ * dismiss it (assertions can still see it — handlers only run on blocked actions).
+ */
+export async function autoDismissCelebrations(page: Page) {
+  await page.addLocatorHandler(page.locator('dialog[data-celebration][open]'), async (d) => {
+    await d.getByRole('button', { name: 'Done' }).click()
+  })
+}
+
 export async function signIn(page: Page, email: string, password = 'test-pass-123') {
+  await autoDismissCelebrations(page)
   await page.goto('/sign-in')
   await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
+  await page.getByLabel('Password', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'Sign in' }).click()
 }
 

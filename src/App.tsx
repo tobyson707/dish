@@ -20,6 +20,7 @@ const Onboarding = L(() => import('@/features/onboarding/Onboarding'), 'Onboardi
 const Home = L(() => import('@/features/home/Home'), 'Home')
 const PlanPage = L(() => import('@/features/plan/PlanPage'), 'PlanPage')
 const NewPlan = L(() => import('@/features/plan/NewPlan'), 'NewPlan')
+const FirstPlan = L(() => import('@/features/plan/FirstPlan'), 'FirstPlan')
 const PlannedMealPage = L(() => import('@/features/plan/PlannedMealPage'), 'PlannedMealPage')
 const GroceryPage = L(() => import('@/features/grocery/GroceryPage'), 'GroceryPage')
 const DiaryPage = L(() => import('@/features/diary/DiaryPage'), 'DiaryPage')
@@ -62,6 +63,7 @@ const router = createBrowserRouter([
       { path: '/privacy', element: <Privacy /> },
       { path: '/terms', element: <Terms /> },
       { path: '/onboarding', element: <RequireAuth><Onboarding /></RequireAuth> },
+      { path: '/plan/first', element: <RequireAuth><RequireOnboarded><FirstPlan /></RequireOnboarded></RequireAuth> },
     ],
   },
   {

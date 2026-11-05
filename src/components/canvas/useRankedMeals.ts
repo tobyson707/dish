@@ -1,3 +1,4 @@
+import { DEFAULT_CURRENCY } from '@/lib/geo'
 import { useMemo } from 'react'
 import { rankCandidates, seededRng } from '@domain/planner.ts'
 import type { MealSlot } from '@domain/types.ts'
@@ -23,7 +24,7 @@ export function useRankedMeals(slot: MealSlot | 'all' | null) {
     const p = prefs.data
     const rank = (s: MealSlot) =>
       rankCandidates(meals, {
-        prefs: { ...p, budget_amount: p.budget_amount == null ? null : Number(p.budget_amount), currency: profile.data?.currency ?? 'NGN', goal: goal.data?.goal ?? null },
+        prefs: { ...p, budget_amount: p.budget_amount == null ? null : Number(p.budget_amount), currency: profile.data?.currency ?? DEFAULT_CURRENCY, goal: goal.data?.goal ?? null },
         slot: s,
         mealsPerDay: p.meal_slots.length,
         date: today,
@@ -52,4 +53,11 @@ export function useRankedMeals(slot: MealSlot | 'all' | null) {
 export function slotForNow(d = new Date()): MealSlot {
   const h = d.getHours()
   return h < 11 ? 'breakfast' : h < 16 ? 'lunch' : h < 21 ? 'dinner' : 'snack'
+}
+
+/** Which of the user's meal times a meal from a mixed list should go to (now, if it fits). */
+export function slotFor(f: Pick<FoodItem, 'meal_types'>, userSlots: MealSlot[]): MealSlot {
+  const now = slotForNow()
+  const fits = f.meal_types.filter((t) => userSlots.includes(t))
+  return fits.includes(now) ? now : (fits[0] ?? f.meal_types[0] ?? 'lunch')
 }

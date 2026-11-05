@@ -89,6 +89,7 @@ export interface Suggestion {
   note?: string | null
   est_cost_min: number | null
   est_cost_max: number | null
+  cost_currency?: string
   calories: number | null
   prep_minutes: number
   cook_minutes: number

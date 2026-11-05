@@ -25,7 +25,7 @@ export function TagInput({ label, hint, value, onChange, placeholder = 'Type and
       <label htmlFor={id} className="text-sm font-semibold">
         {label}
       </label>
-      {hint && <p className="-mt-1 text-[13px] text-muted">{hint}</p>}
+      {hint && <p className="-mt-1 text-footnote text-muted">{hint}</p>}
       {value.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {value.map((v) => (

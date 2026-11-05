@@ -11,7 +11,7 @@ test('home canvas: rail → workspace → add, search, appearance, featured pagi
   const uid = await createUser(email)
   await completeOnboardingFor(uid)
   await signIn(page, email)
-  await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
   await expect(page.getByText('No meal plan yet')).toBeVisible() // honest empty state, no fake meals
   await expectNoHorizontalScroll(page)
 
@@ -95,7 +95,7 @@ test('section actions: plan, diary, shopping dock, discover preview, profile app
   const uid = await createUser(email)
   await completeOnboardingFor(uid)
   await signIn(page, email)
-  await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
 
   // Diary: floating actions lead to the real add/scan flows
   await page.goto('/diary')
@@ -105,9 +105,9 @@ test('section actions: plan, diary, shopping dock, discover preview, profile app
   await page.getByRole('link', { name: 'Add food' }).last().click()
   await expect(page).toHaveURL(/\/diary\/add/)
 
-  // Discover: editorial feature opens the side preview; add to today from it
+  // Discover: a feed card opens the side preview; add to today from it
   await page.goto('/discover')
-  await page.getByRole('button', { name: 'Take a look' }).click()
+  await page.getByRole('list', { name: 'Meal ideas' }).getByRole('button', { name: /^Open / }).first().click()
   const preview = page.getByRole('dialog', { name: / preview$/ })
   await expect(preview.getByRole('link', { name: 'Open full recipe' })).toBeVisible()
   await preview.getByRole('button', { name: /^Add to today/ }).click()

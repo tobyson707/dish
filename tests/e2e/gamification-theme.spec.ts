@@ -48,7 +48,7 @@ test.describe('gamification', () => {
     // reloading never replays feedback or re-awards XP
     await page.goto('/')
     await page.reload()
-    await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
     await page.waitForTimeout(1500)
     await expect(page.getByText('+10 XP')).toHaveCount(0)
     await myProgress(page)
@@ -69,6 +69,48 @@ test.describe('gamification', () => {
     await page.keyboard.press('Escape')
     await page.locator('#progress').screenshot({ path: shots('my-progress') })
     await expectNoHorizontalScroll(page)
+    expect(errors).toEqual([])
+  })
+
+  test('achievement celebration: shown once on any device, shareable card from real data @responsive', async ({ page, browser }) => {
+    const errors = collectConsoleErrors(page)
+    const email = uniqueEmail('celebrate')
+    const uid = await createUser(email)
+    await completeOnboardingFor(uid)
+    await signIn(page, email)
+    await page.removeLocatorHandler(page.locator('dialog[data-celebration][open]')) // see it for real here
+    await expect(page.getByRole('link', { name: /-day streak/ })).toBeVisible()
+    await logManualMeal(page, 'Moi moi and pap')
+
+    const overlay = page.getByRole('dialog', { name: 'First Serving' })
+    await expect(overlay).toBeVisible({ timeout: 10_000 })
+    await expect(overlay.getByText('Achievement unlocked')).toBeVisible()
+    await page.screenshot({ path: shots('celebration') })
+    // the share card is a generated PNG (download fallback where file sharing is unavailable)
+    const canShare = await page.evaluate(() => typeof navigator.canShare === 'function' && navigator.canShare({ files: [new File([''], 'x.png', { type: 'image/png' })] }))
+    if (!canShare) {
+      const [dl] = await Promise.all([page.waitForEvent('download'), overlay.getByRole('button', { name: 'Share' }).click()])
+      expect(dl.suggestedFilename()).toBe('DISH-First-Serving.png')
+      const { readFileSync } = await import('node:fs')
+      const png = readFileSync((await dl.path())!)
+      expect(png.subarray(1, 4).toString()).toBe('PNG')
+      expect([png.readUInt32BE(16), png.readUInt32BE(20)]).toEqual([1080, 1350])
+    }
+    await overlay.getByRole('button', { name: 'Done' }).click()
+    await expect(overlay).toBeHidden()
+
+    // never again: not after a reload, not on another device
+    await page.reload()
+    await page.waitForTimeout(2500)
+    await expect(page.locator('dialog[data-celebration][open]')).toHaveCount(0)
+    const other = await browser.newContext()
+    const page2 = await other.newPage()
+    await signIn(page2, email)
+    await page2.removeLocatorHandler(page2.locator('dialog[data-celebration][open]'))
+    await expect(page2.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
+    await page2.waitForTimeout(2500)
+    await expect(page2.locator('dialog[data-celebration][open]')).toHaveCount(0)
+    await other.close()
     expect(errors).toEqual([])
   })
 
@@ -113,7 +155,7 @@ test.describe('gamification', () => {
     // trusted server-side adjustment (service role) — clients can't do this
     await fetch(`${API}/rest/v1/user_gamification?user_id=eq.${uid}`, { method: 'PATCH', headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ total_xp: 2000 }) })
     await signIn(page, email)
-    await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
     const widget = await myProgress(page)
     await expect(widget).toContainText('DISH Master')
     await expect(widget).toContainText('Top level reached · 2,000 XP')
@@ -143,7 +185,7 @@ test.describe('appearance', () => {
     const uid = await createUser(email)
     await completeOnboardingFor(uid)
     await signIn(page, email)
-    await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+    await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
     await expect.poll(() => bg(page)).toBe(DARK_BG) // new user default: System → dark device
     await page.emulateMedia({ colorScheme: 'light' })
     await expect.poll(() => bg(page)).toBe(LIGHT_BG) // follows device change live
@@ -180,7 +222,7 @@ test.describe('appearance', () => {
     const fresh = await browser.newContext({ colorScheme: 'dark', viewport: page.viewportSize() ?? undefined })
     const p2 = await fresh.newPage()
     await signIn(p2, email)
-    await expect(p2.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+    await expect(p2.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
     await expect.poll(() => bg(p2)).toBe(LIGHT_BG)
     // and after sign-out → sign-in it is still there
     await p2.goto('/profile')

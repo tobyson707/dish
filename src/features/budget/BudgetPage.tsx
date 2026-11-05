@@ -39,7 +39,7 @@ export function BudgetPage() {
   const mut = useBudgetMutations()
   const fmt = (v: number) => formatMoney(v, currency)
 
-  const summary = useMemo(() => summariseBudget((planned.data ?? []).map((m) => ({ date: m.date, slot: m.slot, est_cost: m.est_cost == null ? null : m.est_cost * m.portion, status: m.status })), (records.data ?? []).map((r) => ({ spent_on: r.spent_on, amount: Number(r.amount), category: r.category })), from, to), [planned.data, records.data, from, to])
+  const summary = useMemo(() => summariseBudget((planned.data ?? []).map((m) => ({ date: m.date, slot: m.slot, est_cost: m.est_cost == null || (m.est_cost_currency ?? 'NGN') !== currency ? null : m.est_cost * m.portion, status: m.status })), (records.data ?? []).map((r) => ({ spent_on: r.spent_on, amount: Number(r.amount), category: r.category })), from, to), [planned.data, records.data, from, to, currency])
   const allowance = prefs.data ? budgetAllowance(prefs.data.budget_amount == null ? null : Number(prefs.data.budget_amount), prefs.data.budget_period, prefs.data.meal_slots.length, diffDays(from, to) + 1) : null
 
   return (
@@ -66,7 +66,7 @@ export function BudgetPage() {
               />
             </div>
             {allowance == null && <p className="mt-4 text-sm text-muted">No budget set. <Link to="/profile/preferences" className="font-semibold underline">Set one</Link> to compare.</p>}
-            {allowance != null && summary.actual > allowance && <p className="mt-4 text-sm text-ink-2">You're over this {period === 'day' ? "day's" : period === 'week' ? "week's" : "month's"} budget. No worries — you can adjust your plan or budget anytime.</p>}
+            {allowance != null && summary.actual > allowance && <p className="mt-4 text-sm text-ink-2">You're over this {period === 'day' ? "day's" : period === 'week' ? "week's" : "month's"} budget. No worries, you can adjust your plan or budget anytime.</p>}
           </section>
           <Notice icon="info">Meal costs are rough estimates, not current market prices. Set your own prices on any recipe, and record what you actually spend here.</Notice>
 
@@ -97,7 +97,7 @@ export function BudgetPage() {
                   <li key={r.id} className="flex items-center gap-3 py-2.5">
                     <div className="min-w-0 flex-1">
                       <p className="num font-semibold">{formatMoney(Number(r.amount), r.currency)}</p>
-                      <p className="truncate text-[13px] text-muted">{dayLabel(r.spent_on, today)} · {CATS.find((x) => x.value === r.category)?.label}{r.note ? ` · ${r.note}` : ''}</p>
+                      <p className="truncate text-footnote text-muted">{dayLabel(r.spent_on, today)} · {CATS.find((x) => x.value === r.category)?.label}{r.note ? ` · ${r.note}` : ''}</p>
                     </div>
                     <IconButton icon="trash" label="Delete record" size={40} onClick={() => void mut.remove(r)} />
                   </li>

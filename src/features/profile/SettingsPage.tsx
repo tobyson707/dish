@@ -45,14 +45,14 @@ export function SettingsPage() {
                     {o.label}
                     {on && <Icon name="check" size={16} aria-label="Selected" />}
                   </span>
-                  <span className={cn('block text-[13px]', on ? 'opacity-75' : 'text-muted')}>{o.hint}</span>
+                  <span className={cn('block text-footnote', on ? 'opacity-75' : 'text-muted')}>{o.hint}</span>
                 </span>
               </button>
             )
           })}
         </div>
         <p className="mt-3 text-sm text-muted" aria-live="polite">
-          {preference === 'system' ? `Following your device — currently ${resolved}.` : `Using ${resolved} appearance on every screen.`} Saved to your account.
+          {preference === 'system' ? `Following your device, currently ${resolved}.` : `Using ${resolved} appearance on every screen.`} Saved to your account.
         </p>
       </Section>
       <Section title="Progress">

@@ -136,6 +136,28 @@
 @theme inline {
   --font-sans: 'Manrope Variable', 'Manrope', ui-sans-serif, system-ui, sans-serif;
   --font-serif: 'DM Serif Display', 'Iowan Old Style', Georgia, serif;
+  /* Type scale: one source of truth for every size in the app. Serif for
+     display and titles, Manrope for everything else. */
+  --text-display: clamp(2.7rem, 12.5vw, 5.4rem);
+  --text-display--line-height: 0.95;
+  --text-display--letter-spacing: -0.01em;
+  --text-title-1: clamp(2.3rem, 10vw, 3.2rem);
+  --text-title-1--line-height: 0.95;
+  --text-title-1--letter-spacing: -0.01em;
+  --text-title-2: 2rem;
+  --text-title-2--line-height: 1.08;
+  --text-title-3: 1.3rem;
+  --text-title-3--line-height: 1.3;
+  --text-headline: 1.0625rem;
+  --text-headline--line-height: 1.4;
+  --text-callout: 0.9375rem;
+  --text-callout--line-height: 1.45;
+  --text-footnote: 0.8125rem;
+  --text-footnote--line-height: 1.4;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.35;
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.3;
   --color-sage: var(--c-sage);
   --color-glass: var(--c-glass);
   --color-glass-dark: var(--c-glass-dark);
@@ -223,7 +245,7 @@
 
 @layer components {
   .label-caps {
-    font-size: 11px;
+    font-size: var(--text-micro);
     line-height: 1.2;
     font-weight: 600;
     letter-spacing: 0.12em;
@@ -356,6 +378,15 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
 /* a physical slide from beyond the right edge (no fade as the entrance) */
 @keyframes cat-in { from { transform: translateX(calc(100% + var(--rotary-right) + var(--rotary-w) + var(--cat-ws-gap))); } to { transform: none; } }
 @keyframes cat-out { to { transform: translateX(calc(100% + var(--rotary-right) + var(--rotary-w) + var(--cat-ws-gap))); } }
+
+/* achievement celebration: restrained pop, a soft glow and a few sparks */
+.celebration[open] .celebration-card { animation: celebrate-in 520ms var(--ease-spring) both; }
+.celebration .celebration-badge { animation: badge-pop 620ms var(--ease-spring) 120ms both; }
+.celebration .celebration-glow { animation: fade 900ms var(--ease-out) both; }
+.celebration .celebration-spark { animation: spark 900ms var(--ease-out) calc(220ms + var(--i) * 40ms) both; transform: rotate(calc(var(--i) * 60deg)) translateY(-62px); }
+@keyframes celebrate-in { from { opacity: 0; transform: translateY(24px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes badge-pop { from { transform: scale(0.6); } to { transform: scale(1); } }
+@keyframes spark { from { opacity: 0; transform: rotate(calc(var(--i) * 60deg)) translateY(-30px) scale(0.4); } 40% { opacity: 1; } to { opacity: 0; transform: rotate(calc(var(--i) * 60deg)) translateY(-78px) scale(1); } }
 
 /* workspace content swap when the category dial turns (direction-aware) */
 .ws-swap { animation: ws-swap 340ms var(--ease-out) both; }

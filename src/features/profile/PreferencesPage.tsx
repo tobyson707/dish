@@ -5,7 +5,7 @@ import { useCatalogue, useIngredients } from '@/data/catalogue'
 import { qk } from '@/data/keys'
 import { useUserId } from '@/features/auth/AuthProvider'
 import { draftFrom, persistDraft, type Draft } from '@/features/onboarding/draft'
-import { StepAvoid, StepBasics, StepBudget, StepCooking, StepLoves, StepPlanning, StepTaste, validateStep } from '@/features/onboarding/Steps'
+import { StepAvoid, StepBudget, StepCooking, StepCuisines, StepName, StepPlace, StepPlanning, StepTaste, validateStep } from '@/features/onboarding/Steps'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/Layout'
 import { ErrorState, LoadingBlock } from '@/components/ui/States'
@@ -14,9 +14,10 @@ import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
 
 const SECTIONS = [
-  ['basics', 'Name, units & currency', StepBasics],
-  ['avoid', 'Allergies & foods to avoid', StepAvoid],
-  ['loves', 'Food you love', StepLoves],
+  ['name', 'Name', StepName],
+  ['place', 'Country, currency and units', StepPlace],
+  ['avoid', 'Allergies and restrictions', StepAvoid],
+  ['cuisines', 'Cuisines and favourites', StepCuisines],
   ['taste', 'Taste', StepTaste],
   ['cooking', 'Cooking', StepCooking],
   ['budget', 'Budget', StepBudget],

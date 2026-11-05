@@ -1,3 +1,4 @@
+import { useCurrency } from '@/hooks/useToday'
 import { useState } from 'react'
 import { MEAL_SLOTS, SLOT_LABEL, type MealSlot } from '@domain/types.ts'
 import { checkAllergy } from '@domain/allergens.ts'
@@ -18,6 +19,7 @@ const n = (v: string) => (v.trim() === '' || !Number.isFinite(Number(v)) ? null 
 
 export function AddMealSheet({ open, onClose, date, slot: initialSlot, planId }: { open: boolean; onClose: () => void; date: string; slot?: MealSlot; planId?: string | null }) {
   const create = useCreatePlannedMeal()
+  const currency = useCurrency()
   const prefs = usePreferences()
   const toast = useToast()
   const [mode, setMode] = useState<'catalogue' | 'manual'>('catalogue')
@@ -41,12 +43,12 @@ export function AddMealSheet({ open, onClose, date, slot: initialSlot, planId }:
       await create.mutateAsync({
         date: day, slot, plan_id: planId, name: picked.name, food_item_id: picked.id,
         calories: picked.calories, protein_g: picked.protein_g, carbs_g: picked.carbs_g, fat_g: picked.fat_g,
-        nutrition_source: picked.nutrition_source, est_cost: midCost(picked.est_cost_min, picked.est_cost_max),
+        nutrition_source: picked.nutrition_source, est_cost: midCost(picked.est_cost_min, picked.est_cost_max), est_cost_currency: picked.cost_currency,
         method: picked.can_cook ? 'cook' : 'buy',
       })
     } else {
       if (!m.name.trim()) return setErr('Give the meal a name')
-      await create.mutateAsync({ date: day, slot, plan_id: planId, name: m.name, calories: n(m.calories), protein_g: n(m.protein), carbs_g: n(m.carbs), fat_g: n(m.fat), est_cost: n(m.cost), method: m.method })
+      await create.mutateAsync({ date: day, slot, plan_id: planId, name: m.name, calories: n(m.calories), protein_g: n(m.protein), carbs_g: n(m.carbs), fat_g: n(m.fat), est_cost: n(m.cost), est_cost_currency: currency, method: m.method })
     }
     toast.success(`Added to ${SLOT_LABEL[slot].toLowerCase()}.`)
     reset()

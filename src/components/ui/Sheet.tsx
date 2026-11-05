@@ -50,7 +50,7 @@ export function Sheet({ open, onClose, title, children, footer, size = 'md', des
           </div>
           <div className="flex items-start justify-between gap-3 px-6 pb-2 pt-3 sm:pt-5">
             <div>
-              <h2 id="sheet-title" className={cn('font-serif text-[1.9rem] leading-tight', tone === 'glass' && 'text-on-glass-dark')}>
+              <h2 id="sheet-title" className={cn('font-serif text-title-2 leading-tight', tone === 'glass' && 'text-on-glass-dark')}>
                 {title}
               </h2>
               {description && <p className={cn('mt-1 text-sm', tone === 'glass' ? 'text-on-glass-dark-muted' : 'text-muted')}>{description}</p>}

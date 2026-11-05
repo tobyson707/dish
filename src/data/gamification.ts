@@ -19,7 +19,7 @@ export interface GamificationSummary {
   active_today: boolean
   today: string
   feedback_enabled: boolean
-  achievements: { id: string; unlocked_at: string }[]
+  achievements: { id: string; unlocked_at: string; celebrated_at?: string | null }[]
   recent: XpTransaction[]
 }
 

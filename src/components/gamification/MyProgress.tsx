@@ -47,7 +47,7 @@ export function MyProgress() {
                 ['Best streak', `${g.data.best_streak} day${g.data.best_streak === 1 ? '' : 's'}`],
               ].map(([k, v]) => (
                 <div key={k} className="flex flex-col justify-between">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-muted">{k}</dt>
+                  <dt className="text-micro font-semibold uppercase tracking-wider text-muted">{k}</dt>
                   <dd className="num mt-1 text-lg font-extrabold">{v}</dd>
                 </div>
               ))}

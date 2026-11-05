@@ -2,9 +2,9 @@ import { z } from 'zod'
 import { handler, json, parseBody, HttpError } from '../_shared/http.ts'
 import { authenticate } from '../_shared/supabase.ts'
 import { applyUserPrices, loadCatalogue, loadHistory, loadKitchenNames, loadUserContext } from '../_shared/context.ts'
-import { generateSelections, slotsForRange } from '../_shared/domain/planner.ts'
+import { enforceVariety, generateSelections, slotsForRange } from '../_shared/domain/planner.ts'
 import { addDays, diffDays, nextBlock, planEndDate } from '../_shared/domain/dates.ts'
-import { PLAN_DURATIONS } from '../_shared/domain/types.ts'
+import { PLAN_DURATIONS, type CatalogueMeal } from '../_shared/domain/types.ts'
 import { checkAiQuota, checkRequestBurst, finishJob, startJob } from '../_shared/jobs.ts'
 import { getProvider } from '../_shared/ai/provider.ts'
 import { rerankPlan } from '../_shared/rerank.ts'
@@ -105,6 +105,7 @@ Deno.serve(
       usesAi: aiAllowed,
     })
     const byId = new Map(catalogue.map((m) => [m.id, m]))
+    const byIdMeals: Map<string, CatalogueMeal> = byId
     let aiUsed = false
     try {
       if (aiAllowed) {
@@ -117,6 +118,8 @@ Deno.serve(
           }
         }
         aiUsed = r.aiUsed
+        // the AI picks each slot on its own; re-apply the uniqueness and similarity rules
+        enforceVariety(selections, existing ?? [], byIdMeals, { leftovers_ok: ctx.prefs.leftovers_ok })
         await finishJob(jobId, { status: r.aiUsed ? 'succeeded' : 'fallback', error: r.error, model: r.model, inputTokens: r.inputTokens, outputTokens: r.outputTokens, latencyMs: r.latencyMs, usesAi: r.aiUsed, result: { picks: selections.length, ai_picks: r.value.size } })
       }
 

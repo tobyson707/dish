@@ -75,6 +75,7 @@ export async function loadUserContext(db: SupabaseClient, userId: string): Promi
     budget_period: p.budget_period,
     currency: prof.currency,
     goal: goal?.goal ?? null,
+    planning_goals: p.planning_goals ?? [],
     variety: p.variety,
     leftovers_ok: p.leftovers_ok,
   }
@@ -105,13 +106,14 @@ export async function loadHistory(db: SupabaseClient, userId: string, around: st
 
 /** Personal price overrides replace the catalogue's rough estimate. */
 export async function applyUserPrices(db: SupabaseClient, userId: string, meals: CatalogueRow[]): Promise<void> {
-  const { data } = await db.from('user_prices').select('food_item_id, amount').eq('user_id', userId)
-  const map = new Map((data ?? []).map((r: Row) => [r.food_item_id, Number(r.amount)]))
+  const { data } = await db.from('user_prices').select('food_item_id, amount, currency').eq('user_id', userId)
+  const map = new Map((data ?? []).map((r: Row) => [r.food_item_id, { amount: Number(r.amount), currency: String(r.currency) }]))
   for (const m of meals) {
     const v = map.get(m.id)
     if (v != null) {
-      m.est_cost_min = v
-      m.est_cost_max = v
+      m.est_cost_min = v.amount
+      m.est_cost_max = v.amount
+      m.cost_currency = v.currency // the user's own price keeps its own currency
     }
   }
 }

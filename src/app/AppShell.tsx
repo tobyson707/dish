@@ -6,6 +6,7 @@ import { OfflineIndicator } from '@/components/ui/OfflineIndicator'
 import { LoadingBlock } from '@/components/ui/States'
 import { ReminderScheduler } from '@/features/profile/ReminderScheduler'
 import { GamificationNotifier } from '@/gamification/GamificationNotifier'
+import { Celebrations } from '@/gamification/Celebrations'
 
 const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Home', icon: 'home' },
@@ -18,15 +19,16 @@ const NAV: { to: string; label: string; icon: IconName }[] = [
 export function AppShell() {
   const loc = useLocation()
   return (
-    <div className="min-h-dvh md:pl-28">
+    <div className={cn('min-h-dvh md:pl-28', loc.pathname === '/' && 'md:pr-[calc(var(--rotary-w)+12px)]')}>
       {/* warm atmospheric backdrop behind every screen */}
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-on-ink">
         Skip to content
       </a>
       <OfflineIndicator />
-      {/* Desktop rail */}
-      <nav aria-label="Main" className="fixed bottom-4 left-4 top-4 z-30 hidden w-20 flex-col items-center gap-2 rounded-[30px] bg-nav py-5 text-on-glass-dark shadow-[0_20px_50px_-24px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-xl md:flex">
-        <span className="mb-5 text-[13px] font-extrabold tracking-[0.2em]" aria-hidden="true">
+      {/* Desktop primary rail: fixed, vertically centred on the left. The secondary
+          rail (the category dial) mirrors it on the right on Home. */}
+      <nav aria-label="Main" className="fixed left-4 top-1/2 z-30 hidden w-20 -translate-y-1/2 flex-col items-center gap-2 rounded-[30px] bg-nav py-5 text-on-glass-dark shadow-[0_20px_50px_-24px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-xl md:flex">
+        <span className="mb-5 text-footnote font-extrabold tracking-[0.2em]" aria-hidden="true">
           DISH<span className="text-accent">.</span>
         </span>
         {NAV.map((n) => (
@@ -34,7 +36,7 @@ export function AppShell() {
             key={n.to}
             to={n.to}
             end={n.to === '/'}
-            className={({ isActive }) => cn('press flex w-16 flex-col items-center gap-1 rounded-[22px] py-2.5 text-[11px] font-semibold transition-colors duration-300', isActive ? 'bg-accent text-accent-ink' : 'text-on-glass-dark-muted hover:text-on-glass-dark')}
+            className={({ isActive }) => cn('press flex w-16 flex-col items-center gap-1 rounded-[22px] py-2.5 text-micro font-semibold transition-colors duration-300', isActive ? 'bg-accent text-accent-ink' : 'text-on-glass-dark-muted hover:text-on-glass-dark')}
           >
             <Icon name={n.icon} size={22} />
             {n.label}
@@ -58,7 +60,7 @@ export function AppShell() {
                   <span className={cn('flex h-9 w-12 items-center justify-center rounded-full transition-colors duration-300', isActive ? 'bg-accent text-accent-ink' : 'text-on-glass-dark-muted')}>
                     <Icon name={n.icon} size={20} />
                   </span>
-                  <span className={cn('text-[10px] font-semibold leading-none', isActive ? 'text-on-glass-dark' : 'text-on-glass-dark-muted')}>{n.label}</span>
+                  <span className={cn('text-micro font-semibold leading-none', isActive ? 'text-on-glass-dark' : 'text-on-glass-dark-muted')}>{n.label}</span>
                 </>
               )}
             </NavLink>
@@ -67,6 +69,7 @@ export function AppShell() {
       </nav>
       <ReminderScheduler />
       <GamificationNotifier />
+      <Celebrations />
     </div>
   )
 }

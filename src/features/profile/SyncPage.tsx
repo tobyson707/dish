@@ -33,7 +33,7 @@ export function SyncPage() {
                 {problems.conflicts.map((c) => (
                   <li key={c.id} className="rounded-lg bg-elevated p-3">
                     <p className="font-semibold">{c.label}</p>
-                    <p className="text-[13px] text-muted">{new Date(c.detectedAt).toLocaleString()}</p>
+                    <p className="text-footnote text-muted">{new Date(c.detectedAt).toLocaleString()}</p>
                     <div className="mt-2 flex gap-2">
                       <Button size="sm" onClick={() => void retryProblem(c.id)}>Re-apply mine</Button>
                       <Button size="sm" variant="ghost" onClick={() => void discardProblem(c.id)}>Keep newer</Button>
@@ -49,7 +49,7 @@ export function SyncPage() {
                 {problems.failed.map((f) => (
                   <li key={f.id} className="rounded-lg bg-elevated p-3">
                     <p className="font-semibold">{f.label}</p>
-                    <p className="text-[13px] text-muted">{f.lastError}</p>
+                    <p className="text-footnote text-muted">{f.lastError}</p>
                     <div className="mt-2 flex gap-2">
                       <Button size="sm" onClick={() => void retryProblem(f.id)}>Try again</Button>
                       <Button size="sm" variant="ghost" onClick={() => void discardProblem(f.id)}>Discard change</Button>

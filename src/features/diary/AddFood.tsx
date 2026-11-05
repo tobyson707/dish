@@ -156,13 +156,13 @@ export function AddFood() {
                 <TextField label="Carbs" suffix="g" inputMode="decimal" value={f.carbs} onChange={(e) => setF({ ...f, carbs: e.target.value })} />
                 <TextField label="Fat" suffix="g" inputMode="decimal" value={f.fat} onChange={(e) => setF({ ...f, fat: e.target.value })} />
               </div>
-              <p className="mt-3 text-xs text-muted">{source === 'user' ? 'Saved as your own values.' : 'Catalogue values are approximate estimates, not lab-verified. Editing them marks them as your values.'} Leave blank if you don't know — blanks aren't counted as zero.</p>
+              <p className="mt-3 text-xs text-muted">{source === 'user' ? 'Saved as your own values.' : 'Catalogue values are approximate estimates, not lab-verified. Editing them marks them as your values.'} Leave blank if you don't know. Blanks aren't counted as zero.</p>
             </div>
             <TextArea label="Notes (optional)" value={f.notes} onChange={(e) => setF({ ...f, notes: e.target.value })} maxLength={500} />
             <Button size="lg" block loading={log.isPending} onClick={() => void save()}>
               {editing ? 'Save changes' : 'Add to diary'}
             </Button>
-            <p className="text-center text-xs text-muted">Works offline — it will sync when you're back online.</p>
+            <p className="text-center text-xs text-muted">Works offline. It will sync when you're back online.</p>
           </div>
         )}
       </div>

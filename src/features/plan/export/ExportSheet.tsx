@@ -153,7 +153,7 @@ export function ExportSheet({ open, onClose, anchorDate }: { open: boolean; onCl
               ).map(([id, label, sub]) => (
                 <button key={id} type="button" role="radio" aria-checked={period === id} onClick={() => setPeriod(id)} className={cn('press flex flex-col items-start rounded-[18px] p-3 text-left transition-colors', period === id ? 'bg-ink text-on-ink' : 'bg-elevated ring-1 ring-inset ring-line')}>
                   <span className="font-semibold">{label}</span>
-                  <span className={cn('mt-0.5 text-[12px]', period === id ? 'opacity-75' : 'text-muted')}>{sub}</span>
+                  <span className={cn('mt-0.5 text-caption', period === id ? 'opacity-75' : 'text-muted')}>{sub}</span>
                 </button>
               ))}
             </div>
@@ -182,7 +182,7 @@ export function ExportSheet({ open, onClose, anchorDate }: { open: boolean; onCl
               ).map(([id, label, sub]) => (
                 <button key={id} type="button" role="radio" aria-checked={format === id} onClick={() => setFormat(id)} className={cn('press flex flex-col items-start rounded-[18px] p-3 text-left transition-colors', format === id ? 'bg-ink text-on-ink' : 'bg-elevated ring-1 ring-inset ring-line')}>
                   <span className="font-semibold">{label}</span>
-                  <span className={cn('mt-0.5 text-[12px]', format === id ? 'opacity-75' : 'text-muted')}>{sub}</span>
+                  <span className={cn('mt-0.5 text-caption', format === id ? 'opacity-75' : 'text-muted')}>{sub}</span>
                 </button>
               ))}
             </div>
@@ -226,7 +226,7 @@ export function ExportSheet({ open, onClose, anchorDate }: { open: boolean; onCl
               Also save as {format === 'pdf' ? 'PNG' : 'PDF'}
             </Button>
           </div>
-          {output && !shareable && <p className="-mt-1 text-[13px] text-muted">This browser can't share files directly, so Share saves the file to your device instead.</p>}
+          {output && !shareable && <p className="-mt-1 text-footnote text-muted">This browser can't share files directly, so Share saves the file to your device instead.</p>}
           {busy && output && <p className="text-sm text-muted" role="status">{busy}</p>}
           <button type="button" className="inline-flex items-center gap-1 self-start text-sm font-semibold text-ink-2 underline-offset-2 hover:underline" onClick={() => setStep('options')}>
             <Icon name="left" size={16} /> Change period or format

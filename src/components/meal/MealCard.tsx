@@ -8,7 +8,7 @@ import { Icon } from '@/components/ui/Icon'
 import { Tag } from '@/components/ui/Badges'
 
 /** Large, image-led card for Home ("hero") — circular crop motif from the reference. */
-export function MealHeroCard({ meal, currency, onActions, compact }: { meal: PlannedMeal; currency: string; onActions?: () => void; compact?: boolean }) {
+export function MealHeroCard({ meal, onActions, compact }: { meal: PlannedMeal; onActions?: () => void; compact?: boolean }) {
   const done = meal.status !== 'planned'
   return (
     <article className={cn('relative flex items-center rounded-xl bg-elevated transition-opacity', compact ? 'gap-3 p-2.5 pr-2' : 'gap-4 p-3 pr-4', done && 'opacity-70')} aria-label={`${SLOT_LABEL[meal.slot]}: ${meal.name}`}>
@@ -20,10 +20,10 @@ export function MealHeroCard({ meal, currency, onActions, compact }: { meal: Pla
           {SLOT_LABEL[meal.slot]}
           {meal.scheduled_time && <span className="num normal-case tracking-normal">{meal.scheduled_time.slice(0, 5)}</span>}
         </p>
-        <h3 className={cn('mt-1 font-bold leading-snug tracking-tight', compact ? 'line-clamp-2 text-[16px]' : 'text-lg')}>{meal.name}</h3>
-        <div className={cn('mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-2', compact && 'hidden')}>
+        <h3 className={cn('mt-1 font-bold leading-snug tracking-tight', compact ? 'line-clamp-2 text-base' : 'text-lg')}>{meal.name}</h3>
+        <div className={cn('mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-footnote text-ink-2', compact && 'hidden')}>
           {meal.calories != null && <span className="num">≈ {formatKcal(Math.round(meal.calories * meal.portion))}</span>}
-          {meal.est_cost != null && <span className="num">~{formatMoney(meal.est_cost * meal.portion, currency)}</span>}
+          {meal.est_cost != null && <span className="num">~{formatMoney(meal.est_cost * meal.portion, meal.est_cost_currency ?? 'NGN')}</span>}
           <span className="inline-flex items-center gap-1">
             <Icon name={meal.method === 'cook' ? 'pot' : 'bag'} size={14} /> {meal.method === 'cook' ? 'Cook' : 'Buy'}
           </span>
@@ -58,7 +58,7 @@ export function MealRow({ meal, onActions }: { meal: PlannedMeal; onActions?: ()
             {meal.status === 'skipped' && ' · skipped'}
           </span>
           <span className={cn('block truncate font-semibold', meal.status === 'skipped' && 'text-muted line-through')}>{meal.name}</span>
-          <span className="num block text-[13px] text-muted">
+          <span className="num block text-footnote text-muted">
             {meal.calories != null ? `≈ ${formatKcal(Math.round(meal.calories * meal.portion))}` : 'No calorie estimate'}
             {meal.portion !== 1 && ` · ×${meal.portion}`}
           </span>

@@ -21,7 +21,7 @@ export function LevelProgress({ totalXp, size = 'sm', highlight }: { totalXp: nu
           style={{ width: `${Math.round(p.fraction * 1000) / 10}%` }}
         />
       </div>
-      <p className="num text-[13px] text-ink-2">
+      <p className="num text-footnote text-ink-2">
         {p.isMax ? (
           <>Top level reached · {p.totalXp.toLocaleString()} XP</>
         ) : (

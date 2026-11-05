@@ -122,7 +122,7 @@ export function RotaryCategorySelector({ value, onChange, onActivate, workspaceO
               if (on) onActivate()
               else goTo(i, 'tap')
             }}
-            className="absolute inset-x-0 flex flex-col items-center justify-center gap-1.5 rounded-[24px] text-[11px] font-semibold text-on-glass-dark-muted outline-none will-change-transform min-[380px]:text-[12px]"
+            className="absolute inset-x-0 flex flex-col items-center justify-center gap-1.5 rounded-[24px] text-micro font-semibold text-on-glass-dark-muted outline-none will-change-transform min-[380px]:text-caption"
             style={{ top: PAD + ROTARY_ITEM, height: ROTARY_ITEM }}
           >
             {face(c)}
@@ -137,7 +137,7 @@ export function RotaryCategorySelector({ value, onChange, onActivate, workspaceO
         style={{ top: PAD + ROTARY_ITEM, height: ROTARY_ITEM }}
       >
         {CATEGORIES.map((c) => (
-          <div key={c.id} data-item className="absolute flex flex-col items-center justify-center gap-1.5 text-[11px] font-semibold text-accent-ink will-change-transform min-[380px]:text-[12px]" style={{ top: 0, left: -6, right: -4, height: ROTARY_ITEM }}>
+          <div key={c.id} data-item className="absolute flex flex-col items-center justify-center gap-1.5 text-micro font-semibold text-accent-ink will-change-transform min-[380px]:text-caption" style={{ top: 0, left: -6, right: -4, height: ROTARY_ITEM }}>
             {face(c)}
           </div>
         ))}

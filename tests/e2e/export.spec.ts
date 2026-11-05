@@ -7,7 +7,7 @@ async function withPlan(page: Page) {
   const uid = await createUser(email)
   await completeOnboardingFor(uid)
   await signIn(page, email)
-  await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
   await page.goto('/plan/new')
   await page.getByRole('button', { name: 'Create my plan' }).click()
   await expect(page).toHaveURL(/\/plan\?date=/, { timeout: 30_000 })

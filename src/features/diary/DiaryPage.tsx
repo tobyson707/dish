@@ -89,7 +89,7 @@ export function DiaryPage() {
                     <li key={e.id} className="flex items-center gap-3 py-3">
                       <Link to={`/diary/edit/${e.id}?date=${e.local_date}`} className="min-w-0 flex-1">
                         <span className="block truncate font-semibold">{e.name}</span>
-                        <span className="num mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-muted">
+                        <span className="num mt-0.5 flex flex-wrap items-center gap-2 text-footnote text-muted">
                           {e.nutrition?.calories != null ? formatKcal(Math.round(e.nutrition.calories * e.servings)) : 'No calories'}
                           {e.servings !== 1 && <span>×{e.servings}</span>}
                           <ProvenanceBadge source={e.nutrition?.source} isEstimate={e.nutrition?.is_estimate} />

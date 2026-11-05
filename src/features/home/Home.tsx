@@ -16,6 +16,7 @@ import { friendlyError } from '@/lib/errors'
 import { SLOT_LABEL } from '@domain/types.ts'
 import { HeroFood } from '@/components/ui/FoodImage'
 import { cn } from '@/lib/cn'
+import { greeting } from '@/lib/greeting'
 import { AddMealSheet } from '@/components/meal/AddMealSheet'
 import { FloatingToolbar } from '@/components/canvas/FloatingToolbar'
 import { RotaryCategorySelector, type CategoryChange } from '@/components/canvas/RotaryCategorySelector'
@@ -46,14 +47,13 @@ export function Home() {
   useAutoExtendPlan()
 
   const todays = useMemo(() => (meals.data ?? []).filter((m) => m.date === today).sort(sortPlanned), [meals.data, today])
-  const currency = profile.data?.currency ?? 'NGN'
   const noPlan = plan.isSuccess && !plan.data && todays.length === 0
 
   return (
     <div className="pb-4">
-      <h1 className="sr-only">What's cooking today?</h1>
       <div className="recede-target -mx-2 sm:mx-0">
         <HomeCanvas
+          greeting={greeting(profile.data?.display_name, profile.data?.timezone)}
           meals={todays}
           loading={meals.isPending}
           noPlan={noPlan}
@@ -71,7 +71,7 @@ export function Home() {
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
             <p className="label-caps">{longDate(today)}</p>
-            <h2 className="mt-1 font-serif text-[2rem] leading-tight">Today's menu</h2>
+            <h2 className="mt-1 font-serif text-title-2 leading-tight">Today's menu</h2>
           </div>
           <Link to="/plan" className="shrink-0 text-sm font-semibold underline-offset-2 hover:underline">Full plan →</Link>
         </div>
@@ -87,12 +87,29 @@ export function Home() {
           <div className="flex flex-col gap-3">
             {todays.map((m) => (
               <div key={`${m.id}-${m.food_item_id}`} className="animate-[swap-in_260ms_var(--ease-out)_both]">
-                <MealHeroCard compact meal={m} currency={currency} onActions={() => setActionsFor(m)} />
+                <MealHeroCard compact meal={m} onActions={() => setActionsFor(m)} />
               </div>
             ))}
           </div>
         )}
       </section>
+
+      {/* secondary shortcuts: compact, never competing with Today's menu */}
+      <nav aria-label="Shortcuts" className="mt-8 grid grid-cols-2 gap-2 pr-[calc(var(--rotary-w)+4px)] sm:grid-cols-4">
+        {(
+          [
+            ['/surprise', 'sparkle', 'Surprise me'],
+            ['/grocery', 'cart', 'Shopping list'],
+            ['/kitchen', 'fridge', 'My kitchen'],
+            ['/scan', 'camera', 'Scan food'],
+          ] as const
+        ).map(([to, icon, label]) => (
+          <Link key={to} to={to} className="press flex h-12 items-center gap-2.5 rounded-full bg-elevated px-4 text-sm font-semibold text-ink ring-1 ring-inset ring-line transition-colors hover:bg-surface">
+            <Icon name={icon} size={18} className="shrink-0" />
+            <span className="truncate">{label}</span>
+          </Link>
+        ))}
+      </nav>
 
       <RotaryCategorySelector
         value={category}
@@ -116,7 +133,7 @@ export function Home() {
  * toolbar, editorial headline, featured food, right-edge category rail,
  * overlapping next-meal panel and swipeable pagination.
  */
-function HomeCanvas({ meals, loading, noPlan, category, onFind }: { meals: PlannedMeal[]; loading: boolean; noPlan: boolean; category: Category; onFind: (c: Category) => void }) {
+function HomeCanvas({ greeting, meals, loading, noPlan, category, onFind }: { greeting: string; meals: PlannedMeal[]; loading: boolean; noPlan: boolean; category: Category; onFind: (c: Category) => void }) {
   const filtered = useMemo(() => (category === 'all' ? meals : meals.filter((m) => m.slot === category)), [meals, category])
   const nextIdx = Math.max(0, filtered.findIndex((m) => m.status === 'planned'))
   const [picked, setPicked] = useState<{ key: string; idx: number } | null>(null)
@@ -139,14 +156,8 @@ function HomeCanvas({ meals, loading, noPlan, category, onFind }: { meals: Plann
       <FloatingToolbar className="absolute inset-x-4 top-4 z-20 sm:inset-x-5 sm:top-5" />
 
       <div className="absolute left-5 right-[92px] top-[92px] z-10 sm:left-8 lg:right-[45%] lg:top-[120px]">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-ink-2 animate-[fade_500ms_ease-out_both]">Good food. Less thinking.</p>
-        <p aria-hidden="true" className="mt-4 font-serif text-[clamp(3.3rem,15.5vw,6.4rem)] leading-[0.9] tracking-[-0.01em] text-ink animate-[rise_520ms_var(--ease-out)_80ms_both]">
-          What's
-          <br />
-          cooking
-          <br />
-          <em>today?</em>
-        </p>
+        <h1 className="font-serif text-display leading-[0.95] tracking-[-0.01em] text-ink animate-[rise_520ms_var(--ease-out)_both]">{greeting}</h1>
+        <p className="mt-4 max-w-[22ch] text-headline leading-snug text-ink-2 animate-[fade_500ms_ease-out_120ms_both]">What are you in the mood for today?</p>
       </div>
 
       {/* featured food — swipe between meals */}
@@ -197,8 +208,8 @@ function HomeCanvas({ meals, loading, noPlan, category, onFind }: { meals: Plann
 function EmptyCanvasPanel({ title, body, action }: { title: string; body: string; action: React.ReactNode }) {
   return (
     <div className="rounded-[26px] bg-[var(--c-glass)] p-5 shadow-[0_18px_40px_-20px_var(--c-shadow)] ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-xl animate-[info-in_380ms_var(--ease-out)_both]">
-      <p className="text-[17px] font-bold text-ink">{title}</p>
-      <p className="mt-1 text-[13px] text-ink-2">{body}</p>
+      <p className="text-headline font-bold text-ink">{title}</p>
+      <p className="mt-1 text-footnote text-ink-2">{body}</p>
       <div className="mt-3">{action}</div>
     </div>
   )

@@ -19,7 +19,7 @@ async function home(page: Page) {
   const uid = await createUser(email)
   await completeOnboardingFor(uid)
   await signIn(page, email)
-  await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
   const ok = page.getByRole('button', { name: 'OK', exact: true }) // "ready to work offline" toast
   if (await ok.isVisible()) await ok.click()
   return page.getByRole('toolbar', { name: 'Meal categories' })
@@ -192,7 +192,7 @@ test('interface sounds can be turned off, persist, and the dial still works', as
   await page.keyboard.press('Escape')
 
   await page.goto('/')
-  await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
   expect(await page.evaluate(() => localStorage.getItem('dish-ui-sounds'))).toBe('off')
   await pressed(page).focus()
   await page.keyboard.press('ArrowDown')

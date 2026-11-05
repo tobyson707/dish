@@ -1,4 +1,4 @@
-import { forwardRef, useId, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
+import { forwardRef, useId, useState, type InputHTMLAttributes, type ReactNode, type SelectHTMLAttributes, type TextareaHTMLAttributes } from 'react'
 import { cn } from '@/lib/cn'
 import { Icon } from './Icon'
 
@@ -25,12 +25,12 @@ export function FieldWrap({ label, hint, error, hideLabel, children, className }
       </label>
       {children({ id, describedBy: [hintId, errId].filter(Boolean).join(' ') || undefined, invalid: !!error })}
       {hint && !error && (
-        <p id={hintId} className="text-[13px] text-muted">
+        <p id={hintId} className="text-footnote text-muted">
           {hint}
         </p>
       )}
       {error && (
-        <p id={errId} role="alert" className="flex items-center gap-1 text-[13px] font-medium text-error">
+        <p id={errId} role="alert" className="flex items-center gap-1 text-footnote font-medium text-error">
           <Icon name="alert" size={14} /> {error}
         </p>
       )}
@@ -105,3 +105,32 @@ export function SearchInput({ value, onChange, placeholder = 'Search', label = '
     </div>
   )
 }
+
+/**
+ * Password input with a visibility toggle inside the field. Toggling only swaps
+ * the input type (the value and caret are kept); the button is labelled and
+ * keyboard reachable. Use for every password field.
+ */
+export const PasswordField = forwardRef<HTMLInputElement, Omit<InputProps, 'type' | 'suffix'>>(function PasswordField({ label, hint, error, hideLabel, className, ...rest }, ref) {
+  const [shown, setShown] = useState(false)
+  return (
+    <FieldWrap label={label} hint={hint} error={error} hideLabel={hideLabel} className={className}>
+      {({ id, describedBy, invalid }) => (
+        <div className="relative">
+          <input ref={ref} id={id} type={shown ? 'text' : 'password'} aria-describedby={describedBy} aria-invalid={invalid || undefined} autoCapitalize="none" autoCorrect="off" spellCheck={false} className={cn(inputCls, 'pr-14')} {...rest} />
+          <button
+            type="button"
+            aria-label={shown ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
+            aria-pressed={shown}
+            aria-controls={id}
+            onMouseDown={(e) => e.preventDefault()} // keep focus (and the caret) in the field
+            onClick={() => setShown((v) => !v)}
+            className="absolute inset-y-0 right-1.5 my-auto flex h-10 w-10 items-center justify-center rounded-full text-muted transition-colors hover:text-ink focus-visible:text-ink"
+          >
+            <Icon name={shown ? 'eyeOff' : 'eye'} size={20} />
+          </button>
+        </div>
+      )}
+    </FieldWrap>
+  )
+})

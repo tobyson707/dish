@@ -10,6 +10,7 @@ export function toSuggestion(m: CatalogueRow, method: 'cook' | 'buy', reasons: s
     note: note ?? null,
     est_cost_min: m.est_cost_min,
     est_cost_max: m.est_cost_max,
+    cost_currency: m.cost_currency, // estimates are shown in their own currency, never relabelled
     calories: m.calories,
     prep_minutes: m.prep_minutes,
     cook_minutes: m.cook_minutes,
@@ -31,6 +32,7 @@ export function plannedSnapshot(m: CatalogueRow, method: 'cook' | 'buy') {
     fat_g: m.fat_g,
     nutrition_source: m.nutrition_source,
     est_cost: cost,
+    est_cost_currency: cost == null ? null : m.cost_currency,
     method,
   }
 }

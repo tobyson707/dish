@@ -1,5 +1,6 @@
 import type { Allergen, CookTime, CookingMode, DietPattern, Goal, MealSlot } from '@domain/types.ts'
-import type { DietaryGoal, Profile, UserPreferences } from '@/types/db'
+import type { AllergyStatus, DietaryGoal, PlanningGoal, Profile, UserPreferences } from '@/types/db'
+import { DEFAULT_CURRENCY, guessCountry, isCurrency, suggestedCurrency } from '@/lib/geo'
 import { supabase } from '@/lib/supabase'
 import { estimateDailyTarget, type AgeRange, type ActivityLevel } from '@domain/nutrition.ts'
 
@@ -8,8 +9,11 @@ export interface Draft {
   display_name: string
   units: 'metric' | 'imperial'
   currency: string
+  country_code: string | null
+  currency_source: 'suggested' | 'manual' | null
   timezone: string
   goal: Goal | null
+  planning_goals: PlanningGoal[]
   age_range: AgeRange | null
   height_cm: number | null
   weight_kg: number | null
@@ -20,6 +24,7 @@ export interface Draft {
   cuisines: string[]
   favourite_meals: string[]
   favourite_ingredients: string[]
+  allergy_status: AllergyStatus
   allergies: Allergen[]
   custom_allergies: string[]
   dislikes: string[]
@@ -44,9 +49,12 @@ export function draftFrom(profile: Profile, prefs: UserPreferences, goal: Dietar
   const base: Draft = {
     display_name: profile.display_name ?? '',
     units: profile.units,
-    currency: profile.currency,
+    currency: isCurrency(profile.currency) ? profile.currency : DEFAULT_CURRENCY,
+    country_code: profile.country_code ?? null,
+    currency_source: profile.currency_source ?? null,
     timezone: profile.timezone,
     goal: goal?.goal ?? null,
+    planning_goals: prefs.planning_goals ?? [],
     age_range: (profile.age_range as AgeRange | null) ?? null,
     height_cm: profile.height_cm,
     weight_kg: profile.weight_kg,
@@ -57,6 +65,7 @@ export function draftFrom(profile: Profile, prefs: UserPreferences, goal: Dietar
     cuisines: prefs.cuisines,
     favourite_meals: prefs.favourite_meals,
     favourite_ingredients: prefs.favourite_ingredients,
+    allergy_status: prefs.allergy_status ?? 'listed',
     allergies: prefs.allergies,
     custom_allergies: prefs.custom_allergies,
     dislikes: prefs.dislikes,
@@ -82,6 +91,18 @@ export function draftFrom(profile: Profile, prefs: UserPreferences, goal: Dietar
     } catch {
       /* keep default */
     }
+    // first-time defaults: a likely country from the device locale, and its
+    // currency as a suggestion (the person confirms or changes both)
+    if (!base.country_code) {
+      const c2 = guessCountry()
+      if (c2) {
+        base.country_code = c2
+        if (base.currency_source !== 'manual') {
+          base.currency = suggestedCurrency(c2)
+          base.currency_source = 'suggested'
+        }
+      }
+    }
   }
   return { ...base, ...saved }
 }
@@ -95,6 +116,8 @@ export async function persistDraft(userId: string, d: Draft, opts: { complete?: 
     display_name: d.display_name.trim() || null,
     units: d.units,
     currency: d.currency,
+    country_code: d.country_code,
+    currency_source: d.currency_source,
     timezone: d.timezone,
     age_range: body ? d.age_range : null,
     height_cm: body ? d.height_cm : null,
@@ -112,8 +135,10 @@ export async function persistDraft(userId: string, d: Draft, opts: { complete?: 
       cuisines: d.cuisines,
       favourite_meals: d.favourite_meals,
       favourite_ingredients: d.favourite_ingredients,
-      allergies: d.allergies,
-      custom_allergies: d.custom_allergies,
+      allergy_status: d.allergy_status,
+      allergies: d.allergy_status === 'listed' ? d.allergies : [],
+      custom_allergies: d.allergy_status === 'listed' ? d.custom_allergies : [],
+      planning_goals: d.planning_goals,
       dislikes: d.dislikes,
       excluded_foods: d.excluded_foods,
       diet_pattern: d.diet_pattern,
@@ -158,14 +183,3 @@ export async function saveProgress(userId: string, step: number, d: Draft) {
   const { error } = await supabase.from('profiles').update({ onboarding_step: step, onboarding_draft: d as unknown as Record<string, unknown> }).eq('id', userId)
   if (error) throw error
 }
-
-export const CURRENCIES = [
-  { value: 'NGN', label: '₦ Nigerian naira (NGN)' },
-  { value: 'GHS', label: '₵ Ghanaian cedi (GHS)' },
-  { value: 'KES', label: 'KSh Kenyan shilling (KES)' },
-  { value: 'ZAR', label: 'R South African rand (ZAR)' },
-  { value: 'GBP', label: '£ British pound (GBP)' },
-  { value: 'EUR', label: '€ Euro (EUR)' },
-  { value: 'USD', label: '$ US dollar (USD)' },
-  { value: 'CAD', label: '$ Canadian dollar (CAD)' },
-]

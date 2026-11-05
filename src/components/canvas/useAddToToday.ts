@@ -42,6 +42,7 @@ export function useAddToToday() {
           fat_g: food.fat_g,
           nutrition_source: food.nutrition_source,
           est_cost: midCost(food.est_cost_min, food.est_cost_max),
+          est_cost_currency: food.cost_currency,
           method: food.can_cook ? 'cook' : 'buy',
         })
         toast.show(`Added ${food.name} to today's ${SLOT_LABEL[slot].toLowerCase()}.`, { tone: 'success', action: { label: 'View', onClick: () => nav(`/plan?date=${today}`) } })

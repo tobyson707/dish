@@ -4,6 +4,7 @@
 import { checkAllergy } from './allergens.ts'
 import { addDays, diffDays, type ISODate } from './dates.ts'
 import { COOK_TIME_MAX, type CatalogueMeal, type MealSlot, type PreferenceSnapshot } from './types.ts'
+import { DEFAULT_SIMILARITY, mealProfile, mealSimilarity, type SimilarityThresholds } from './similarity.ts'
 
 export interface HistoryItem {
   food_item_id: string
@@ -48,6 +49,10 @@ export function fitsDiet(meal: CatalogueMeal, pattern: PreferenceSnapshot['diet_
   }
 }
 
+/**
+ * Budget per meal in the user's currency. Budgets are only compared with cost
+ * estimates in the SAME currency: DISH never converts (no invented rates).
+ */
 export function perMealBudget(prefs: PreferenceSnapshot, mealsPerDay: number): number | null {
   if (prefs.budget_amount == null || prefs.budget_amount <= 0) return null
   return prefs.budget_period === 'meal' ? prefs.budget_amount : prefs.budget_amount / Math.max(1, mealsPerDay)
@@ -81,7 +86,15 @@ export interface FilterContext {
   relax?: boolean
 }
 
-export type Exclusion = 'slot' | 'allergy' | 'excluded' | 'diet' | 'method' | 'budget'
+export type Exclusion = 'slot' | 'allergy' | 'excluded' | 'diet' | 'method' | 'budget' | 'incomplete'
+
+/**
+ * A snack is not a lunch or dinner: items whose primary use is a snack (or
+ * light snack-type items under 300 kcal) are kept out of main-meal slots.
+ */
+export function isSnackOnly(meal: CatalogueMeal): boolean {
+  return meal.meal_types[0] === 'snack' || (meal.meal_types.includes('snack') && meal.calories != null && meal.calories < 300)
+}
 
 /** Returns null if the meal passes, or the reason it is excluded. */
 export function exclusionReason(meal: CatalogueMeal, ctx: FilterContext): Exclusion | null {
@@ -94,9 +107,10 @@ export function exclusionReason(meal: CatalogueMeal, ctx: FilterContext): Exclus
   if (!fitsDiet(meal, prefs.diet_pattern)) return 'diet'
   if (ctx.relax) return null
   // SOFT-HARD — relaxed only if the pool would otherwise be empty.
+  if ((ctx.slot === 'lunch' || ctx.slot === 'dinner') && isSnackOnly(meal)) return 'incomplete'
   if (!chooseMethod(meal, prefs)) return 'method'
   const budget = perMealBudget(prefs, ctx.mealsPerDay)
-  if (budget != null && meal.est_cost_min != null && meal.est_cost_min > budget * 1.15) return 'budget'
+  if (budget != null && meal.cost_currency === prefs.currency && meal.est_cost_min != null && meal.est_cost_min > budget * 1.15) return 'budget'
   return null
 }
 
@@ -105,9 +119,45 @@ export interface ScoreContext extends FilterContext {
   history: HistoryItem[]
   kitchenNames?: string[]
   rng: () => number
+  /** catalogue by id, so history items can be compared for similarity */
+  lookup?: Map<string, CatalogueMeal>
+  similarity?: SimilarityThresholds
+  /** how often each main protein / base already appears in this plan block */
+  usage?: { protein: Map<string, number>; base: Map<string, number> }
+  /** cheapest and dearest same-currency estimate in the candidate pool (budget goal) */
+  costRange?: { min: number; max: number } | null
 }
 
 const VARIETY_WINDOW = { low: 2, medium: 4, high: 7 } as const
+const VARIETY_WEIGHT = { low: 0.5, medium: 1, high: 1.5 } as const
+
+/** Spice on the person's five-step scale (0 none .. 4 very hot) against the catalogue's 0..3. */
+function spiceScore(mealSpice: number, pref: number): number {
+  const target = Math.min(pref, 3)
+  let s = -Math.abs(mealSpice - target) * 1.2
+  if (pref === 0 && mealSpice >= 2) s -= 4 // "no spice" means it, not "a bit less"
+  if (pref === 4 && mealSpice === 3) s += 1
+  return s
+}
+
+/** Meals eaten close together (same day or the next) that are too alike. */
+function neighbourSimilarity(meal: CatalogueMeal, ctx: ScoreContext): { max: number; penalty: number } {
+  if (!ctx.lookup) return { max: 0, penalty: 0 }
+  const t = ctx.similarity ?? DEFAULT_SIMILARITY
+  let max = 0
+  let penalty = 0
+  for (const h of ctx.history) {
+    if (h.food_item_id === meal.id) continue
+    const gap = Math.abs(diffDays(h.date, ctx.date))
+    if (gap > 1) continue
+    const other = ctx.lookup.get(h.food_item_id)
+    if (!other) continue
+    const sim = mealSimilarity(meal, other)
+    max = Math.max(max, sim)
+    if (sim >= t.moderate) penalty += (gap === 0 ? 6 : 4) * sim
+  }
+  return { max, penalty }
+}
 
 export function scoreMeal(meal: CatalogueMeal, ctx: ScoreContext, salt = 0): ScoredCandidate {
   const { prefs } = ctx
@@ -116,7 +166,7 @@ export function scoreMeal(meal: CatalogueMeal, ctx: ScoreContext, salt = 0): Sco
 
   if (prefs.cuisines.length === 0 || prefs.cuisines.includes(meal.cuisine)) {
     score += prefs.cuisines.length ? 3 : 1
-    if (prefs.cuisines.length) reasons.push(`${meal.cuisine} — one of your cuisines`)
+    if (prefs.cuisines.length) reasons.push(`${meal.cuisine}, one of your cuisines`)
   }
   if (prefs.favourite_meals.some((f) => mentions(meal, f))) {
     score += 5
@@ -128,8 +178,45 @@ export function scoreMeal(meal: CatalogueMeal, ctx: ScoreContext, salt = 0): Sco
     reasons.push(`Has ${favIng.slice(0, 2).join(' & ')}`)
   }
   if (prefs.dislikes.some((d) => mentions(meal, d))) score -= 12
-  score -= Math.abs(meal.spice_level - prefs.spice_pref) * 1.2
+  score += spiceScore(meal.spice_level, prefs.spice_pref)
   score -= Math.abs(meal.richness - prefs.richness_pref) * 0.8
+
+  const goals = new Set(prefs.planning_goals ?? [])
+  const total0 = meal.prep_minutes + meal.cook_minutes
+  const main = ctx.slot === 'lunch' || ctx.slot === 'dinner'
+  const profile = mealProfile(meal)
+
+  // Breakfast: lighter, breakfast-native dishes; no soups, stews or swallows first thing.
+  if (ctx.slot === 'breakfast') {
+    if (meal.meal_types[0] === 'breakfast') score += 1
+    if (meal.calories != null && meal.calories > 650) score -= 3
+    if (profile.base === 'swallow' || profile.style === 'soup' || profile.style === 'stew' || profile.style === 'pepper_soup') score -= 6
+  }
+  // Completeness: a main meal should be a meal, not a nibble.
+  if (main && meal.calories != null && meal.calories < 350) score -= 2
+
+  // Planning goals (only those with an honest, measurable effect).
+  if (goals.has('less_time') && meal.can_cook && total0 <= 30) score += 1.5
+  if (goals.has('substantial') && main && meal.calories != null && meal.calories >= 600) score += 1.5
+  if (goals.has('balanced') && meal.protein_g != null && meal.protein_g >= 15 && meal.ingredients.some((i) => i.category === 'produce' && !/onion|scotch bonnet|pepper|garlic|ginger/i.test(i.name))) {
+    score += 1.5
+    reasons.push('Protein and vegetables')
+  }
+  if (goals.has('budget') && ctx.costRange && meal.cost_currency === prefs.currency && meal.est_cost_max != null && ctx.costRange.max > ctx.costRange.min) {
+    score += 2 * (1 - (meal.est_cost_max - ctx.costRange.min) / (ctx.costRange.max - ctx.costRange.min))
+  }
+  const seenBefore = ctx.history.some((h) => h.food_item_id === meal.id)
+  if (goals.has('discover') && !seenBefore) score += prefs.cuisines.length && !prefs.cuisines.includes(meal.cuisine) ? 1.5 : 1
+  if (goals.has('routine') && seenBefore) score += 1
+
+  // Variety of the main ingredient and base across the block.
+  if (ctx.usage) {
+    const w = VARIETY_WEIGHT[prefs.variety] * (goals.has('routine') ? 0.6 : 1) * (goals.has('discover') ? 1.3 : 1)
+    if (profile.protein !== 'none') score -= 1.6 * w * (ctx.usage.protein.get(profile.protein) ?? 0)
+    if (profile.base !== 'none') score -= 1.2 * w * (ctx.usage.base.get(profile.base) ?? 0)
+  }
+  // Consecutive meals should not be near-copies of each other.
+  score -= neighbourSimilarity(meal, ctx).penalty
 
   if (meal.calories != null) {
     if (prefs.goal === 'lose' && meal.calories < 550) score += 1.5
@@ -141,7 +228,7 @@ export function scoreMeal(meal: CatalogueMeal, ctx: ScoreContext, salt = 0): Sco
   }
 
   const budget = perMealBudget(prefs, ctx.mealsPerDay)
-  if (budget != null && meal.est_cost_max != null && meal.est_cost_max <= budget) score += 1.5
+  if (budget != null && meal.cost_currency === prefs.currency && meal.est_cost_max != null && meal.est_cost_max <= budget) score += 1.5
 
   const total = meal.prep_minutes + meal.cook_minutes
   if (total <= 20) reasons.push(`Ready in about ${total} min`)
@@ -170,10 +257,104 @@ export function scoreMeal(meal: CatalogueMeal, ctx: ScoreContext, salt = 0): Sco
   return { meal, score, method, reasons: reasons.slice(0, 3) }
 }
 
-export function rankCandidates(meals: CatalogueMeal[], ctx: ScoreContext, salt = 0): ScoredCandidate[] {
+/**
+ * Rank the meals that pass the filters. `guard` (uniqueness and similarity
+ * rules) narrows the pool further, but only while something still passes: a
+ * slot is never left empty because of variety alone.
+ */
+export function rankCandidates(meals: CatalogueMeal[], ctx: ScoreContext, salt = 0, guard?: (m: CatalogueMeal) => boolean): ScoredCandidate[] {
   let pool = meals.filter((m) => exclusionReason(m, ctx) === null)
   if (pool.length === 0) pool = meals.filter((m) => exclusionReason(m, { ...ctx, relax: true }) === null)
-  return pool.map((m) => scoreMeal(m, ctx, salt)).sort((a, b) => b.score - a.score)
+  if (guard) {
+    const varied = pool.filter(guard)
+    if (varied.length) pool = varied
+  }
+  let costRange = ctx.costRange
+  if (costRange === undefined && ctx.prefs.planning_goals?.includes('budget')) {
+    const costs = pool.filter((m) => m.cost_currency === ctx.prefs.currency && m.est_cost_max != null).map((m) => m.est_cost_max!)
+    costRange = costs.length ? { min: Math.min(...costs), max: Math.max(...costs) } : null
+  }
+  return pool.map((m) => scoreMeal(m, { ...ctx, costRange }, salt)).sort((a, b) => b.score - a.score)
+}
+
+export interface VarietyOptions {
+  leftovers_ok: boolean
+  similarity?: SimilarityThresholds
+}
+
+type Placed = { date: ISODate; slot: MealSlot; food_item_id: string | null }
+
+/**
+ * May `meal` go in (date, slot) given what is already placed? Same recipe
+ * twice in a block is refused (except as next-day leftovers for lunch or
+ * dinner when the person allows leftovers), and so is a near-copy on the same
+ * or the next day.
+ */
+export function fitsVariety(meal: CatalogueMeal, at: { date: ISODate; slot: MealSlot }, placed: Placed[], lookup: Map<string, CatalogueMeal>, opts: VarietyOptions): boolean {
+  const t = opts.similarity ?? DEFAULT_SIMILARITY
+  const main = at.slot === 'lunch' || at.slot === 'dinner'
+  for (const p of placed) {
+    if (!p.food_item_id || (p.date === at.date && p.slot === at.slot)) continue
+    const gap = Math.abs(diffDays(p.date, at.date))
+    if (p.food_item_id === meal.id) {
+      if (opts.leftovers_ok && main && gap === 1 && (p.slot === 'lunch' || p.slot === 'dinner')) continue
+      return false
+    }
+    if (gap > 1) continue
+    const other = lookup.get(p.food_item_id)
+    if (other && mealSimilarity(meal, other) >= t.strong) return false
+  }
+  return true
+}
+
+export interface PlanIssue {
+  kind: 'duplicate' | 'similar' | 'incomplete'
+  date: ISODate
+  slot: MealSlot
+  food_item_id: string
+  other?: string
+}
+
+/** Check a whole block. Bounded: O(n²) over the block's own slots, no search. */
+export function validatePlan(placed: Placed[], lookup: Map<string, CatalogueMeal>, opts: VarietyOptions): PlanIssue[] {
+  const issues: PlanIssue[] = []
+  const sorted = [...placed].filter((p) => p.food_item_id).sort(bySlotTime)
+  for (let i = 0; i < sorted.length; i++) {
+    const p = sorted[i]!
+    const meal = lookup.get(p.food_item_id!)
+    if (!meal) continue
+    if ((p.slot === 'lunch' || p.slot === 'dinner') && isSnackOnly(meal)) issues.push({ kind: 'incomplete', date: p.date, slot: p.slot, food_item_id: meal.id })
+    const before = sorted.slice(0, i)
+    if (fitsVariety(meal, p, before, lookup, opts)) continue
+    const dup = before.find((b) => b.food_item_id === meal.id)
+    issues.push(dup ? { kind: 'duplicate', date: p.date, slot: p.slot, food_item_id: meal.id, other: dup.food_item_id! } : { kind: 'similar', date: p.date, slot: p.slot, food_item_id: meal.id, other: before.find((b) => Math.abs(diffDays(b.date, p.date)) <= 1 && lookup.get(b.food_item_id!) && mealSimilarity(meal, lookup.get(b.food_item_id!)!) >= (opts.similarity ?? DEFAULT_SIMILARITY).strong)?.food_item_id ?? undefined })
+  }
+  return issues
+}
+
+/**
+ * One bounded repair pass over selections (for example after an AI re-rank,
+ * which picks each slot independently): any pick that breaks the variety rules
+ * is swapped for the first shortlist alternative that doesn't. Kept and locked
+ * meals are never changed. Returns how many picks were changed.
+ */
+export function enforceVariety(selections: PlannedSelection[], keep: Placed[], lookup: Map<string, CatalogueMeal>, opts: VarietyOptions): number {
+  const ordered = [...selections].sort(bySlotTime)
+  const placed: Placed[] = [...keep]
+  let changed = 0
+  for (const s of ordered) {
+    const current = lookup.get(s.food_item_id)
+    if (current && !fitsVariety(current, s, placed, lookup, opts)) {
+      const alt = s.shortlist.map((id) => lookup.get(id)).find((m) => m && m.id !== s.food_item_id && fitsVariety(m, s, placed, lookup, opts))
+      if (alt) {
+        s.food_item_id = alt.id
+        s.reasons = ['Adds variety to your week']
+        changed++
+      }
+    }
+    placed.push({ date: s.date, slot: s.slot, food_item_id: s.food_item_id })
+  }
+  return changed
 }
 
 export function seededRng(seed: string): () => number {
@@ -215,23 +396,49 @@ export interface GenerateInput {
   kitchenNames?: string[]
   seed: string
   shortlistSize?: number
+  /** override the similarity thresholds (defaults: strong 0.75, moderate 0.5) */
+  similarity?: SimilarityThresholds
 }
 
-/** Fill every requested slot. Slots with nothing suitable are returned in `unfilled`. */
+const SLOT_ORDER: Record<MealSlot, number> = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 }
+const bySlotTime = (a: PlanSlotRequest, b: PlanSlotRequest) => (a.date === b.date ? SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot] : a.date < b.date ? -1 : 1)
+
+/**
+ * Fill every requested slot. Slots with nothing suitable are returned in
+ * `unfilled`. The block has no repeated recipes (bar allowed leftovers), no
+ * near-identical meals on the same or consecutive days, and spreads the main
+ * protein and base across the week.
+ */
 export function generateSelections(input: GenerateInput): { selections: PlannedSelection[]; unfilled: PlanSlotRequest[] } {
   const rng = seededRng(input.seed)
+  const lookup = new Map(input.meals.map((m) => [m.id, m]))
   const history: HistoryItem[] = [
     ...input.history,
     ...input.keep.filter((k) => k.food_item_id).map((k) => ({ food_item_id: k.food_item_id!, date: k.date })),
   ]
+  const placed: Placed[] = input.keep.map((k) => ({ date: k.date, slot: k.slot, food_item_id: k.food_item_id }))
+  const usage = { protein: new Map<string, number>(), base: new Map<string, number>() }
+  const count = (m: CatalogueMeal | undefined) => {
+    if (!m) return
+    const p = mealProfile(m)
+    usage.protein.set(p.protein, (usage.protein.get(p.protein) ?? 0) + 1)
+    usage.base.set(p.base, (usage.base.get(p.base) ?? 0) + 1)
+  }
+  for (const k of input.keep) if (k.food_item_id) count(lookup.get(k.food_item_id))
+  const opts: VarietyOptions = { leftovers_ok: input.prefs.leftovers_ok, similarity: input.similarity }
   const keepSet = new Set(input.keep.map((k) => `${k.date}|${k.slot}`))
   const selections: PlannedSelection[] = []
   const unfilled: PlanSlotRequest[] = []
-  const ordered = [...input.slots].sort((a, b) => (a.date === b.date ? a.slot.localeCompare(b.slot) : a.date < b.date ? -1 : 1))
+  const ordered = [...input.slots].sort(bySlotTime)
   let salt = 0
   for (const req of ordered) {
     if (keepSet.has(`${req.date}|${req.slot}`)) continue
-    const ranked = rankCandidates(input.meals, { prefs: input.prefs, slot: req.slot, mealsPerDay: input.mealsPerDay, date: req.date, history, kitchenNames: input.kitchenNames, rng }, salt++)
+    const ranked = rankCandidates(
+      input.meals,
+      { prefs: input.prefs, slot: req.slot, mealsPerDay: input.mealsPerDay, date: req.date, history, kitchenNames: input.kitchenNames, rng, lookup, similarity: input.similarity, usage },
+      salt++,
+      (m) => fitsVariety(m, req, placed, lookup, opts),
+    )
     if (ranked.length === 0) {
       unfilled.push(req)
       continue
@@ -245,6 +452,8 @@ export function generateSelections(input: GenerateInput): { selections: PlannedS
       shortlist: ranked.slice(0, input.shortlistSize ?? 6).map((r) => r.meal.id),
     })
     history.push({ food_item_id: pick.meal.id, date: req.date })
+    placed.push({ ...req, food_item_id: pick.meal.id })
+    count(pick.meal)
   }
   return { selections, unfilled }
 }

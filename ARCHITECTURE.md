@@ -167,3 +167,23 @@ Device access is isolated in `src/platform/*` (camera, notifications, haptics). 
 - `render.ts` draws a dedicated composition with Canvas 2D (never a screenshot): warm header with up to three of the plan's photos (or the designed plate fallback), day cards with 88 px thumbnails. Fonts and every image are loaded first (CORS-safe; resized → original → bundled → fallback). PDF: A4 pages at ~300 dpi, days never split, small header + “Page n of m” footer on every page. PNG: one tall image (≤ 7 days and a readable height per image, otherwise numbered parts), scaled to stay under mobile canvas limits.
 - `pdf.ts` is a ~100-line PDF 1.4 writer (JPEG pages, UTF-16 metadata, exact xref) — no dependency. Limitation: PDF text is rendered, not selectable.
 - `share.ts`: Web Share API with files where `navigator.canShare({ files })`; a cancelled share does nothing; otherwise download with a clear message. Filenames: `DISH-Meal-Plan-YYYY-MM-DD[_to_YYYY-MM-DD][-part-n-of-m].png|pdf`.
+
+## Onboarding, profile card and first plan
+Flow: Welcome → Sign up → Check email (the "I've confirmed my email" button asks the auth server, it never assumes) → Sign in → Onboarding → Profile card → First plan.
+Onboarding steps (`src/features/onboarding/`): name (underlined field) · country and currency · meal-planning goals (multi, optional) · cuisines (multi or "Open to anything") · allergies and restrictions (four collapsible categories; None / Not sure / Prefer not to specify) · taste (five spice levels) · cooking · budget · planning · "Does this look right?" profile card with per-section Edit and "Back to my profile".
+"Looks good, plan my meals" saves and opens `/plan/first` (`FirstPlan.tsx`), which reuses an existing active plan, fills a created-but-empty one, or creates one week; retries never create a duplicate. The Plan screen then shows an optional three-tip tour (`PlanWalkthrough.tsx`, dismissal kept per user in localStorage).
+The calorie estimate moved out of onboarding into Profile → Goals & targets (optional).
+
+## Countries and currencies
+`scripts/build-geo.mjs` compiles `world-countries` (ISO 3166-1) and `currency-codes` (ISO 4217, legal tender only) into `src/data/geo/*.json`; currency names come from CLDR via `Intl.DisplayNames`. `src/lib/geo.ts` exposes search, `suggestedCurrency(country)` (first listed currency, USD fallback) and a locale-based country guess. Choosing a country suggests a currency unless the person picked one by hand (`profiles.currency_source = 'manual'`); multi-currency countries show their currencies as chips. All money goes through `formatMoney` (Intl). Catalogue estimates carry their own currency (`est_cost_currency`) and are never converted; budgets only compare same-currency figures.
+
+## Planner uniqueness and variety (`_shared/domain/similarity.ts`, `planner.ts`)
+Each meal gets a profile derived from its own name and ingredients: base, main protein, cooking style, sauce, and distinctive ingredients. `mealSimilarity` = 0.25 base + 0.25 protein + 0.15 style + 0.10 sauce + 0.25 × ingredient Jaccard. Thresholds are configurable (`similarity` on `generateSelections`; defaults strong 0.75, moderate 0.5).
+Rules inside a plan block: no recipe twice (except next-day lunch/dinner leftovers when allowed); nothing strongly similar on the same or the next day; moderate similarity and repeated proteins/bases are scored down (weighted by the variety setting); breakfast favours breakfast dishes and avoids soups, stews and swallows; snacks never fill lunch or dinner. Variety rules narrow the pool only while something still fits, so they never empty a slot, and they never relax allergies or diet. After an AI re-rank, `enforceVariety` runs one bounded repair pass from each slot's shortlist; `validatePlan` reports anything left.
+Planning goals that change scoring: less time, substantial, balanced, budget (same-currency only), discover, routine. The others are recorded but deliberately have no scoring effect.
+
+## Celebrations
+`src/gamification/Celebrations.tsx` queues server-recorded achievements (`celebrated_at` makes each show once on any device) and level-ups, one at a time, never over another open layer, and respects "Progress feedback". Share renders a 1080×1350 PNG with Canvas 2D (`shareCard.ts`) from real data only, shared via the Web Share API or downloaded.
+
+## Typography
+One type scale in `src/styles/index.css` (`@theme`): `text-display`, `text-title-1..3`, `text-headline`, `text-callout`, `text-footnote`, `text-caption`, `text-micro`, plus Tailwind's `text-sm`/`text-base`. DM Serif Display for display and titles, Manrope for everything else. No em dashes in UI copy.

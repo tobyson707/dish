@@ -155,7 +155,7 @@ export function ScanPage() {
             <ul className="mt-2 list-disc space-y-1 pl-5">
               <li>Your browser will ask for camera access when you tap “Take photo”. You can choose a photo from your library instead.</li>
               <li>The photo is stored privately in your account and sent securely for analysis.</li>
-              <li>Results are estimates — a photo can't show oil, hidden ingredients or exact portion size. You'll review everything before it's saved.</li>
+              <li>Results are estimates. A photo can't show oil, hidden ingredients or exact portion size. You'll review everything before it's saved.</li>
             </ul>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -197,26 +197,26 @@ export function ScanPage() {
               <p className="text-sm text-muted">Overall confidence: <strong className="text-ink">{result.overall_confidence}</strong>. Check and correct anything below.</p>
             </div>
           </div>
-          {result.needs_user_input && <Notice tone="warning">We're not sure about this one. Please name the food and adjust the amounts — or add it manually.</Notice>}
+          {result.needs_user_input && <Notice tone="warning">We're not sure about this one. Please name the food and adjust the amounts, or add it manually.</Notice>}
           <ul className="stagger flex flex-col gap-3">
             {items.map((it, i) => (
               <li key={i} className={cn('rounded-lg bg-elevated p-4 ring-1 ring-inset', it.include ? 'ring-line' : 'opacity-50 ring-transparent')}>
                 <div className="flex items-center justify-between gap-2">
-                  <span className={cn('rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider', it.confidence === 'low' ? 'bg-error-soft text-error' : it.confidence === 'medium' ? 'bg-accent-soft' : 'bg-surface')}>{it.confidence} confidence</span>
+                  <span className={cn('rounded-full px-2 py-0.5 text-micro font-semibold uppercase tracking-wider', it.confidence === 'low' ? 'bg-error-soft text-error' : it.confidence === 'medium' ? 'bg-accent-soft' : 'bg-surface')}>{it.confidence} confidence</span>
                   <label className="flex items-center gap-2 text-sm font-semibold">
                     <input type="checkbox" className="h-5 w-5 accent-[var(--c-ink)]" checked={it.include} onChange={(e) => upd(i, { include: e.target.checked }, false)} /> Include
                   </label>
                 </div>
                 <div className="mt-3 flex flex-col gap-3">
                   <TextField label="Food" value={it.name} onChange={(e) => upd(i, { name: e.target.value, matched_food_item_id: null })} />
-                  <p className="-mt-1 text-[13px] text-muted">Looks like: {it.portion_description}</p>
+                  <p className="-mt-1 text-footnote text-muted">Looks like: {it.portion_description}</p>
                   <Stepper label="Servings" value={it.servings_estimate} onChange={(v) => upd(i, { servings_estimate: v })} format={(v) => `×${v}`} />
                   <div className="grid grid-cols-2 gap-2">
                     {(['calories', 'protein_g', 'carbs_g', 'fat_g'] as const).map((k) => (
                       <TextField key={k} label={{ calories: 'Calories / serving', protein_g: 'Protein', carbs_g: 'Carbs', fat_g: 'Fat' }[k]} suffix={k === 'calories' ? 'kcal' : 'g'} inputMode="decimal" value={it[k] ?? ''} onChange={(e) => upd(i, { [k]: e.target.value === '' ? null : Number(e.target.value) } as Partial<EditableItem>)} />
                     ))}
                   </div>
-                  {it.possible_ingredients.length > 0 && <p className="text-[13px] text-muted">Possible ingredients: {it.possible_ingredients.join(', ')}. Not a complete list — don't rely on this for allergies.</p>}
+                  {it.possible_ingredients.length > 0 && <p className="text-footnote text-muted">Possible ingredients: {it.possible_ingredients.join(', ')}. Not a complete list, so don't rely on this for allergies.</p>}
                 </div>
               </li>
             ))}

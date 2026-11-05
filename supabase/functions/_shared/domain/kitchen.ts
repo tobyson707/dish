@@ -83,6 +83,6 @@ export function leftoverNote(cookedOn: ISODate | null, today: ISODate): string {
   const base = 'Leftovers are as you reported them. Keep cooked food chilled and reheat until piping hot.'
   if (!cookedOn) return `${base} If you're unsure how long it's been stored, it's safest not to eat it.`
   const age = diffDays(cookedOn, today)
-  if (age >= 3) return `Cooked ${age} days ago. Many food-safety guides suggest eating chilled leftovers within about 2–3 days — if in doubt, throw it out.`
+  if (age >= 3) return `Cooked ${age} days ago. Many food-safety guides suggest eating chilled leftovers within about 2–3 days. If in doubt, throw it out.`
   return `${base}`
 }

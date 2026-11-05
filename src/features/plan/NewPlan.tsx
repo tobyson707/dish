@@ -18,7 +18,7 @@ import { useSyncState } from '@/offline/useSync'
 
 const HINT: Record<PlanDuration, string> = {
   day: 'Just today (or one chosen day)',
-  week: 'Seven days — the sweet spot',
+  week: 'Seven days, the sweet spot',
   month: 'Prepared a week at a time',
   '3months': 'Prepared a week at a time',
   '6months': 'Prepared a week at a time',

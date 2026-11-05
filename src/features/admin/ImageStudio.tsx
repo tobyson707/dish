@@ -125,19 +125,19 @@ function Studio() {
               <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white/10" role="progressbar" aria-label="Generations used in the last 24 hours" aria-valuemin={0} aria-valuemax={s.daily_limit} aria-valuenow={s.used_today}>
                 <div className="h-full rounded-full bg-accent" style={{ width: `${Math.min(100, (s.used_today / Math.max(1, s.daily_limit)) * 100)}%` }} />
               </div>
-              <p className="num mt-1.5 text-[12px] text-on-glass-dark-muted">
+              <p className="num mt-1.5 text-caption text-on-glass-dark-muted">
                 {s.used_today} of {s.daily_limit} generations used in the last 24 h · room for {roomToday} more
               </p>
             </div>
             <dl className="num flex gap-5 text-center text-sm">
-              <div><dt className="text-[11px] text-on-glass-dark-muted">Queued</dt><dd className="text-xl font-semibold">{s.queued}</dd></div>
-              <div><dt className="text-[11px] text-on-glass-dark-muted">Running</dt><dd className="text-xl font-semibold">{s.running}</dd></div>
-              <div><dt className="text-[11px] text-on-glass-dark-muted">To review</dt><dd className="text-xl font-semibold">{s.awaiting_review}</dd></div>
+              <div><dt className="text-micro text-on-glass-dark-muted">Queued</dt><dd className="text-xl font-semibold">{s.queued}</dd></div>
+              <div><dt className="text-micro text-on-glass-dark-muted">Running</dt><dd className="text-xl font-semibold">{s.running}</dd></div>
+              <div><dt className="text-micro text-on-glass-dark-muted">To review</dt><dd className="text-xl font-semibold">{s.awaiting_review}</dd></div>
             </dl>
           </div>
         ) : null}
         {s?.configured && (s.queued > 0 || s.running > 0) && (
-          <button type="button" className="mt-3 text-[13px] font-semibold text-accent underline-offset-2 hover:underline" onClick={() => run({ action: 'process' }, 'Worker started.')}>
+          <button type="button" className="mt-3 text-footnote font-semibold text-accent underline-offset-2 hover:underline" onClick={() => run({ action: 'process' }, 'Worker started.')}>
             Queue looks stuck? Start the worker
           </button>
         )}
@@ -146,7 +146,7 @@ function Studio() {
       {/* Filters */}
       <div role="tablist" aria-label="Filter recipes" className="mt-6 flex flex-wrap gap-1.5">
         {FILTERS.map((f) => (
-          <button key={f.id} type="button" role="tab" aria-selected={filter === f.id} onClick={() => { setFilter(f.id); setSelected(new Set()) }} className={cn('press h-9 rounded-full px-4 text-[13px] font-semibold transition-colors', filter === f.id ? 'bg-ink text-on-ink' : 'bg-elevated text-ink-2 ring-1 ring-inset ring-line hover:text-ink')}>
+          <button key={f.id} type="button" role="tab" aria-selected={filter === f.id} onClick={() => { setFilter(f.id); setSelected(new Set()) }} className={cn('press h-9 rounded-full px-4 text-footnote font-semibold transition-colors', filter === f.id ? 'bg-ink text-on-ink' : 'bg-elevated text-ink-2 ring-1 ring-inset ring-line hover:text-ink')}>
             {f.label} <span className="num ml-1 opacity-70">{counts[f.id]}</span>
           </button>
         ))}
@@ -159,7 +159,7 @@ function Studio() {
             <input type="checkbox" className="h-4 w-4 accent-[var(--c-accent)]" checked={sel.length > 0 && sel.length === selectable.length} onChange={(e) => setSelected(new Set(e.target.checked ? selectable.map((r) => r.id) : []))} />
             Select all ({selectable.length})
           </label>
-          <div role="radiogroup" aria-label="Quality" className="flex rounded-full bg-surface p-0.5 text-[12px] font-semibold">
+          <div role="radiogroup" aria-label="Quality" className="flex rounded-full bg-surface p-0.5 text-caption font-semibold">
             {(['standard', 'featured'] as const).map((v) => (
               <button key={v} type="button" role="radio" aria-checked={variant === v} onClick={() => setVariant(v)} className={cn('h-8 rounded-full px-3 capitalize', variant === v ? 'bg-ink text-on-ink' : 'text-ink-2')}>
                 {v}
@@ -169,7 +169,7 @@ function Studio() {
           <Button size="sm" icon="sparkle" disabled={!sel.length || act.isPending} onClick={() => generate(sel, filter === 'approved' || sel.some((id) => rows.find((r) => r.id === id)?.image_path))}>
             {sel.length ? `Generate ${sel.length}` : 'Generate selected'}
           </Button>
-          {sel.length > roomToday && <span className="text-[12px] text-muted">Only {roomToday} fit in today's limit; the rest will be skipped.</span>}
+          {sel.length > roomToday && <span className="text-caption text-muted">Only {roomToday} fit in today's limit; the rest will be skipped.</span>}
         </div>
       )}
 
@@ -206,10 +206,10 @@ function Studio() {
         row={reviewing}
         onClose={() => setReviewing(null)}
         busy={act.isPending}
-        onApprove={async (qc, notes) => (await run({ action: 'approve', job_id: reviewing!.job!.id, qc, notes }, 'Approved — the photo is now live across DISH.')) && setReviewing(null)}
+        onApprove={async (qc, notes) => (await run({ action: 'approve', job_id: reviewing!.job!.id, qc, notes }, 'Approved. The photo is now live across DISH.')) && setReviewing(null)}
         onReject={async (notes, regenerate) => {
           const r = reviewing!
-          if (!(await run({ action: 'reject', job_id: r.job!.id, notes }, regenerate ? 'Rejected.' : 'Rejected — the image was deleted.'))) return
+          if (!(await run({ action: 'reject', job_id: r.job!.id, notes }, regenerate ? 'Rejected.' : 'Rejected. The image was deleted.'))) return
           setReviewing(null)
           if (regenerate) await generate([r.id], true)
         }}
@@ -227,17 +227,17 @@ function StudioRow({ row: r, selectable, selected, onSelect, busy, configured, o
       <FoodImage path={preview} name={r.name} slug={r.slug} className="h-14 w-[74px] shrink-0 rounded-[14px]" width={160} />
       <div className="min-w-0 flex-1">
         <p className="line-clamp-2 font-semibold leading-snug">{r.name}</p>
-        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-muted">
+        <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-caption text-muted">
           <span className={cn('rounded-full px-2 py-0.5 font-semibold', STATE_TONE[r.state])}>{r.state === 'progress' && job?.status === 'queued' ? 'Queued' : STATE_LABEL[r.state]}</span>
           <span>{r.cuisine} · {r.meal_types.map((m) => SLOT_LABEL[m as MealSlot] ?? m).join(', ')}</span>
           {job && r.state !== 'missing' && <span className="num">attempt {job.attempts}/{job.max_attempts}</span>}
         </p>
-        {job?.status === 'failed' && job.error && <p className="mt-1 line-clamp-2 text-[12px] text-error">{job.error}</p>}
+        {job?.status === 'failed' && job.error && <p className="mt-1 line-clamp-2 text-caption text-error">{job.error}</p>}
       </div>
       <div className="flex shrink-0 gap-1.5">
         {r.state === 'review' && <Button size="sm" variant="accent" onClick={onReview}>Review</Button>}
         {r.state === 'progress' && job?.status === 'queued' && <Button size="sm" variant="ghost" disabled={busy} onClick={onCancel}>Cancel</Button>}
-        {r.state === 'progress' && job?.status === 'running' && <span className="flex h-9 items-center gap-2 px-2 text-[12px] text-muted"><span className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent" style={{ animation: 'spin .8s linear infinite' }} /> Generating</span>}
+        {r.state === 'progress' && job?.status === 'running' && <span className="flex h-9 items-center gap-2 px-2 text-caption text-muted"><span className="h-3.5 w-3.5 rounded-full border-2 border-current border-t-transparent" style={{ animation: 'spin .8s linear infinite' }} /> Generating</span>}
         {job?.status === 'failed' && job.attempts < job.max_attempts && configured && <Button size="sm" variant="secondary" disabled={busy} onClick={onRetry}>Retry</Button>}
         {(r.state === 'missing' || r.state === 'approved' || (r.state === 'failed' && job && job.attempts >= job.max_attempts)) && configured && (
           <Button size="sm" variant={r.image_path ? 'ghost' : 'secondary'} disabled={busy} onClick={onGenerate}>
@@ -276,7 +276,7 @@ function ReviewSheet({ row, onClose, busy, onApprove, onReject }: { row: Row | n
               ].map(([label, cls, use]) => (
                 <figure key={label}>
                   <img src={src} alt="" className={cn('w-full rounded-[14px] object-cover', cls)} />
-                  <figcaption className="mt-1 text-[11px] text-muted"><span className="font-semibold text-ink">{label}</span> · {use}</figcaption>
+                  <figcaption className="mt-1 text-micro text-muted"><span className="font-semibold text-ink">{label}</span> · {use}</figcaption>
                 </figure>
               ))}
             </div>
@@ -287,14 +287,14 @@ function ReviewSheet({ row, onClose, busy, onApprove, onReject }: { row: Row | n
               Approving replaces the current photo.
             </div>
           )}
-          <dl className="num grid grid-cols-2 gap-x-4 gap-y-1 text-[12px] text-muted sm:grid-cols-4">
+          <dl className="num grid grid-cols-2 gap-x-4 gap-y-1 text-caption text-muted sm:grid-cols-4">
             <div><dt>Model</dt><dd className="text-ink">{job.model}</dd></div>
             <div><dt>Size</dt><dd className="text-ink">{job.width}×{job.height}</dd></div>
-            <div><dt>File</dt><dd className="text-ink">{job.bytes ? `${Math.round(job.bytes / 1024)} KB WebP` : '—'}</dd></div>
-            <div><dt>Took</dt><dd className="text-ink">{job.latency_ms ? `${(job.latency_ms / 1000).toFixed(1)} s` : '—'}</dd></div>
+            <div><dt>File</dt><dd className="text-ink">{job.bytes ? `${Math.round(job.bytes / 1024)} KB WebP` : '–'}</dd></div>
+            <div><dt>Took</dt><dd className="text-ink">{job.latency_ms ? `${(job.latency_ms / 1000).toFixed(1)} s` : '–'}</dd></div>
           </dl>
           {job.prompt && (
-            <details className="rounded-[16px] bg-surface p-3 text-[12px]">
+            <details className="rounded-[16px] bg-surface p-3 text-caption">
               <summary className="cursor-pointer font-semibold">Prompt ({job.prompt_version})</summary>
               <p className="mt-2 whitespace-pre-wrap text-ink-2">{job.prompt}</p>
             </details>
@@ -313,7 +313,7 @@ function ReviewSheet({ row, onClose, busy, onApprove, onReject }: { row: Row | n
             </ul>
           </fieldset>
           <TextArea label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} rows={2} />
-          {!all && <Notice>Tick every check to approve. If anything is off, reject it — you can regenerate straight away.</Notice>}
+          {!all && <Notice>Tick every check to approve. If anything is off, reject it and regenerate straight away.</Notice>}
           <div className="flex flex-wrap gap-2">
             <Button icon="check" disabled={!all || busy} onClick={() => onApprove(Object.fromEntries(FOOD_PHOTO_QC.map((q) => [q.id, true])) as Record<FoodPhotoQcId, true>, notes || undefined)}>
               Approve and publish

@@ -9,9 +9,9 @@ export function ProvenanceBadge({ source, isEstimate, className }: { source: Nut
   const label = verified ? 'Verified' : s === 'user' ? 'Your values' : s === 'ai_estimate' ? 'AI estimate' : s === 'imported' ? 'Imported' : 'Estimate'
   return (
     <span
-      title={`${NUTRITION_SOURCE_LABEL[s]}${verified ? '' : ' — approximate'}`}
+      title={`${NUTRITION_SOURCE_LABEL[s]}${verified ? '' : ' (approximate)'}`}
       className={cn(
-        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider',
+        'inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-micro font-semibold uppercase tracking-wider',
         verified ? 'bg-success/15 text-success' : s === 'ai_estimate' ? 'bg-accent-soft text-ink' : 'bg-surface text-muted ring-1 ring-inset ring-line',
         className,
       )}

@@ -45,8 +45,8 @@ export function AchievementGrid({ defs, unlocked }: { defs: AchievementDef[]; un
               <button type="button" onClick={() => setOpen(d)} className={cn('press flex h-full w-full flex-col items-center gap-2 rounded-lg px-3 py-4 text-center', at ? 'bg-elevated' : 'bg-surface')} aria-label={`${d.name}, ${at ? 'unlocked' : 'locked'}. ${at ? d.description : d.requirement}`}>
                 <AchievementBadge def={d} unlockedAt={at} />
                 <span className={cn('text-sm font-bold leading-tight', !at && 'text-ink-2')}>{d.name}</span>
-                <span className="text-[12px] leading-snug text-muted">{at ? d.description : d.requirement}</span>
-                <span className={cn('mt-auto text-[11px] font-semibold uppercase tracking-wider', at ? 'text-ink' : 'text-muted')}>{at ? `Unlocked ${formatDate(at)}` : 'Locked'}</span>
+                <span className="text-caption leading-snug text-muted">{at ? d.description : d.requirement}</span>
+                <span className={cn('mt-auto text-micro font-semibold uppercase tracking-wider', at ? 'text-ink' : 'text-muted')}>{at ? `Unlocked ${formatDate(at)}` : 'Locked'}</span>
               </button>
             </li>
           )

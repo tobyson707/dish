@@ -109,6 +109,8 @@ export interface ManualMealInput {
   carbs_g: number | null
   fat_g: number | null
   est_cost: number | null
+  /** ISO 4217 code the estimate is in (catalogue estimates are NGN) */
+  est_cost_currency?: string | null
   method: 'cook' | 'buy'
   food_item_id?: string | null
   nutrition_source?: PlannedMeal['nutrition_source']
@@ -134,6 +136,7 @@ export function useCreatePlannedMeal() {
         carbs_g: m.carbs_g,
         fat_g: m.fat_g,
         est_cost: m.est_cost,
+        est_cost_currency: m.est_cost == null ? null : (m.est_cost_currency ?? null),
         method: m.method,
         food_item_id: m.food_item_id ?? null,
         nutrition_source: m.nutrition_source ?? (m.calories != null ? 'user' : null),

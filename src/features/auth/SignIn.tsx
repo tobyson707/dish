@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { env } from '@/lib/env'
 import { friendlyError } from '@/lib/errors'
 import { Button } from '@/components/ui/Button'
-import { TextField } from '@/components/ui/Field'
+import { PasswordField, TextField } from '@/components/ui/Field'
 import { Notice } from '@/components/ui/States'
 import { AuthLayout, GoogleButton, redirectUrl } from './AuthLayout'
 import { emailSchema, fieldErrors } from './schemas'
@@ -15,7 +15,8 @@ const Schema = z.object({ email: emailSchema, password: z.string().min(1, 'Enter
 export function SignIn() {
   const nav = useNavigate()
   const loc = useLocation()
-  const [form, setForm] = useState({ email: '', password: '' })
+  const fromCheck = loc.state as { email?: string; verifyCheck?: boolean } | null
+  const [form, setForm] = useState({ email: fromCheck?.email ?? '', password: '' })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -49,6 +50,7 @@ export function SignIn() {
   return (
     <AuthLayout title="Welcome back." subtitle="Sign in to see what's on the menu." footer={<>New to DISH? <Link to="/sign-up" className="font-semibold text-ink underline">Create an account</Link></>}>
       <form onSubmit={submit} noValidate className="flex flex-col gap-4">
+        {fromCheck?.verifyCheck && !formError && <Notice>Sign in to finish. If your email isn't confirmed yet, we'll tell you and you can resend the link.</Notice>}
         {formError && (
           <Notice tone="error">
             {formError}
@@ -63,7 +65,7 @@ export function SignIn() {
           </Notice>
         )}
         <TextField label="Email" type="email" autoComplete="email" inputMode="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} error={errors.email} />
-        <TextField label="Password" type="password" autoComplete="current-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} error={errors.password} />
+        <PasswordField label="Password" autoComplete="current-password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} error={errors.password} />
         <Link to="/forgot-password" className="self-end text-sm font-semibold text-ink-2 underline-offset-2 hover:underline">
           Forgot password?
         </Link>

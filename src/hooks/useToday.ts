@@ -1,3 +1,4 @@
+import { DEFAULT_CURRENCY } from '@/lib/geo'
 import { useEffect, useState } from 'react'
 import { todayInTimeZone } from '@domain/dates.ts'
 import { useProfile } from '@/data/profile'
@@ -20,5 +21,5 @@ export function useToday(): string {
 }
 
 export function useCurrency(): string {
-  return useProfile().data?.currency ?? 'NGN'
+  return useProfile().data?.currency ?? DEFAULT_CURRENCY
 }

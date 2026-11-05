@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { env } from '@/lib/env'
 import { friendlyError } from '@/lib/errors'
 import { Button } from '@/components/ui/Button'
-import { TextField } from '@/components/ui/Field'
+import { PasswordField, TextField } from '@/components/ui/Field'
 import { Notice } from '@/components/ui/States'
 import { AuthLayout, GoogleButton, redirectUrl } from './AuthLayout'
 import { emailSchema, fieldErrors, passwordSchema } from './schemas'
@@ -48,14 +48,14 @@ export function SignUp() {
         {formError && <Notice tone="error">{formError}</Notice>}
         <TextField label="Your name" autoComplete="given-name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} />
         <TextField label="Email" type="email" autoComplete="email" inputMode="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} error={errors.email} />
-        <TextField label="Password" type="password" autoComplete="new-password" hint="At least 8 characters, with a letter and a number." value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} error={errors.password} />
+        <PasswordField label="Password" autoComplete="new-password" hint="At least 8 characters, with a letter and a number." value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} error={errors.password} />
         <label className="flex items-start gap-3 text-sm text-ink-2">
           <input type="checkbox" className="mt-0.5 h-5 w-5 accent-[var(--c-ink)]" checked={form.agree} onChange={(e) => setForm({ ...form, agree: e.target.checked })} aria-invalid={!!errors.agree || undefined} />
           <span>
             I agree to the <Link to="/terms" className="underline">Terms</Link> and <Link to="/privacy" className="underline">Privacy notice</Link>. DISH gives general food information, not medical advice.
           </span>
         </label>
-        {errors.agree && <p role="alert" className="text-[13px] font-medium text-error">{errors.agree}</p>}
+        {errors.agree && <p role="alert" className="text-footnote font-medium text-error">{errors.agree}</p>}
         <Button type="submit" size="lg" block loading={busy}>
           Create account
         </Button>

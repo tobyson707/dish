@@ -64,6 +64,21 @@ export const GOAL_LABEL: Record<Goal, string> = {
   explore: 'Explore new foods',
 }
 
+/** What the person wants from meal planning (several allowed). Only some change scoring; see planner.ts. */
+export const PLANNING_GOALS = ['easier_decisions', 'plan_ahead', 'balanced', 'regular', 'substantial', 'discover', 'less_time', 'budget', 'routine'] as const
+export type PlanningGoal = (typeof PLANNING_GOALS)[number]
+export const PLANNING_GOAL_LABEL: Record<PlanningGoal, string> = {
+  easier_decisions: 'Make everyday meal decisions easier',
+  plan_ahead: 'Plan my meals ahead',
+  balanced: 'Eat more balanced meals',
+  regular: 'Eat more regularly',
+  substantial: 'Enjoy more substantial meals',
+  discover: 'Discover new foods and cuisines',
+  less_time: 'Spend less time deciding what to eat',
+  budget: 'Manage my food budget',
+  routine: 'Keep a consistent eating routine',
+}
+
 export const COOKING_MODES = ['cook', 'buy', 'mix', 'quick'] as const
 export type CookingMode = (typeof COOKING_MODES)[number]
 
@@ -176,7 +191,7 @@ export interface PreferenceSnapshot {
   favourite_ingredients: string[]
   cuisines: string[] // empty = anything
   diet_pattern: DietPattern
-  spice_pref: number // 0..3
+  spice_pref: number // 0 no spice, 1 mild, 2 medium, 3 hot, 4 very hot
   richness_pref: number // 0..3
   cooking_mode: CookingMode
   cook_time: CookTime
@@ -184,6 +199,7 @@ export interface PreferenceSnapshot {
   budget_period: 'meal' | 'day'
   currency: string
   goal: Goal | null
+  planning_goals?: PlanningGoal[]
   variety: 'low' | 'medium' | 'high'
   leftovers_ok: boolean
 }

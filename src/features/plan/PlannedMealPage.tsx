@@ -6,7 +6,7 @@ import { formatQuantity } from '@domain/units.ts'
 import { usePlannedMeal, useSetMealStatus } from '@/data/plans'
 import { useCatalogue, toCatalogueMeal } from '@/data/catalogue'
 import { usePreferences } from '@/data/profile'
-import { useCurrency, useToday } from '@/hooks/useToday'
+import { useToday } from '@/hooks/useToday'
 import { dayLabel, formatKcal, formatMinutes, formatMoney } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { Button, ButtonLink, IconButton } from '@/components/ui/Button'
@@ -24,7 +24,6 @@ export function PlannedMealPage() {
   const catalogue = useCatalogue()
   const prefs = usePreferences()
   const today = useToday()
-  const currency = useCurrency()
   const status = useSetMealStatus()
   const toast = useToast()
   const [actions, setActions] = useState(false)
@@ -72,13 +71,13 @@ export function PlannedMealPage() {
         </div>
         <dl className="mt-3 grid grid-cols-4 gap-2 text-center">
           {[
-            ['Energy', m.calories == null ? '—' : formatKcal(Math.round(m.calories * m.portion)).replace(' kcal', '')],
-            ['Protein', m.protein_g == null ? '—' : `${Math.round(m.protein_g * m.portion)}g`],
-            ['Carbs', m.carbs_g == null ? '—' : `${Math.round(m.carbs_g * m.portion)}g`],
-            ['Fat', m.fat_g == null ? '—' : `${Math.round(m.fat_g * m.portion)}g`],
+            ['Energy', m.calories == null ? '–' : formatKcal(Math.round(m.calories * m.portion)).replace(' kcal', '')],
+            ['Protein', m.protein_g == null ? '–' : `${Math.round(m.protein_g * m.portion)}g`],
+            ['Carbs', m.carbs_g == null ? '–' : `${Math.round(m.carbs_g * m.portion)}g`],
+            ['Fat', m.fat_g == null ? '–' : `${Math.round(m.fat_g * m.portion)}g`],
           ].map(([k, v]) => (
             <div key={k}>
-              <dt className="text-[11px] font-semibold uppercase tracking-wider text-muted">{k}</dt>
+              <dt className="text-micro font-semibold uppercase tracking-wider text-muted">{k}</dt>
               <dd className="num mt-1 text-xl font-extrabold">{v}</dd>
             </div>
           ))}
@@ -89,12 +88,12 @@ export function PlannedMealPage() {
       <section className="mt-4 grid grid-cols-2 gap-2 text-sm">
         <div className="rounded-lg bg-elevated p-4">
           <p className="label-caps">Est. cost</p>
-          <p className="num mt-1 text-lg font-bold">{m.est_cost == null ? '—' : `~${formatMoney(m.est_cost * m.portion, currency)}`}</p>
-          <p className="text-xs text-muted">Rough estimate — prices vary</p>
+          <p className="num mt-1 text-lg font-bold">{m.est_cost == null ? '–' : `~${formatMoney(m.est_cost * m.portion, m.est_cost_currency ?? 'NGN')}`}</p>
+          <p className="text-xs text-muted">Rough estimate. Prices vary.</p>
         </div>
         <div className="rounded-lg bg-elevated p-4">
           <p className="label-caps">Time</p>
-          <p className="mt-1 text-lg font-bold">{food ? (m.method === 'cook' ? formatMinutes(food.prep_minutes + food.cook_minutes) : 'Ready to buy') : '—'}</p>
+          <p className="mt-1 text-lg font-bold">{food ? (m.method === 'cook' ? formatMinutes(food.prep_minutes + food.cook_minutes) : 'Ready to buy') : '–'}</p>
           {food && m.method === 'cook' && <p className="text-xs text-muted">{food.prep_minutes} min prep · {food.cook_minutes} min cook</p>}
         </div>
       </section>
@@ -104,7 +103,7 @@ export function PlannedMealPage() {
         <section className="mt-4">
           <Notice tone={food.ingredients_complete ? 'info' : 'warning'} icon="shield">
             {food.allergens.length ? <>Listed ingredients include: <strong>{food.allergens.map((a) => ALLERGEN_LABEL[a as Allergen] ?? a).join(', ')}</strong>. </> : 'No common allergens in the listed ingredients. '}
-            {food.ingredients_complete ? 'Recipes vary — always check labels and ask whoever prepares it.' : 'This meal varies a lot between cooks and vendors, so allergens cannot be ruled out.'}
+            {food.ingredients_complete ? 'Recipes vary. Always check labels and ask whoever prepares it.' : 'This meal varies a lot between cooks and vendors, so allergens cannot be ruled out.'}
           </Notice>
         </section>
       )}

@@ -54,7 +54,7 @@ export function KitchenPage() {
       ) : kitchen.isError && !kitchen.data ? (
         <ErrorState className="mt-6" message={friendlyError(kitchen.error)} onRetry={() => kitchen.refetch()} />
       ) : items.length === 0 ? (
-        <EmptyState className="mt-4" title="Your kitchen is empty" message="Add a few things you have at home — eggs, rice, plantain — and DISH will suggest what to cook." />
+        <EmptyState className="mt-4" title="Your kitchen is empty" message="Add a few things you have at home (eggs, rice, plantain) and DISH will suggest what to cook." />
       ) : (
         <>
           <Section title={`Ingredients · ${pantry.length}`}>
@@ -63,7 +63,7 @@ export function KitchenPage() {
                 <li key={i.id} className="flex items-center gap-2 py-2.5">
                   <button type="button" className="min-w-0 flex-1 text-left" onClick={() => setEditing(i)}>
                     <span className="block font-semibold">{i.name} {i.quantity != null && <span className="num font-normal text-muted">{formatQuantity(i.quantity, i.unit)}</span>}</span>
-                    {i.expires_on && <span className={cn('block text-[12px]', soon(i) ? 'font-semibold text-warning' : 'text-muted')}>{soon(i) ? 'Use soon · ' : ''}Best before {dayLabel(i.expires_on, today)}</span>}
+                    {i.expires_on && <span className={cn('block text-caption', soon(i) ? 'font-semibold text-warning' : 'text-muted')}>{soon(i) ? 'Use soon · ' : ''}Best before {dayLabel(i.expires_on, today)}</span>}
                   </button>
                   <Button size="sm" variant="ghost" onClick={() => { void mut.markUsed(i); toast.show(`Marked ${i.name} as used.`) }}>Used</Button>
                   <IconButton icon="trash" label={`Remove ${i.name}`} size={40} onClick={() => void mut.remove(i)} />
@@ -81,7 +81,7 @@ export function KitchenPage() {
                       <Button size="sm" variant="ghost" onClick={() => void mut.markUsed(i)}>Finished</Button>
                       <IconButton icon="trash" label={`Remove ${i.name}`} size={40} onClick={() => void mut.remove(i)} />
                     </div>
-                    <p className={cn('mt-1 text-[13px]', i.leftover_cooked_on && diffDays(i.leftover_cooked_on, today) >= 3 ? 'text-warning' : 'text-muted')}>{leftoverNote(i.leftover_cooked_on, today)}</p>
+                    <p className={cn('mt-1 text-footnote', i.leftover_cooked_on && diffDays(i.leftover_cooked_on, today) >= 3 ? 'text-warning' : 'text-muted')}>{leftoverNote(i.leftover_cooked_on, today)}</p>
                   </li>
                 ))}
               </ul>
@@ -150,7 +150,7 @@ function KitchenCard({ s }: { s: KitchenSuggestion }) {
         <div className="min-w-0">
           <Link to={`/recipes/${s.slug}`} className="text-lg font-bold leading-snug">{s.name}</Link>
           <p className={cn('text-sm font-semibold', s.can_make_now ? 'text-success' : 'text-ink-2')}>{s.can_make_now ? 'You have every listed ingredient' : `Missing ${s.missing.length} ingredient${s.missing.length > 1 ? 's' : ''}`}</p>
-          {s.uses_soon.length > 0 && <p className="text-[13px] text-warning">Uses up: {s.uses_soon.join(', ')}</p>}
+          {s.uses_soon.length > 0 && <p className="text-footnote text-warning">Uses up: {s.uses_soon.join(', ')}</p>}
         </div>
       </div>
       <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">

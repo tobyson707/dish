@@ -44,7 +44,7 @@ export function parseBody<T>(schema: { safeParse: (v: unknown) => { success: tru
   const r = schema.safeParse(body)
   if (!r.success) {
     const first = r.error.issues[0]
-    throw new HttpError(400, `Invalid request: ${first?.path.join('.') || 'body'} — ${first?.message ?? 'invalid'}`, 'validation')
+    throw new HttpError(400, `Invalid request: ${first?.path.join('.') || 'body'}: ${first?.message ?? 'invalid'}`, 'validation')
   }
   return r.data
 }
