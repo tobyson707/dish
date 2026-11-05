@@ -91,6 +91,8 @@ See [AI_INTEGRATIONS.md](AI_INTEGRATIONS.md). In short: set `AI_PROVIDER=anthrop
 - plan generation, replacements, Surprise Me and kitchen suggestions all use the built-in deterministic planner;
 - photo scanning shows an honest "not set up" state, and points you to manual entry.
 
+**Catalogue photography.** Set `IMAGE_PROVIDER=openai` and `IMAGE_API_KEY`, add yourself to `public.app_admins`, then open **Profile → Image studio** to generate, review and publish recipe photos. See [AI_INTEGRATIONS.md → Catalogue food photography](AI_INTEGRATIONS.md#catalogue-food-photography-image-generation).
+
 ## Deploy the frontend
 
 The app is a static build (`npm run build` → `dist/`). `vercel.json` configures SPA rewrites, cache headers for the service worker and hashed assets, and basic security headers. Set `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (and optionally `VITE_ENABLE_GOOGLE_AUTH`, `VITE_VAPID_PUBLIC_KEY`) in the hosting provider's environment. Any static host that can rewrite unknown paths to `/index.html` works.

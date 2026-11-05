@@ -105,7 +105,9 @@ up() {
 
   echo "▸ functions"
   local envfile=$STATE/functions.env
-  { echo "SUPABASE_URL=http://127.0.0.1:54321"; echo "SUPABASE_ANON_KEY=$ANON_KEY"; echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY";
+  # IMAGE_PROVIDER=mock: catalogue image generation works locally without a key
+  # (placeholder image); supabase/functions/.env can override it.
+  { echo "SUPABASE_URL=http://127.0.0.1:54321"; echo "SUPABASE_ANON_KEY=$ANON_KEY"; echo "SUPABASE_SERVICE_ROLE_KEY=$SERVICE_ROLE_KEY"; echo "IMAGE_PROVIDER=mock";
     [[ -f $ROOT/supabase/functions/.env ]] && grep -v '^#' "$ROOT/supabase/functions/.env" || true; } > "$envfile"
   # Optional (LOCAL_NPM_MIRROR=1): for sandboxes whose TLS-intercepting proxy Deno
   # can't trust, serve npm packages through a local Node mirror instead.

@@ -65,7 +65,7 @@ export function RecipeDetail() {
   return (
     <div>
       <PageHeader back eyebrow={`${food.cuisine}${food.is_sample ? ' · sample recipe' : ''}`} title={food.name} actions={<IconButton icon="heart" label={isFav ? 'Remove from favourites' : 'Save to favourites'} className={isFav ? 'text-accent' : undefined} onClick={() => fav.mutate({ foodItemId: food.id, on: !isFav })} />} />
-      <FoodImage path={food.image_path} alt={food.image_alt} name={food.name} className="aspect-[4/3] w-full rounded-xl" width={960} priority />
+      <FoodImage path={food.image_path} alt={food.image_alt} name={food.name} className="aspect-[4/5] max-h-[62dvh] w-full rounded-xl sm:aspect-[16/10] sm:max-h-none" width={960} priority />
       {food.image_credit && <p className="mt-1 text-[11px] text-muted">Photo: {food.image_credit}</p>}
       <p className="mt-4 text-ink-2">{food.description}</p>
       <div className="mt-4 flex flex-wrap gap-2">

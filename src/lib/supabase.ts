@@ -22,8 +22,15 @@ export const supabase: SupabaseClient = createClient(
 export const MEAL_IMAGE_BUCKET = 'meal-images'
 export const SCAN_BUCKET = 'food-scans'
 
+/** Resized catalogue image (Supabase image transformations; persistent, CDN-cached URL). */
 export function mealImageUrl(path: string | null | undefined, width = 640): string | null {
   if (!path || !isSupabaseConfigured) return null
   const { data } = supabase.storage.from(MEAL_IMAGE_BUCKET).getPublicUrl(path, { transform: { width, quality: 72 } })
   return data.publicUrl
+}
+
+/** The stored file itself — used when image transformations aren't available on the project. */
+export function mealImageOriginalUrl(path: string | null | undefined): string | null {
+  if (!path || !isSupabaseConfigured) return null
+  return supabase.storage.from(MEAL_IMAGE_BUCKET).getPublicUrl(path).data.publicUrl
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { cn } from '@/lib/cn'
-import { mealImageUrl } from '@/lib/supabase'
+import { mealImageOriginalUrl, mealImageUrl } from '@/lib/supabase'
 import { photoFor } from '@/data/mealPhotos'
 
 function initialsOf(name: string) {
@@ -18,12 +18,36 @@ function toneIndex(name: string, n: number) {
   return h % n
 }
 
-/** Resolve the best available image: Supabase storage path, then bundled licensed photo. */
-export function resolveMealImage(path: string | null | undefined, name: string, slug?: string | null, width = 640): { src: string; alt: string; credit?: string } | null {
-  const remote = mealImageUrl(path, width)
-  if (remote) return { src: remote, alt: name }
+type Resolved = { src: string; srcSet?: string; alt: string; credit?: string }
+
+/**
+ * Image sources in order of preference: the approved catalogue photo in
+ * Supabase Storage (resized, with a 2× source), the stored original (when
+ * resizing isn't available on the project), then a bundled licensed photo.
+ */
+export function mealImageCandidates(path: string | null | undefined, name: string, slug?: string | null, width = 640): Resolved[] {
+  const out: Resolved[] = []
+  const resized = mealImageUrl(path, width)
+  if (resized) out.push({ src: resized, srcSet: `${resized} 1x, ${mealImageUrl(path, Math.min(width * 2, 1536))} 2x`, alt: name })
+  const original = mealImageOriginalUrl(path)
+  if (original) out.push({ src: original, alt: name })
   const local = photoFor(slug, name)
-  return local ? { src: local.src, alt: local.alt, credit: local.credit } : null
+  if (local) out.push({ src: local.src, alt: local.alt, credit: local.credit })
+  return out
+}
+
+/** Best available image (first candidate). */
+export function resolveMealImage(path: string | null | undefined, name: string, slug?: string | null, width = 640): Resolved | null {
+  return mealImageCandidates(path, name, slug, width)[0] ?? null
+}
+
+/** Moves to the next candidate when one fails to load; resets when the path changes. */
+function useCandidate(path: string | null | undefined, name: string, slug: string | null | undefined, width: number) {
+  const [state, setState] = useState({ key: `${path}|${slug}`, stage: 0 })
+  const key = `${path}|${slug}`
+  const stage = state.key === key ? state.stage : 0
+  const img = mealImageCandidates(path, name, slug, width)[stage] ?? null
+  return { img, next: () => setState({ key, stage: stage + 1 }) }
 }
 
 /**
@@ -31,13 +55,12 @@ export function resolveMealImage(path: string | null | undefined, name: string, 
  * refined fallback when no licensed photo exists yet. Photos are never filtered.
  */
 export function FoodImage({ path, alt, name, slug, shape = 'rounded', className, width = 640, priority }: { path: string | null | undefined; alt?: string | null; name: string; slug?: string | null; shape?: 'circle' | 'rounded' | 'square'; className?: string; width?: number; priority?: boolean }) {
-  const [failed, setFailed] = useState(false)
-  const img = !failed ? resolveMealImage(path, name, slug, width) : null
+  const { img, next } = useCandidate(path, name, slug, width)
   const radius = shape === 'circle' ? 'rounded-full' : shape === 'rounded' ? 'rounded-lg' : 'rounded-none'
   return (
     <div className={cn('relative overflow-hidden bg-surface', radius, className)}>
       {img ? (
-        <img src={img.src} alt={alt || img.alt} loading={priority ? 'eager' : 'lazy'} decoding="async" onError={() => setFailed(true)} className="absolute inset-0 h-full w-full object-cover" />
+        <img key={img.src} src={img.src} srcSet={img.srcSet} alt={alt || img.alt} loading={priority ? 'eager' : 'lazy'} decoding="async" onError={next} className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <Fallback name={name} />
       )}
@@ -71,17 +94,18 @@ function Fallback({ name }: { name: string }) {
  * carries the dish name so the composition stays intact.
  */
 export function HeroFood({ path, name, slug, className }: { path?: string | null; name: string; slug?: string | null; className?: string }) {
-  const [failed, setFailed] = useState(false)
-  const img = !failed ? resolveMealImage(path, name, slug, 1100) : null
+  const { img, next } = useCandidate(path, name, slug, 1100)
   const [a, b] = TONES[toneIndex(name, TONES.length)]!
   if (img)
     return (
       <div className={cn('relative', className)}>
         <img
+          key={img.src}
           src={img.src}
+          srcSet={img.srcSet}
           alt={img.alt}
           decoding="async"
-          onError={() => setFailed(true)}
+          onError={next}
           className="h-full w-full rounded-full object-cover"
           style={{ maskImage: 'radial-gradient(closest-side, #000 78%, transparent 100%)', WebkitMaskImage: 'radial-gradient(closest-side, #000 78%, transparent 100%)' }}
         />

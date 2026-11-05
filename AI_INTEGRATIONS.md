@@ -72,3 +72,45 @@ Prompts and schemas live in `supabase/functions/_shared/ai/prompts.ts`. Each has
 ## Verification status
 
 The Claude adapter is written against the installed SDK's types and compiles in the Edge Runtime. It was **not called live** in this environment because no API key was available. The fallback paths and the unavailable states were exercised end-to-end. Before launch, set the secrets and run a few plans and real food photos through it.
+
+## Catalogue food photography (image generation)
+
+Generated once per recipe, reviewed by a person, stored in Supabase Storage and reused everywhere (`food_items.image_path` is what every screen already reads). Opening a recipe never triggers generation.
+
+**Pieces**
+- `supabase/functions/food-images` — admin-only Edge Function: `status`, `enqueue` (≤ 50 recipes, `standard`/`featured`, explicit `regenerate`), `process`, `approve` (requires every QC item), `reject`, `retry`, `cancel`.
+- `_shared/images/provider.ts` — provider interface + adapters (`openai`, `mock`). Add a vendor = one adapter + a case in `getImageProvider()`.
+- `_shared/images/worker.ts` — background worker (`EdgeRuntime.waitUntil`): claims jobs with `claim_food_image_job()` (`FOR UPDATE SKIP LOCKED`), builds the prompt, generates, validates (format, ≥ 512 px, exact aspect, ≤ 4 MB), uploads `meal-images/generated/<slug>/<job>.webp`, leaves the job awaiting review. **Never auto-approves.**
+- `_shared/domain/foodPhoto.ts` — the DISH art direction, avoid-list, prompt builder (from name, description, cuisine, meal type and the recipe's visible ingredients, with West African serving notes) and the reviewer checklist. Version: `dish-photo-v1` (stored on each job and on the published recipe).
+- `src/features/admin/ImageStudio.tsx` (`/admin/images`) — filters (no image / needs review / in progress / failed / approved), batch select, standard vs featured, review sheet with crop previews (4:3, 1:1, 4:5), prompt, metadata and QC checklist.
+- Migration `20261106000100_food_images.sql` — `app_admins`, `is_admin()`, image metadata columns on `food_items`, `food_image_jobs` (queue + review history, admin-read-only RLS, no client writes).
+
+**Formats.** One 1536×1024 landscape master per recipe, composed with the plate centred and generous margins, so it crops cleanly with `object-fit: cover` to every container (4:3 cards and Home, 1:1 thumbnails, 4:5 recipe detail on phones). Images are WebP (`output_format: webp`, compression 82). Screens request resized versions through Supabase image transformations with a 2× source and fall back to the stored original, then to a bundled licensed photo, then to the designed placeholder.
+
+**Cost control.** `IMAGE_DAILY_LIMIT` (default 40 per rolling 24 h, counted per attempt) is enforced at enqueue and in the worker; at most one active job per recipe (unique index); approved images are never regenerated without an explicit “Regenerate”; retries capped at 3 attempts per job; rate-limit errors stop the job instead of hammering the API; nothing regenerates when servings or other recipe details change.
+
+### Image secrets (Supabase → Edge Functions → Secrets)
+
+| Secret | Default | Purpose |
+| --- | --- | --- |
+| `IMAGE_PROVIDER` | — (off) | `openai` (or `mock` for local placeholders) |
+| `IMAGE_API_KEY` | falls back to `OPENAI_API_KEY` | OpenAI API key — server only |
+| `IMAGE_MODEL_STANDARD` | `gpt-image-2.5-flare` | routine catalogue images (`quality: medium`) |
+| `IMAGE_MODEL_FEATURED` | `gpt-image-2.5-sunburst` | hero images (`quality: high`) |
+| `IMAGE_DAILY_LIMIT` | `40` | max generations per rolling 24 h |
+
+The model IDs are the ones requested for this feature; they could not be checked against OpenAI's documentation from the build environment. If OpenAI rejects a model name, the job fails with the provider's message in the studio — set `IMAGE_MODEL_*` to the exact IDs listed in your OpenAI account.
+
+### Make someone an admin
+
+Run in the Supabase SQL editor (admins can't be added from the app):
+
+```sql
+insert into public.app_admins (user_id, note)
+select id, 'catalogue images' from auth.users where email = 'you@example.com'
+on conflict do nothing;
+```
+
+The **Image studio** entry then appears on that account's Profile.
+
+**Verification status.** Workflow, security (RLS, admin checks, validation), duplicate prevention, review/approval and publishing are covered by integration and end-to-end tests using the `mock` provider (the local stack sets `IMAGE_PROVIDER=mock`). The OpenAI adapter itself has not been exercised against the live API from this environment.

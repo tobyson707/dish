@@ -11,6 +11,7 @@ import { InstallCard } from './InstallCard'
 import { MyProgress } from '@/components/gamification/MyProgress'
 import { AppearanceSheet } from '@/components/canvas/AppearanceSheet'
 import { useTheme } from '@/theme/ThemeProvider'
+import { useIsAdmin } from '@/data/foodImages'
 
 export function ProfilePage() {
   const profile = useProfile()
@@ -20,6 +21,7 @@ export function ProfilePage() {
   const p = profile.data
   const { preference } = useTheme()
   const [appearanceOpen, setAppearanceOpen] = useState(false)
+  const isAdmin = useIsAdmin()
   return (
     <div>
       <PageHeader eyebrow={user?.email ?? ''} title={p?.display_name || 'Profile'} large />
@@ -51,6 +53,7 @@ export function ProfilePage() {
           </li>
           <Item to="/profile/settings" icon="settings" title="Settings" sub="Appearance and progress feedback" />
           <Item to="/profile/account" icon="shield" title="Account & privacy" sub="Password, export, delete account" />
+          {isAdmin.data && <Item to="/admin/images" icon="image" title="Image studio" sub="DISH team · generate and review catalogue photos" />}
         </ul>
       </nav>
       <div className="mt-4"><InstallCard /></div>

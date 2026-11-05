@@ -28,6 +28,7 @@ const ScanPage = L(() => import('@/features/scanner/ScanPage'), 'ScanPage')
 const Discover = L(() => import('@/features/discover/Discover'), 'Discover')
 const Surprise = L(() => import('@/features/discover/Surprise'), 'Surprise')
 const RecipeDetail = L(() => import('@/features/recipes/RecipeDetail'), 'RecipeDetail')
+const ImageStudio = L(() => import('@/features/admin/ImageStudio'), 'ImageStudio')
 const KitchenPage = L(() => import('@/features/kitchen/KitchenPage'), 'KitchenPage')
 const BudgetPage = L(() => import('@/features/budget/BudgetPage'), 'BudgetPage')
 const ProfilePage = L(() => import('@/features/profile/ProfilePage'), 'ProfilePage')
@@ -95,6 +96,7 @@ const router = createBrowserRouter([
       { path: '/profile/settings', element: <SettingsPage /> },
       { path: '/profile/sync', element: <SyncPage /> },
       { path: '/history', element: <HistoryPage /> },
+      { path: '/admin/images', element: <ImageStudio /> },
       { path: '*', element: <NotFound /> },
     ],
   },

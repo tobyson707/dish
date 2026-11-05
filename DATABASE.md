@@ -85,3 +85,11 @@ The starter catalogue is **sample / reference data**:
 **Days and time zones.** Local dates use `profiles.timezone`. Offline action timestamps are trusted only within the last 3 days and never in the future, so replaying old events can't create streak days.
 
 **Appearance.** `profiles.theme_preference` (`light` / `dark` / `system`, default `system`).
+
+## Catalogue images (migration `20261106000100_food_images.sql`)
+
+- `app_admins (user_id)` — allow-list for internal tools; users can only see their own row; no client writes. `is_admin()` (SECURITY DEFINER, `search_path = ''`) is the check used by RLS, the UI and the `food-images` function.
+- `food_items` gains `image_generation_status` (`none | queued | generating | review | approved | rejected | failed`), `image_provider`, `image_model`, `image_prompt_version`, `image_generated_at`. The published image stays in the existing `image_path` / `image_alt` / `image_credit`.
+- `food_image_jobs` — queue and review history: status, variant, provider/model/prompt version, the exact prompt, size, candidate `storage_path`, bytes/width/height, attempts (max 3), error, latency, reviewer, QC checklist, notes. Unique partial index: one queued/running/awaiting-review job per recipe. RLS: admins read; nobody writes except the service role.
+- `claim_food_image_job()` (service role only) — atomically claims the next job (`FOR UPDATE SKIP LOCKED`, featured first) and requeues jobs stuck in `running` for 10+ minutes. `food_images_generated_today()` (service role only) — attempts in the last 24 h for the daily cap.
+- Re-seeding never touches image columns, so approved photos survive `seed.sql` re-runs.

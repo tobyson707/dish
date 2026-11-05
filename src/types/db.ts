@@ -123,8 +123,41 @@ export interface FoodItem {
   image_path: string | null
   image_alt: string | null
   image_credit: string | null
+  image_generation_status?: FoodImageStatus
+  image_provider?: string | null
+  image_model?: string | null
+  image_prompt_version?: string | null
+  image_generated_at?: string | null
   is_sample: boolean
   recipe?: Recipe | null
+}
+
+export type FoodImageStatus = 'none' | 'queued' | 'generating' | 'review' | 'approved' | 'rejected' | 'failed'
+export type FoodImageJobStatus = 'queued' | 'running' | 'succeeded' | 'failed' | 'approved' | 'rejected' | 'superseded' | 'cancelled'
+
+export interface FoodImageJob {
+  id: string
+  food_item_id: string
+  status: FoodImageJobStatus
+  variant: 'standard' | 'featured'
+  provider: string | null
+  model: string | null
+  prompt_version: string | null
+  prompt: string | null
+  size: string | null
+  storage_path: string | null
+  bytes: number | null
+  width: number | null
+  height: number | null
+  attempts: number
+  max_attempts: number
+  error: string | null
+  latency_ms: number | null
+  review_notes: string | null
+  created_at: string
+  started_at: string | null
+  finished_at: string | null
+  reviewed_at: string | null
 }
 
 export interface MealPlan {
