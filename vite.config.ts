@@ -65,7 +65,12 @@ export default defineConfig({
       devOptions: { enabled: false },
     }),
   ],
-  server: { fs: { allow: ['.'] } },
+  server: {
+    fs: { allow: ['.'] },
+    // Optional same-origin proxy to a local Supabase (use VITE_SUPABASE_URL=/__supabase).
+    // Not "/supabase": shared domain modules are served from /supabase/functions/… in dev.
+    proxy: { '/__supabase': { target: 'http://localhost:54321', changeOrigin: true, ws: true, rewrite: (p) => p.replace(/^\/__supabase/, '') } },
+  },
   build: { target: 'es2022', sourcemap: true },
   test: {
     environment: 'jsdom',
