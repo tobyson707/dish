@@ -7,6 +7,7 @@ import { Toggle } from '@/components/ui/Inputs'
 import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
+import { useUiSounds } from '@/lib/uiSound'
 
 const OPTIONS: { value: ThemePreference; label: string; hint: string; icon: IconName }[] = [
   { value: 'light', label: 'Light', hint: 'Always use light appearance.', icon: 'sun' },
@@ -19,6 +20,7 @@ export function SettingsPage() {
   const g = useGamification()
   const setFeedback = useSetGamificationFeedback()
   const toast = useToast()
+  const [sounds, setSounds] = useUiSounds()
   return (
     <div>
       <PageHeader back="/profile" eyebrow="Profile" title="Settings" />
@@ -64,6 +66,12 @@ export function SettingsPage() {
           />
         </div>
         <p className="mt-2 text-sm text-muted">Your XP and achievements are still recorded when feedback is off.</p>
+      </Section>
+      <Section title="Sounds">
+        <div className="rounded-lg bg-elevated px-4">
+          <Toggle label="Interface sounds" description="A quiet dial click (and a tiny vibration where supported) when you turn the category selector." checked={sounds} onChange={setSounds} />
+        </div>
+        <p className="mt-2 text-sm text-muted">Saved on this device. Everything works the same with sounds off.</p>
       </Section>
     </div>
   )

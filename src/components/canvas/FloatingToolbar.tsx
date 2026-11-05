@@ -27,8 +27,8 @@ export function FloatingToolbar({ onSettings, className }: { onSettings: () => v
       <div className="flex items-center gap-2">
         <GlassIcon icon="heart" label="Favourites" to="/history" />
         <GlassIcon icon="bell" label="Reminders" to="/profile/notifications" />
-        <Link to="/plan" className={cn(glassBtn, 'w-auto gap-2 px-4 text-sm font-semibold')}>
-          <Icon name="plan" size={18} /> Plan
+        <Link to="/plan" aria-label="Plan" className={cn(glassBtn, 'w-auto gap-2 px-3 text-sm font-semibold min-[360px]:px-4')}>
+          <Icon name="plan" size={18} /> <span className="hidden min-[360px]:inline">Plan</span>
         </Link>
       </div>
     </div>

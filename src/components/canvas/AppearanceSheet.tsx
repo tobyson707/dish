@@ -4,6 +4,7 @@ import type { ThemePreference } from '@/theme/theme'
 import { Sheet } from '@/components/ui/Sheet'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { cn } from '@/lib/cn'
+import { useUiSounds } from '@/lib/uiSound'
 
 const OPTIONS: { value: ThemePreference; label: string; hint: string; icon: IconName }[] = [
   { value: 'light', label: 'Light', hint: 'Always use the light appearance.', icon: 'sun' },
@@ -45,9 +46,32 @@ export function AppearanceSheet({ open, onClose }: { open: boolean; onClose: () 
           )
         })}
       </div>
+      <SoundRow />
       <Link to="/profile/settings" onClick={onClose} className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-on-glass-dark-muted underline-offset-2 hover:text-on-glass-dark hover:underline">
         All settings <Icon name="right" size={14} />
       </Link>
     </Sheet>
+  )
+}
+
+/** Dial sounds on/off — same persistent preference as Settings → Sounds. */
+function SoundRow() {
+  const [on, setOn] = useUiSounds()
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      onClick={() => setOn(!on)}
+      className="press mt-3 flex w-full items-center gap-4 rounded-[26px] px-5 py-3.5 text-left ring-1 ring-inset ring-white/10 transition-colors hover:bg-white/[0.06]"
+    >
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold text-on-glass-dark">Interface sounds</span>
+        <span className="block text-[13px] text-on-glass-dark-muted">A quiet click when you turn the category dial.</span>
+      </span>
+      <span aria-hidden="true" className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors duration-300', on ? 'bg-accent' : 'bg-white/15')}>
+        <span className={cn('absolute top-1 h-5 w-5 rounded-full bg-on-glass-dark shadow transition-transform duration-300 [transition-timing-function:var(--ease-spring)]', on ? 'translate-x-6' : 'translate-x-1')} />
+      </span>
+    </button>
   )
 }

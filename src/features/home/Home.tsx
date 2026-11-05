@@ -19,12 +19,12 @@ import { DateStrip, type DayState } from '@/components/ui/Calendar'
 import { useNavigate } from 'react-router'
 import { friendlyError } from '@/lib/errors'
 import { ProgressWidget } from '@/components/gamification/ProgressWidget'
-import { SLOT_LABEL, type MealSlot } from '@domain/types.ts'
+import { SLOT_LABEL } from '@domain/types.ts'
 import { HeroFood } from '@/components/ui/FoodImage'
 import { cn } from '@/lib/cn'
 import { AddMealSheet } from '@/components/meal/AddMealSheet'
 import { FloatingToolbar } from '@/components/canvas/FloatingToolbar'
-import { CategoryRail } from '@/components/canvas/CategoryRail'
+import { RotaryCategorySelector, type CategoryChange } from '@/components/canvas/RotaryCategorySelector'
 import { NextMealPanel } from '@/components/canvas/NextMealPanel'
 import { UtilityDock } from '@/components/canvas/UtilityDock'
 import { AppearanceSheet } from '@/components/canvas/AppearanceSheet'
@@ -44,7 +44,8 @@ export function Home() {
   const goal = useActiveGoal()
   const [actionsFor, setActionsFor] = useState<PlannedMeal | null>(null)
   const [category, setCategory] = useState<Category>('all')
-  const [workspaceSlot, setWorkspaceSlot] = useState<MealSlot | null>(null)
+  // single source of truth: the dial, the canvas filter and the workspace all read `category`
+  const [workspaceOpen, setWorkspaceOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [appearanceOpen, setAppearanceOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
@@ -74,12 +75,16 @@ export function Home() {
           loading={meals.isPending}
           noPlan={noPlan}
           category={category}
-          onCategory={(c) => {
-            setCategory(c)
-            if (c !== 'all') setWorkspaceSlot(c)
+          onCategory={(c: CategoryChange) => {
+            setCategory(c.category)
+            if (c.open) setWorkspaceOpen(true)
           }}
+          onOpenWorkspace={() => setWorkspaceOpen(true)}
           onSettings={() => setAppearanceOpen(true)}
-          onFind={(slot) => setWorkspaceSlot(slot)}
+          onFind={(c) => {
+            setCategory(c)
+            setWorkspaceOpen(true)
+          }}
         />
         <UtilityDock className="mt-3" onSearch={() => setSearchOpen(true)} onAdd={() => setAddOpen(true)} />
       </div>
@@ -133,7 +138,7 @@ export function Home() {
       </div>
 
       <MealActionsSheet meal={actionsFor} onClose={() => setActionsFor(null)} />
-      <CategoryWorkspace slot={workspaceSlot} open={!!workspaceSlot} onClose={() => setWorkspaceSlot(null)} />
+      <CategoryWorkspace category={category} open={workspaceOpen} onClose={() => setWorkspaceOpen(false)} onCategory={setCategory} />
       <SearchWorkspace open={searchOpen} onClose={() => setSearchOpen(false)} />
       <AppearanceSheet open={appearanceOpen} onClose={() => setAppearanceOpen(false)} />
       <AddMealSheet key={`add-${addOpen}`} open={addOpen} onClose={() => setAddOpen(false)} date={today} slot={category === 'all' ? undefined : category} planId={plan.data && today >= plan.data.start_date && today <= plan.data.end_date ? plan.data.id : null} />
@@ -146,7 +151,7 @@ export function Home() {
  * toolbar, editorial headline, featured food, right-edge category rail,
  * overlapping next-meal panel and swipeable pagination.
  */
-function HomeCanvas({ meals, loading, noPlan, category, onCategory, onSettings, onFind }: { meals: PlannedMeal[]; loading: boolean; noPlan: boolean; category: Category; onCategory: (c: Category) => void; onSettings: () => void; onFind: (slot: MealSlot) => void }) {
+function HomeCanvas({ meals, loading, noPlan, category, onCategory, onOpenWorkspace, onSettings, onFind }: { meals: PlannedMeal[]; loading: boolean; noPlan: boolean; category: Category; onCategory: (c: CategoryChange) => void; onOpenWorkspace: () => void; onSettings: () => void; onFind: (c: Category) => void }) {
   const filtered = useMemo(() => (category === 'all' ? meals : meals.filter((m) => m.slot === category)), [meals, category])
   const nextIdx = Math.max(0, filtered.findIndex((m) => m.status === 'planned'))
   const [picked, setPicked] = useState<{ key: string; idx: number } | null>(null)
@@ -199,7 +204,7 @@ function HomeCanvas({ meals, loading, noPlan, category, onCategory, onSettings, 
         </div>
       </div>
 
-      <CategoryRail value={category} onSelect={onCategory} className="absolute right-0 top-[29%] z-20 lg:top-[22%]" />
+      <RotaryCategorySelector value={category} onChange={onCategory} onActivate={onOpenWorkspace} className="absolute right-0 top-[30%] z-20 lg:top-[26%]" />
 
       <div className="absolute bottom-[42px] left-4 right-[24%] z-20 sm:left-6 sm:right-auto sm:w-[min(72%,420px)] lg:bottom-12 lg:left-8">
         {loading ? null : featured ? (
@@ -210,7 +215,7 @@ function HomeCanvas({ meals, loading, noPlan, category, onCategory, onSettings, 
           <EmptyCanvasPanel
             title={category === 'all' ? 'Nothing planned today' : `No ${categoryLabel(category).toLowerCase()} planned`}
             body="Let's find something you'll enjoy."
-            action={<button type="button" onClick={() => onFind(category === 'all' ? 'lunch' : category)} className="press inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-bold text-accent-ink">Find a meal <Icon name="right" size={16} /></button>}
+            action={<button type="button" onClick={() => onFind(category)} className="press inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-bold text-accent-ink">Find a meal <Icon name="right" size={16} /></button>}
           />
         )}
       </div>

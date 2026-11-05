@@ -15,9 +15,26 @@ test('home canvas: rail → workspace → add, search, appearance, featured pagi
   await expect(page.getByText('No meal plan yet')).toBeVisible() // honest empty state, no fake meals
   await expectNoHorizontalScroll(page)
 
-  // Category rail opens the side workspace; the page recedes behind it
+  // Turning the rotary dial three detents (All → Breakfast → Lunch → Dinner) opens the
+  // side workspace; the page recedes behind it. Wheel on desktop, a slow drag on touch devices.
   const rail = page.getByRole('toolbar', { name: 'Meal categories' })
-  await rail.getByRole('button', { name: 'Dinner' }).click()
+  if (test.info().project.use.isMobile) {
+    const b = (await rail.boundingBox())!
+    await page.mouse.move(b.x + b.width / 2, b.y + b.height - 10)
+    await page.mouse.down()
+    for (let i = 1; i <= 40; i++) {
+      await page.mouse.move(b.x + b.width / 2, b.y + b.height - 10 - (228 * i) / 40)
+      await page.waitForTimeout(20)
+    }
+    await page.waitForTimeout(150) // come to rest before letting go: no fling
+    await page.mouse.up()
+  } else {
+    await rail.hover()
+    for (let i = 0; i < 3; i++) {
+      await page.mouse.wheel(0, 100)
+      await page.waitForTimeout(120)
+    }
+  }
   await expect(rail.getByRole('button', { name: 'Dinner' })).toHaveAttribute('aria-pressed', 'true')
   const ws = page.getByRole('dialog', { name: 'Dinner ideas' })
   await expect(ws.getByRole('heading', { name: 'Dinner' })).toBeVisible()
@@ -35,8 +52,13 @@ test('home canvas: rail → workspace → add, search, appearance, featured pagi
   await expect(page.getByRole('article', { name: `Dinner: ${meal}` })).toBeVisible()
   await expect(page.getByRole('link', { name: new RegExp(meal) }).first()).toBeVisible()
 
-  // Escape closes a workspace too
-  await rail.getByRole('button', { name: 'Breakfast' }).click()
+  // Keyboard: arrows turn the dial (select only), Enter opens; Escape closes
+  await rail.getByRole('button', { name: 'Dinner' }).focus()
+  await page.keyboard.press('ArrowUp')
+  await page.keyboard.press('ArrowUp')
+  await expect(rail.getByRole('button', { name: 'Breakfast' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await page.keyboard.press('Enter')
   await expect(page.getByRole('dialog', { name: 'Breakfast ideas' })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog', { name: 'Breakfast ideas' })).toBeHidden()

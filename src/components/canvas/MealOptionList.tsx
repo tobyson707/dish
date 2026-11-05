@@ -3,6 +3,18 @@ import { FoodImage } from '@/components/ui/FoodImage'
 import { Icon } from '@/components/ui/Icon'
 import { cn } from '@/lib/cn'
 
+const DIET: [string, string][] = [
+  ['vegan', 'Vegan'],
+  ['vegetarian', 'Vegetarian'],
+  ['pescatarian', 'Pescatarian'],
+]
+/** One short, relevant dietary note (from catalogue tags), or null. */
+function dietLabel(f: FoodItem): string | null {
+  const d = DIET.find(([t]) => f.dietary_tags.includes(t))?.[1]
+  const spicy = f.spice_level >= 2 ? 'Spicy' : null
+  return [d, spicy].filter(Boolean).join(' · ') || null
+}
+
 /** Compact, elegant meal rows for the dark workspace (no oversized cards). */
 export function MealOptionList({ items, onOpen, onAdd, addedIds, busyId, addLabel = 'Add to today' }: { items: FoodItem[]; onOpen: (f: FoodItem) => void; onAdd: (f: FoodItem) => void; addedIds?: Set<string>; busyId?: string | null; addLabel?: string }) {
   return (
@@ -21,6 +33,7 @@ export function MealOptionList({ items, onOpen, onAdd, addedIds, busyId, addLabe
                     <span className="inline-flex items-center gap-1"><Icon name="clock" size={13} /> {mins != null ? `${mins} min` : 'Buy'}</span>
                     {f.calories != null && <span className="inline-flex items-center gap-1"><Icon name="flame" size={13} /> {f.calories} kcal</span>}
                   </span>
+                  {dietLabel(f) && <span className="mt-1.5 inline-block rounded-full bg-white/[0.08] px-2 py-0.5 text-[11px] font-semibold text-on-glass-dark-muted">{dietLabel(f)}</span>}
                 </span>
               </button>
               <button

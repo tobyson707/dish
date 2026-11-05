@@ -304,6 +304,13 @@ html[data-workspace] .recede-target {
 @keyframes ws-in { from { transform: translateX(104%); opacity: 0.6; } to { transform: none; opacity: 1; } }
 @keyframes ws-out { to { transform: translateX(104%); opacity: 0.4; } }
 @keyframes hero-in { from { opacity: 0; transform: scale(1.03); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+/* while a sheet or workspace is open the page behind must not scroll */
+html:has(dialog[open]) { overflow: hidden; }
+html { scrollbar-gutter: stable; }
+
+/* workspace content swap when the category dial turns (direction-aware) */
+.ws-swap { animation: ws-swap 340ms var(--ease-out) both; }
+@keyframes ws-swap { from { opacity: 0; transform: translateY(calc(var(--swap-dir, 1) * 16px)); } to { opacity: 1; transform: none; } }
 @keyframes info-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes xp-rise { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
 @keyframes badge-in { from { opacity: 0; transform: scale(0.94); } to { opacity: 1; transform: none; } }
