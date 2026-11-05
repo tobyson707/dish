@@ -33,11 +33,13 @@ test.describe('gamification', () => {
     await expect(widget).toContainText('100 XP to Meal Planner')
     await expectNoHorizontalScroll(page)
 
+    await page.removeLocatorHandler(page.locator('dialog[data-celebration][open]'))
     await logManualMeal(page, 'Agege bread and tea')
     await expect(page.getByText('+10 XP')).toBeVisible()
-    await expect(page.getByText('Achievement unlocked')).toBeVisible()
-    await expect(page.getByText('First Serving').first()).toBeVisible()
+    const celebration = page.getByRole('dialog', { name: 'First Serving' })
+    await expect(celebration.getByText('Achievement unlocked')).toBeVisible({ timeout: 10_000 })
     await page.screenshot({ path: shots('xp-feedback') })
+    await celebration.getByRole('button', { name: 'Done' }).click()
 
     await page.goto('/')
     await expect(page.getByRole('link', { name: /^1-day streak/ })).toBeVisible() // header updates from the server-recorded streak

@@ -256,7 +256,7 @@ test('discover, recipe detail, surprise, kitchen, budget, profile @responsive', 
   const feed = page.getByRole('list', { name: 'Meal ideas' })
   await expect(feed.getByRole('listitem').first()).toBeVisible()
   const firstPage = await feed.getByRole('listitem').count()
-  expect(firstPage).toBe(8)
+  expect(firstPage % 8).toBe(0) // pages of 8 (a tall screen may fill two at once)
   await page.screenshot({ path: shots('discover') })
   await page.mouse.wheel(0, 6000)
   await expect.poll(() => feed.getByRole('listitem').count()).toBeGreaterThan(firstPage)

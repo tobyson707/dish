@@ -73,7 +73,10 @@ function Flow({ initial, initialStep }: { initial: Draft; initialStep: number })
   const [returnToSummary, setReturnToSummary] = useState(false)
   const headingRef = useRef<HTMLHeadingElement>(null)
   const s = STEPS[step]!
-  const set = (patch: Partial<Draft>) => setD((x) => ({ ...x, ...patch }))
+  const set = (patch: Partial<Draft>) => {
+    setD((x) => ({ ...x, ...patch }))
+    setErrors((e) => (Object.keys(e).length ? Object.fromEntries(Object.entries(e).filter(([k]) => !(k in patch))) : e))
+  }
   const mealNames = useMemo(() => catalogue.data?.map((f) => f.name) ?? [], [catalogue.data])
   const ingredientNames = useMemo(() => ingredients.data?.map((i) => i.name) ?? [], [ingredients.data])
 
@@ -125,7 +128,7 @@ function Flow({ initial, initialStep }: { initial: Draft; initialStep: number })
           Sign out
         </button>
       </div>
-      <main key={step} className="flex-1 pb-36 pt-8" style={{ animation: `${dir > 0 ? 'swap-in' : 'rise'} 280ms var(--ease-out) both` }}>
+      <main key={step} className={cn('flex-1 pt-8', s.key === 'summary' ? 'pb-60' : 'pb-36')} style={{ animation: `${dir > 0 ? 'swap-in' : 'rise'} 280ms var(--ease-out) both` }}>
         <p className="label-caps">{s.eyebrow}</p>
         <h1 ref={headingRef} tabIndex={-1} className="mt-3 font-serif text-title-1 outline-none">
           {s.title}
