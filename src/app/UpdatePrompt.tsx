@@ -17,7 +17,7 @@ export function UpdatePrompt() {
     <div role="status" className="fixed inset-x-3 top-3 z-[70] mx-auto flex max-w-md items-center gap-3 rounded-lg bg-ink px-4 py-3 text-sm text-on-ink shadow-lg animate-[rise_220ms_var(--ease-out)]" style={{ marginTop: 'var(--safe-top)' }}>
       <span className="flex-1">{needRefresh ? 'A new version of DISH is ready.' : 'DISH is ready to work offline.'}</span>
       {needRefresh && (
-        <Button size="sm" variant="accent" onClick={() => void updateServiceWorker(true)}>
+        <Button size="sm" variant="primary" onClick={() => void updateServiceWorker(true)}>
           Update
         </Button>
       )}

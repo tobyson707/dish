@@ -15,7 +15,7 @@ export function Chip({ selected, onClick, children, tone = 'default', disabled, 
         selected
           ? tone === 'danger'
             ? 'bg-error text-on-error'
-            : 'bg-ink text-on-ink'
+            : 'bg-accent text-accent-ink'
           : 'bg-elevated text-ink ring-1 ring-inset ring-line hover:ring-ink/30',
         selected && 'animate-[pop_160ms_var(--ease-out)]',
       )}

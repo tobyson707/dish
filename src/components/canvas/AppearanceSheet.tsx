@@ -29,7 +29,7 @@ export function AppearanceSheet({ open, onClose }: { open: boolean; onClose: () 
               onClick={() => setPreference(o.value)}
               className={cn(
                 'press flex items-center gap-4 rounded-[26px] px-5 py-4 text-left transition-[background-color,box-shadow,color] duration-300',
-                on ? 'bg-accent text-accent-ink shadow-[0_14px_30px_-14px_rgb(242_155_98/0.7)]' : 'bg-white/6 text-on-glass-dark ring-1 ring-inset ring-white/12 hover:bg-white/10',
+                on ? 'bg-accent text-accent-ink' : 'bg-white/6 text-on-glass-dark ring-1 ring-inset ring-white/12 hover:bg-white/10',
               )}
             >
               <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-full', on ? 'bg-white/35' : 'bg-white/8')}>

@@ -28,7 +28,7 @@ export function NextMealPanel({ meal, label, className }: { meal: PlannedMeal; l
           )}
         </p>
       </div>
-      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink transition-transform duration-200 group-hover:translate-x-0.5">
+      <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink text-on-ink transition-transform duration-200 group-hover:translate-x-0.5">
         <Icon name="right" size={20} />
       </span>
     </Link>

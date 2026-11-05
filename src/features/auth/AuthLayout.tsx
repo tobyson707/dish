@@ -10,7 +10,7 @@ export function AuthLayout({ title, subtitle, children, back = '/welcome', foote
       <div className="flex h-12 items-center justify-between">
         {back ? <IconButton icon="left" label="Back" className="-ml-2.5" onClick={() => nav(back)} /> : <span />}
         <Link to="/welcome" className="display text-xl" aria-label="DISH home">
-          DISH<span className="text-accent">.</span>
+          DISH<span className="text-accent-strong">.</span>
         </Link>
       </div>
       <main className="page-enter mt-8 flex flex-1 flex-col">

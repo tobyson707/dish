@@ -50,13 +50,13 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               t.tone === 'error' ? 'bg-error text-on-error' : 'bg-ink text-on-ink',
             )}
           >
-            {t.tone === 'success' && <Icon name="check" size={18} className="text-accent" />}
+            {t.tone === 'success' && <Icon name="check" size={18} className="text-accent-on-ink" />}
             {t.tone === 'error' && <Icon name="alert" size={18} />}
             <span className="flex-1">{t.message}</span>
             {t.action && (
               <button
                 type="button"
-                className="rounded-full px-2 py-1 font-semibold text-accent underline-offset-2 hover:underline"
+                className="rounded-full px-2 py-1 font-semibold text-accent-on-ink underline-offset-2 hover:underline"
                 onClick={() => {
                   t.action!.onClick()
                   dismiss(t.id)

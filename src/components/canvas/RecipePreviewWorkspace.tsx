@@ -102,7 +102,7 @@ function Preview({ f, onClose }: { f: FoodItem; onClose: () => void }) {
               setTimeout(onClose, 500)
             }
           }}
-          className="press inline-flex h-12 items-center justify-center gap-2 rounded-full bg-accent font-semibold text-accent-ink disabled:opacity-60"
+          className="press inline-flex h-12 items-center justify-center gap-2 rounded-full bg-on-glass-dark font-semibold text-on-glass-dark-ink disabled:opacity-60"
         >
           <Icon name={added ? 'check' : 'plus'} size={18} />
           {added ? 'Added' : busy ? 'Adding…' : `Add to today’s ${SLOT_LABEL[slot].toLowerCase()}`}

@@ -11,7 +11,7 @@ export function Welcome() {
       <main className="flex flex-1 flex-col">
         <p className="label-caps animate-[fade_400ms_ease-out_both]">Good food. Less thinking.</p>
         <h1 className="display mt-4 text-[clamp(5rem,30vw,8rem)] animate-[wordmark_450ms_var(--ease-out)_both]">
-          DISH<span className="text-accent">.</span>
+          DISH<span className="text-accent-strong">.</span>
         </h1>
         <p className="mt-6 max-w-xs text-lg text-ink-2 animate-[rise_400ms_var(--ease-out)_120ms_both]">Hungry? Let's sort out your meals — what to eat, what to buy, and what you've had.</p>
         <div className="mt-auto grid grid-cols-7 gap-2 py-10" aria-hidden="true">

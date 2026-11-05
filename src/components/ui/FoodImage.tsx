@@ -70,10 +70,11 @@ export function FoodImage({ path, alt, name, slug, shape = 'rounded', className,
   )
 }
 
+// neutral tones only (monochrome identity); slight variation keeps lists readable
 const TONES = [
-  ['var(--g-peach)', 'var(--c-accent-soft)'],
+  ['var(--g-cream)', 'var(--g-leaf)'],
+  ['var(--g-peach)', 'var(--g-sage)'],
   ['var(--g-sage)', 'var(--g-leaf)'],
-  ['var(--g-cream)', 'var(--g-peach)'],
 ] as const
 
 function Fallback({ name }: { name: string }) {

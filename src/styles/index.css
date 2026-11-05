@@ -5,58 +5,68 @@
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DISH design tokens — the ONLY place literal colours live.
-   Direction: warm-grey editorial surface, ink-black type, one orange accent,
-   circles as a recurring motif (dot calendar, circular meal crops).
+   Identity: monochrome — black, white and neutral greys — with one electric
+   orange accent (#FF6B35) used selectively for selection, active states,
+   progress, streaks, achievements and focus. No decorative gradients.
 
-   Theming: the resolved theme is set as <html data-theme="light|dark"> by a
-   pre-paint script in index.html (no flash) and kept in sync by ThemeProvider.
-   Light is the default token set; dark redefines the same semantic tokens.
-   Contrast pairs are WCAG AA-checked (text ≥ 4.5:1, focus/borders ≥ 3:1).
+   Core palette: #111111 black · #FFFFFF white · #F4F4F4 secondary surface ·
+   #EAEAEA muted surface · #E5E5E5 border · #FF6B35 accent · #777777 grey.
+
+   Theming: <html data-theme="light|dark"> is set by a pre-paint script in
+   index.html (no flash) and kept in sync by ThemeProvider. Dark redefines the
+   same semantic tokens. Contrast (WCAG AA): text ≥ 4.5:1, focus/controls ≥ 3:1.
+   Orange as text/icons on light surfaces uses --c-accent-strong (5.0:1);
+   pure #FF6B35 is for fills and for dark surfaces (6.8:1 on #111111).
    ───────────────────────────────────────────────────────────────────────────── */
 :root {
-  /* surfaces — warm cream base */
-  --c-bg: #f3eee6; /* application background */
-  --c-surface: #ece5da; /* secondary surface */
-  --c-elevated: #fbf8f3; /* primary / elevated surface (cards, sheets) */
-  --c-input: #fdfbf7; /* input background */
-  --c-input-border: #878f80; /* 3.2:1 on elevated — form controls stay identifiable */
-  --c-nav: rgb(30 31 26 / 0.92); /* floating dark dock */
-  --c-scrim: rgb(24 26 22 / 0.42); /* modal / sheet overlay */
+  /* surfaces */
+  --c-bg: #ffffff; /* application background */
+  --c-elevated: #f4f4f4; /* primary surface: cards and panels on white */
+  --c-surface: #eaeaea; /* muted surface: chips, tracks, placeholders */
+  --c-input: #ffffff;
+  --c-input-border: #8f8f8f; /* 3.3:1 — form controls stay identifiable */
+  --c-nav: rgb(17 17 17 / 0.92); /* floating black dock / rail */
+  --c-scrim: rgb(0 0 0 / 0.45); /* modal / sheet overlay */
   --c-image-ring: transparent; /* separates food photos from surfaces (dark only) */
-  /* text — forest charcoal */
-  --c-ink: #1d2a21; /* primary text */
-  --c-ink-2: #465245; /* secondary text */
-  --c-muted: #5f685b; /* muted text: 5.0:1 on bg */
-  --c-on-ink: #f6f1ea; /* text on ink (inverse) */
+  /* text */
+  --c-ink: #111111; /* primary text, primary button */
+  --c-ink-2: #444444; /* secondary text */
+  --c-muted: #6e6e6e; /* muted text — #777777 deepened to keep 4.5:1 on #F4F4F4 */
+  --c-on-ink: #ffffff; /* text on ink (primary button) */
+  --c-disabled: #b3b3b3;
   /* lines & dots */
-  --c-line: #ddd5c8; /* borders and dividers */
-  --c-dot: #cfc6b8;
-  --c-dot-soft: #e3dccf;
-  /* brand */
-  --c-accent: #f29b62; /* peach — active controls, key actions, selection */
-  --c-accent-ink: #1d2a21;
-  --c-accent-soft: #f7d8c1;
-  --c-accent-2: #5d7a52; /* secondary accent: botanical green */
-  --c-sage: #c4cfb4;
-  /* glass — floating controls over the canvas */
-  --c-glass: rgb(255 251 245 / 0.62); /* light translucent pills/buttons */
-  --c-glass-line: rgb(255 255 255 / 0.55);
-  --c-glass-dark: rgb(30 31 26 / 0.86); /* dark translucent rail, dock, workspaces */
-  --c-on-glass-dark: #f3eee6;
-  --c-on-glass-dark-muted: #b9b6ad;
-  /* canvas gradient — peach · cream · sage */
-  --g-peach: #f6d2b6;
-  --g-cream: #f5ede1;
-  --g-sage: #c9d3b9;
-  --g-leaf: #a9bb98;
+  --c-line: #e5e5e5; /* borders and dividers */
+  --c-dot: #d4d4d4;
+  --c-dot-soft: #eaeaea;
+  /* accent — electric orange */
+  --c-accent: #ff6b35; /* fills: selected, active, progress, streak */
+  --c-accent-ink: #111111; /* text on orange: 6.8:1 */
+  --c-accent-soft: #ffe8df; /* quiet selected background */
+  --c-accent-strong: #c4450f; /* orange text/icons on light surfaces: 5.0:1 */
+  --c-accent-on-ink: #ff6b35; /* orange on ink surfaces (black in light) */
+  --c-selected: var(--c-accent);
+  --c-accent-2: var(--c-ink); /* legacy alias: no second accent colour */
+  --c-sage: #eaeaea; /* legacy alias: neutral */
+  /* glass — neutral translucent surfaces */
+  --c-glass: rgb(255 255 255 / 0.78);
+  --c-glass-line: rgb(17 17 17 / 0.08);
+  --c-glass-dark: rgb(17 17 17 / 0.88);
+  --c-on-glass-dark: #ffffff;
+  --c-on-glass-dark-muted: #a3a3a3; /* 7.4:1 on #111 */
+  --c-on-glass-dark-ink: #111111; /* text on white buttons inside dark glass */
+  /* canvas tones (legacy names) — neutral greys only */
+  --g-peach: #f4f4f4;
+  --g-cream: #fafafa;
+  --g-sage: #eeeeee;
+  --g-leaf: #e2e2e2;
   /* states */
-  --c-focus: #b8541b; /* 4.2:1 on bg */
-  --c-success: #2e6b45;
-  --c-warning: #7f5410;
-  --c-error: #a8341c;
+  --c-focus: #c4450f; /* orange focus ring, 5.0:1 on white */
+  --c-success: #1e7a46;
+  --c-warning: #8a5a00;
+  --c-error: #c62828;
   --c-on-error: #ffffff;
-  --c-error-soft: #f6dcd5;
-  --c-shadow: rgb(40 32 20 / 0.14);
+  --c-error-soft: #fde8e8;
+  --c-shadow: rgb(0 0 0 / 0.1);
 
   --radius-sm: 6px;
   --radius-md: 12px;
@@ -80,45 +90,46 @@
   color-scheme: light;
 }
 
-/* Dark: deep charcoal and warm black with olive undertones, soft white type,
-   the same peach used sparingly. Same composition, not an inversion. */
+/* Dark: #111111 base, neutral dark-grey surfaces, white type, the same orange. */
 :root[data-theme='dark'] {
-  --c-bg: #141412;
-  --c-surface: #1c1c19;
-  --c-elevated: #24241f;
-  --c-input: #2a2a24;
-  --c-input-border: #7a766e;
-  --c-nav: rgb(22 22 19 / 0.9);
-  --c-scrim: rgb(0 0 0 / 0.55);
+  --c-bg: #111111;
+  --c-elevated: #1c1c1c;
+  --c-surface: #262626;
+  --c-input: #1c1c1c;
+  --c-input-border: #6f6f6f; /* 3.3:1 */
+  --c-nav: rgb(28 28 28 / 0.92);
+  --c-scrim: rgb(0 0 0 / 0.6);
   --c-image-ring: rgb(255 255 255 / 0.07);
-  --c-ink: #f1ece4;
-  --c-ink-2: #c8c2b8;
-  --c-muted: #a29d93;
-  --c-on-ink: #161613;
-  --c-line: #33332c;
-  --c-dot: #3c3b34;
-  --c-dot-soft: #2b2a25;
-  --c-accent: #f2a77a;
-  --c-accent-ink: #1a1a17;
-  --c-accent-soft: #4a3022;
-  --c-accent-2: #9fbd8f;
-  --c-sage: #2c3326;
-  --c-glass: rgb(44 43 37 / 0.6);
+  --c-ink: #ffffff;
+  --c-ink-2: #d4d4d4;
+  --c-muted: #a3a3a3; /* 7.4:1 on #111, 6.6:1 on #1c1c1c */
+  --c-on-ink: #111111; /* primary button: white with black text */
+  --c-disabled: #5c5c5c;
+  --c-line: #2e2e2e;
+  --c-dot: #3d3d3d;
+  --c-dot-soft: #262626;
+  --c-accent: #ff6b35;
+  --c-accent-ink: #111111;
+  --c-accent-soft: #3a1d12;
+  --c-accent-strong: #ff6b35; /* 6.8:1 on #111 */
+  --c-accent-on-ink: #c4450f; /* ink is white in dark */
+  --c-sage: #262626;
+  --c-glass: rgb(38 38 38 / 0.7);
   --c-glass-line: rgb(255 255 255 / 0.08);
-  --c-glass-dark: rgb(20 20 17 / 0.84);
-  --c-on-glass-dark: #f1ece4;
-  --c-on-glass-dark-muted: #a8a39a;
-  --g-peach: #3a2a20;
-  --g-cream: #1f1e1a;
-  --g-sage: #262d21;
-  --g-leaf: #303a28;
-  --c-focus: #f2a77a;
-  --c-success: #7fd1a0;
-  --c-warning: #e8b25a;
-  --c-error: #ff8a6e;
-  --c-on-error: #161613;
-  --c-error-soft: #3d1d16;
-  --c-shadow: rgb(0 0 0 / 0.5);
+  --c-glass-dark: rgb(22 22 22 / 0.9);
+  --c-on-glass-dark: #ffffff;
+  --c-on-glass-dark-muted: #a3a3a3;
+  --g-peach: #1a1a1a;
+  --g-cream: #161616;
+  --g-sage: #1e1e1e;
+  --g-leaf: #242424;
+  --c-focus: #ff6b35;
+  --c-success: #5cc98a;
+  --c-warning: #f2b544;
+  --c-error: #ff6b6b;
+  --c-on-error: #111111;
+  --c-error-soft: #3a1515;
+  --c-shadow: rgb(0 0 0 / 0.55);
   color-scheme: dark;
 }
 
@@ -130,6 +141,7 @@
   --color-glass-dark: var(--c-glass-dark);
   --color-on-glass-dark: var(--c-on-glass-dark);
   --color-on-glass-dark-muted: var(--c-on-glass-dark-muted);
+  --color-on-glass-dark-ink: var(--c-on-glass-dark-ink);
   --color-bg: var(--c-bg);
   --color-surface: var(--c-surface);
   --color-elevated: var(--c-elevated);
@@ -146,6 +158,13 @@
   --color-accent-ink: var(--c-accent-ink);
   --color-accent-soft: var(--c-accent-soft);
   --color-accent-2: var(--c-accent-2);
+  --color-accent-strong: var(--c-accent-strong);
+  --color-accent-on-ink: var(--c-accent-on-ink);
+  --color-selected: var(--c-selected);
+  --color-disabled: var(--c-disabled);
+  --color-focus: var(--c-focus);
+  --color-scrim: var(--c-scrim);
+  --color-shadow: var(--c-shadow);
   --color-on-ink: var(--c-on-ink);
   --color-success: var(--c-success);
   --color-warning: var(--c-warning);

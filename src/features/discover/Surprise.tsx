@@ -127,7 +127,7 @@ function SuggestionCard({ s, slot, today, currency }: { s: Suggestion; slot: Mea
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <Link to={`/recipes/${s.slug}`} className="text-lg font-bold leading-snug">{s.name}</Link>
-            <IconButton icon="heart" label={isFav ? 'Remove from favourites' : 'Save to favourites'} size={40} className={isFav ? 'text-accent' : undefined} onClick={() => fav.mutate({ foodItemId: s.food_item_id, on: !isFav })} />
+            <IconButton icon="heart" label={isFav ? 'Remove from favourites' : 'Save to favourites'} size={40} className={isFav ? 'text-accent-strong' : undefined} onClick={() => fav.mutate({ foodItemId: s.food_item_id, on: !isFav })} />
           </div>
           <p className="num text-[13px] text-muted">
             {s.method === 'cook' ? `Cook · ${formatMinutes(s.prep_minutes + s.cook_minutes)}` : 'Buy'} · {formatCostRange(s.est_cost_min, s.est_cost_max, currency)}

@@ -115,7 +115,7 @@ export function Home() {
 }
 
 /**
- * The immersive canvas (reference screen 1): atmospheric gradient, floating
+ * The immersive canvas (reference screen 1): calm neutral surface, floating
  * toolbar, editorial headline, featured food, right-edge category rail,
  * overlapping next-meal panel and swipeable pagination.
  */
@@ -137,11 +137,8 @@ function HomeCanvas({ canvasRef, meals, loading, noPlan, category, onFind }: { c
       ref={canvasRef}
       aria-label="Today's featured meal"
       className="relative isolate h-[clamp(580px,calc(100dvh-var(--safe-top)-var(--safe-bottom)-190px),860px)] overflow-hidden rounded-[34px] shadow-[0_30px_80px_-40px_var(--c-shadow)] md:h-[clamp(600px,calc(100dvh-200px),820px)]"
-      style={{ background: 'radial-gradient(90% 55% at 0% 0%, var(--g-peach) 0%, transparent 62%), radial-gradient(70% 55% at 100% 4%, var(--g-sage) 0%, transparent 66%), radial-gradient(95% 70% at 80% 100%, var(--g-leaf) 0%, transparent 62%), var(--g-cream)' }}
+      style={{ background: 'var(--c-elevated)' }}
     >
-      {/* soft botanical depth, purely decorative */}
-      <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-10 h-56 w-56 rounded-full bg-[var(--g-leaf)] opacity-50 blur-3xl" />
-      <div aria-hidden="true" className="pointer-events-none absolute -left-20 top-1/3 h-64 w-64 rounded-full bg-[var(--g-peach)] opacity-60 blur-3xl" />
 
       <FloatingToolbar className="absolute inset-x-4 top-4 z-20 sm:inset-x-5 sm:top-5" />
 
@@ -178,12 +175,12 @@ function HomeCanvas({ canvasRef, meals, loading, noPlan, category, onFind }: { c
         {loading ? null : featured ? (
           <NextMealPanel meal={featured} label={label} />
         ) : noPlan ? (
-          <EmptyCanvasPanel title="No meal plan yet" body="Tell DISH how long to plan for." action={<Link to="/plan/new" className="press inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-bold text-accent-ink">Create my meal plan <Icon name="right" size={16} /></Link>} />
+          <EmptyCanvasPanel title="No meal plan yet" body="Tell DISH how long to plan for." action={<Link to="/plan/new" className="press inline-flex h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-bold text-on-ink">Create my meal plan <Icon name="right" size={16} /></Link>} />
         ) : (
           <EmptyCanvasPanel
             title={category === 'all' ? 'Nothing planned today' : `No ${categoryLabel(category).toLowerCase()} planned`}
             body="Let's find something you'll enjoy."
-            action={<button type="button" onClick={() => onFind(category)} className="press inline-flex h-10 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-bold text-accent-ink">Find a meal <Icon name="right" size={16} /></button>}
+            action={<button type="button" onClick={() => onFind(category)} className="press inline-flex h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-bold text-on-ink">Find a meal <Icon name="right" size={16} /></button>}
           />
         )}
       </div>

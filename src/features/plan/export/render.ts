@@ -21,19 +21,20 @@ const PNG_MAX_DAYS = 7
 const PNG_MAX_H = 5400
 const MAX_CANVAS_PX = 15_000_000 // stay under mobile Safari's canvas area limit
 
+// Print palette: the DISH monochrome identity (always light, so it prints well)
 const C = {
-  bg: '#f3eee6',
-  paper: '#fbf8f3',
-  ink: '#1d2a21',
-  ink2: '#465245',
-  muted: '#6b7266',
-  accent: '#f29b62',
-  accentInk: '#b8541b',
-  peach: '#f6d2b6',
-  cream: '#f5ede1',
-  sage: '#c9d3b9',
-  leaf: '#a9bb98',
-  line: 'rgba(29,42,33,0.12)',
+  bg: '#ffffff',
+  paper: '#f4f4f4', // day cards
+  muted2: '#eaeaea',
+  ink: '#111111',
+  ink2: '#444444',
+  muted: '#6e6e6e',
+  onInk: '#ffffff',
+  onInkMuted: '#bdbdbd',
+  accent: '#ff6b35',
+  accentText: '#c4450f', // orange as text on white (5.0:1)
+  line: '#e5e5e5',
+  shadow: 'rgba(0,0,0,0.16)',
 }
 const SERIF = '"DM Serif Display", Georgia, serif'
 const SANS = '"Manrope Variable", Manrope, system-ui, sans-serif'
@@ -194,9 +195,9 @@ function initialsOf(name: string) {
     .join('')
 }
 const TONES: [string, string][] = [
-  [C.peach, '#f7d8c1'],
-  [C.sage, C.leaf],
-  [C.cream, C.peach],
+  ['#fafafa', '#e2e2e2'],
+  ['#f4f4f4', '#dcdcdc'],
+  ['#eeeeee', '#e6e6e6'],
 ]
 function toneOf(name: string) {
   let h = 0
@@ -213,7 +214,7 @@ function drawFallback(ctx: Ctx, name: string, x: number, y: number, w: number, h
   ctx.fillStyle = g
   ctx.fillRect(x, y, w, h)
   const ini = initialsOf(name) || '•'
-  ctx.fillStyle = 'rgba(29,42,33,0.62)'
+  ctx.fillStyle = 'rgba(17,17,17,0.6)'
   ctx.font = `400 ${Math.round(w * (ini.length > 1 ? 0.36 : 0.46))}px ${SERIF}`
   ctx.textAlign = 'center'
   ctx.textBaseline = 'middle'
@@ -224,12 +225,12 @@ function drawFallback(ctx: Ctx, name: string, x: number, y: number, w: number, h
 
 function plate(ctx: Ctx, cx: number, cy: number, d: number, img: HTMLImageElement | null, name: string) {
   ctx.save()
-  ctx.shadowColor = 'rgba(40,32,20,0.18)'
+  ctx.shadowColor = C.shadow
   ctx.shadowBlur = 40
   ctx.shadowOffsetY = 18
   ctx.beginPath()
   ctx.arc(cx, cy, d / 2 + 10, 0, Math.PI * 2)
-  ctx.fillStyle = C.paper
+  ctx.fillStyle = C.bg
   ctx.fill()
   ctx.restore()
   ctx.save()
@@ -249,24 +250,12 @@ function drawBackground(ctx: Ctx, w: number, h: number) {
 
 function drawHeader(ctx: Ctx, model: ExportModel, assets: ExportAssets) {
   const w = PAGE_W
-  // atmospheric band
-  ctx.save()
+  // header band: flat black (no gradients), one thin orange rule
   rr(ctx, 28, 28, w - 56, HEADER_H - 40, 44)
-  ctx.clip()
-  ctx.fillStyle = C.cream
-  ctx.fillRect(0, 0, w, HEADER_H)
-  for (const [x, y, r, col] of [
-    [0, 0, 620, C.peach],
-    [w, 40, 560, C.sage],
-    [w * 0.75, HEADER_H, 520, C.leaf],
-  ] as const) {
-    const g = ctx.createRadialGradient(x, y, 0, x, y, r)
-    g.addColorStop(0, col)
-    g.addColorStop(1, 'rgba(245,237,225,0)')
-    ctx.fillStyle = g
-    ctx.fillRect(0, 0, w, HEADER_H)
-  }
-  ctx.restore()
+  ctx.fillStyle = C.ink
+  ctx.fill()
+  ctx.fillStyle = C.accent
+  ctx.fillRect(M + 20, 150, 64, 5)
 
   // photographs: one strong plate, two smaller companions (or designed plates)
   const names = model.days.flatMap((d) => d.meals.map((m) => m.name))
@@ -279,26 +268,26 @@ function drawHeader(ctx: Ctx, model: ExportModel, assets: ExportAssets) {
   // identity (personal first)
   const tx = M + 20
   const maxW = 560 // clear of the photo plates on the right
-  ctx.fillStyle = C.muted
+  ctx.fillStyle = C.onInkMuted
   ctx.font = `600 16px ${SANS}`
   spacing(ctx, 3)
   ctx.fillText(`MEAL PLAN · ${model.shortRange.toUpperCase()}`, tx, 124)
   spacing(ctx, 0)
-  ctx.fillStyle = C.ink
+  ctx.fillStyle = C.onInk
   ctx.font = `400 96px ${SERIF}`
-  ctx.fillText(model.title, tx, 226)
-  let y = 226
+  ctx.fillText(model.title, tx, 240)
+  let y = 240
   if (model.preparedFor) {
     ctx.font = `600 30px ${SANS}`
-    ctx.fillStyle = C.ink2
+    ctx.fillStyle = C.onInk
     ctx.fillText(wrap(ctx, `Prepared for ${model.preparedFor}`, maxW, 1)[0]!, tx, (y += 50))
   }
   ctx.font = `400 21px ${SANS}`
-  ctx.fillStyle = C.muted
+  ctx.fillStyle = C.onInkMuted
   ctx.fillText(wrap(ctx, model.rangeLabel, maxW, 1)[0]!, tx, (y += 38))
   if (model.note) {
     ctx.font = `italic 400 26px ${SERIF}`
-    ctx.fillStyle = C.ink2
+    ctx.fillStyle = C.onInkMuted
     y += 12
     wrap(ctx, `“${model.note}”`, maxW, 2).forEach((l) => ctx.fillText(l, tx, (y += 36)))
   }
@@ -308,9 +297,9 @@ function drawHeader(ctx: Ctx, model: ExportModel, assets: ExportAssets) {
   ctx.font = `700 17px ${SANS}`
   const pw = ctx.measureText(summary).width + 36
   rr(ctx, tx, HEADER_H - 104, pw, 40, 20)
-  ctx.fillStyle = C.ink
+  ctx.fillStyle = C.accent
   ctx.fill()
-  ctx.fillStyle = C.paper
+  ctx.fillStyle = C.ink
   ctx.fillText(summary, tx + 18, HEADER_H - 78)
 }
 
@@ -352,14 +341,9 @@ function drawDay(ctx: Ctx, day: ExportDay, y: number, model: ExportModel, assets
   const x = M
   const w = PAGE_W - 2 * M
   const h = dayBlockHeight(day)
-  ctx.save()
-  ctx.shadowColor = 'rgba(40,32,20,0.06)'
-  ctx.shadowBlur = 24
-  ctx.shadowOffsetY = 8
   rr(ctx, x, y, w, h, 30)
   ctx.fillStyle = C.paper
   ctx.fill()
-  ctx.restore()
 
   // day heading
   ctx.fillStyle = C.ink
@@ -399,7 +383,7 @@ function drawDay(ctx: Ctx, day: ExportDay, y: number, model: ExportModel, assets
     ctx.restore()
 
     ctx.font = `700 14px ${SANS}`
-    ctx.fillStyle = C.accentInk
+    ctx.fillStyle = C.accentText
     spacing(ctx, 2.2)
     ctx.fillText([m.slotLabel.toUpperCase(), m.time].filter(Boolean).join(' · '), textX, ty + 18)
     spacing(ctx, 0)

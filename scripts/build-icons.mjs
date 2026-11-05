@@ -4,12 +4,12 @@ import { fileURLToPath } from 'node:url'
 
 const out = (f) => fileURLToPath(new URL(`../public/${f}`, import.meta.url))
 const svg = (pad) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#161514"/>
+  <rect width="512" height="512" fill="#111111"/>
   <g transform="translate(${pad} ${pad}) scale(${(512 - 2 * pad) / 512})">
-    <text x="244" y="300" text-anchor="middle" font-family="Manrope, Arial Black, sans-serif" font-weight="800" font-size="150" letter-spacing="-6" fill="#e6e3df">DISH</text>
-    <circle cx="424" cy="292" r="17" fill="#f26a0f"/>
-    <g fill="#e6e3df" opacity="0.35">${Array.from({ length: 7 }, (_, i) => `<circle cx="${112 + i * 48}" cy="370" r="14"/>`).join('')}</g>
-    <circle cx="256" cy="370" r="14" fill="#f26a0f"/>
+    <text x="244" y="300" text-anchor="middle" font-family="Manrope, Arial Black, sans-serif" font-weight="800" font-size="150" letter-spacing="-6" fill="#ffffff">DISH</text>
+    <circle cx="424" cy="292" r="17" fill="#ff6b35"/>
+    <g fill="#ffffff" opacity="0.35">${Array.from({ length: 7 }, (_, i) => `<circle cx="${112 + i * 48}" cy="370" r="14"/>`).join('')}</g>
+    <circle cx="256" cy="370" r="14" fill="#ff6b35"/>
   </g></svg>`
 
 const browser = await chromium.launch()

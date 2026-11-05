@@ -38,7 +38,7 @@ const STATE_LABEL: Record<Row['state'], string> = { missing: 'No image', review:
 const STATE_TONE: Record<Row['state'], string> = {
   missing: 'bg-surface text-muted',
   review: 'bg-accent text-accent-ink',
-  progress: 'bg-sage text-ink',
+  progress: 'bg-surface text-ink',
   failed: 'bg-error/15 text-error',
   approved: 'bg-ink text-on-ink',
 }
@@ -166,7 +166,7 @@ function Studio() {
               </button>
             ))}
           </div>
-          <Button size="sm" variant="accent" icon="sparkle" disabled={!sel.length || act.isPending} onClick={() => generate(sel, filter === 'approved' || sel.some((id) => rows.find((r) => r.id === id)?.image_path))}>
+          <Button size="sm" icon="sparkle" disabled={!sel.length || act.isPending} onClick={() => generate(sel, filter === 'approved' || sel.some((id) => rows.find((r) => r.id === id)?.image_path))}>
             {sel.length ? `Generate ${sel.length}` : 'Generate selected'}
           </Button>
           {sel.length > roomToday && <span className="text-[12px] text-muted">Only {roomToday} fit in today's limit; the rest will be skipped.</span>}
@@ -315,7 +315,7 @@ function ReviewSheet({ row, onClose, busy, onApprove, onReject }: { row: Row | n
           <TextArea label="Notes (optional)" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={500} rows={2} />
           {!all && <Notice>Tick every check to approve. If anything is off, reject it — you can regenerate straight away.</Notice>}
           <div className="flex flex-wrap gap-2">
-            <Button variant="accent" icon="check" disabled={!all || busy} onClick={() => onApprove(Object.fromEntries(FOOD_PHOTO_QC.map((q) => [q.id, true])) as Record<FoodPhotoQcId, true>, notes || undefined)}>
+            <Button icon="check" disabled={!all || busy} onClick={() => onApprove(Object.fromEntries(FOOD_PHOTO_QC.map((q) => [q.id, true])) as Record<FoodPhotoQcId, true>, notes || undefined)}>
               Approve and publish
             </Button>
             <Button variant="secondary" icon="refresh" disabled={busy} onClick={() => onReject(notes || undefined, true)}>

@@ -20,7 +20,7 @@ export function OfflineIndicator() {
   return (
     <div role="status" aria-live="polite" className="sticky top-0 z-40 bg-ink text-on-ink" style={{ paddingTop: 'var(--safe-top)' }}>
       <Link to="/profile/sync" className="mx-auto flex max-w-3xl items-center justify-center gap-2 px-4 py-2 text-[13px] font-medium">
-        <Icon name={icon} size={16} className={icon === 'alert' ? 'text-accent' : undefined} />
+        <Icon name={icon} size={16} className={icon === 'alert' ? 'text-accent-on-ink' : undefined} />
         {text}
       </Link>
     </div>

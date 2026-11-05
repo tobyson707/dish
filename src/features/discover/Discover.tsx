@@ -120,7 +120,7 @@ export function Discover() {
                       <div className="relative">
                         <FoodImage path={f.image_path} alt={f.image_alt} name={f.name} className="aspect-square w-full rounded-lg" width={400} />
                         {favs.data?.includes(f.id) && (
-                          <span className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-elevated text-accent">
+                          <span className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-elevated text-accent-strong">
                             <Icon name="heart" size={16} filled />
                           </span>
                         )}
@@ -152,7 +152,7 @@ function FeatureHero({ food, slot, onOpen }: { food: FoodItem; slot: MealSlot; o
       aria-label="Featured for you"
       className="relative mb-5 min-h-[260px] overflow-hidden rounded-[32px] p-6 sm:p-8"
       style={{
-        background: 'radial-gradient(120% 100% at 85% 20%, var(--g-peach), var(--g-cream) 55%, var(--c-surface))',
+        background: 'var(--c-elevated)',
       }}
     >
       <div className="relative z-10 max-w-[58%] sm:max-w-[55%]">
@@ -182,7 +182,7 @@ function FeatureHero({ food, slot, onOpen }: { food: FoodItem; slot: MealSlot; o
 function Tile({ to, icon, title, sub, dark }: { to: string; icon: IconName; title: string; sub: string; dark?: boolean }) {
   return (
     <Link to={to} className={cn('press flex min-h-32 flex-col justify-between rounded-lg p-4', dark ? 'bg-ink text-on-ink' : 'bg-elevated')}>
-      <Icon name={icon} size={24} className={dark ? 'text-accent' : undefined} />
+      <Icon name={icon} size={24} className={dark ? 'text-accent-on-ink' : undefined} />
       <span>
         <span className="block font-bold leading-tight">{title}</span>
         <span className={cn('mt-0.5 block text-[12px]', dark ? 'opacity-70' : 'text-muted')}>{sub}</span>

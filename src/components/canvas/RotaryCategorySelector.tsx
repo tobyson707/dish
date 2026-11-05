@@ -127,12 +127,12 @@ export function RotaryCategorySelector({ value, onChange, onActivate, anchor, wo
       }}
       onKeyDown={onKeyDown}
       className={cn(
-        'group fixed z-[55] w-[70px] -translate-y-1/2 cursor-grab touch-none select-none overflow-hidden rounded-l-[36px] bg-[var(--c-glass-dark)] shadow-[-12px_18px_40px_-18px_rgb(0_0_0/0.45)] ring-1 ring-white/10 backdrop-blur-xl active:cursor-grabbing min-[380px]:w-[78px]',
+        'group fixed z-[55] w-[70px] -translate-y-1/2 cursor-grab touch-none select-none overflow-hidden rounded-l-[36px] bg-[var(--c-glass-dark)] shadow-[-12px_18px_40px_-18px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-xl active:cursor-grabbing min-[380px]:w-[78px]',
       )}
       style={{ right, top: 'var(--rotary-top)', height: ROTARY_ITEM * VISIBLE + PAD * 2 }}
     >
       {/* edge shading: the faces seem to turn away under glass */}
-      <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-10 rounded-l-[36px] bg-[linear-gradient(to_bottom,rgb(20_20_17/0.6),transparent_30%,transparent_70%,rgb(20_20_17/0.6))]" />
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-10 rounded-l-[36px] bg-[linear-gradient(to_bottom,var(--c-glass-dark),transparent_30%,transparent_70%,var(--c-glass-dark))]" />
       <span aria-hidden="true" className="pointer-events-none absolute inset-x-3 top-px z-10 h-px bg-white/15" />
       {CATEGORIES.map((c, i) => {
         const on = c.id === value
@@ -162,7 +162,7 @@ export function RotaryCategorySelector({ value, onChange, onActivate, anchor, wo
       <div
         data-rotary-pill
         aria-hidden="true"
-        className="pointer-events-none absolute left-1.5 right-1 z-[5] overflow-hidden rounded-[24px] bg-accent shadow-[0_10px_24px_-8px_rgb(242_155_98/0.55)] ring-inset ring-accent-ink/45 group-has-[button:focus-visible]:ring-2"
+        className="pointer-events-none absolute left-1.5 right-1 z-[5] overflow-hidden rounded-[24px] bg-accent  ring-inset ring-accent-ink/45 group-has-[button:focus-visible]:ring-2"
         style={{ top: PAD + ROTARY_ITEM, height: ROTARY_ITEM }}
       >
         {CATEGORIES.map((c) => (

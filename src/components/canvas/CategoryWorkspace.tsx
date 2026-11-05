@@ -108,13 +108,13 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
   return createPortal(
     <>
       {/* the Home canvas stays where it is; it is dimmed and softened, and tapping it closes */}
-      <div aria-hidden="true" data-closing={closing || undefined} onClick={onClose} className="cat-scrim fixed inset-0 z-40 bg-[rgb(20_20_17/0.38)] backdrop-blur-[3px]" />
+      <div aria-hidden="true" data-closing={closing || undefined} onClick={onClose} className="cat-scrim fixed inset-0 z-40 bg-[var(--c-scrim)] backdrop-blur-[3px]" />
       <section
         role="dialog"
         aria-modal="false"
         aria-label={label}
         data-closing={closing || undefined}
-        className="cat-ws fixed z-50 flex flex-col overflow-hidden rounded-[30px] bg-[var(--c-glass-dark)] text-on-glass-dark shadow-[-24px_0_70px_-20px_rgb(0_0_0/0.5)] ring-1 ring-white/10 backdrop-blur-xl"
+        className="cat-ws fixed z-50 flex flex-col overflow-hidden rounded-[30px] bg-[var(--c-glass-dark)] text-on-glass-dark shadow-[-24px_0_70px_-20px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-xl"
         style={{ translate: drag.offset ? `${drag.offset}px 0` : undefined, transition: drag.dragging ? 'none' : 'translate 260ms var(--ease-out)' }}
       >
         <header

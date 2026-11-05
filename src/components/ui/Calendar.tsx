@@ -29,7 +29,7 @@ export function DateStrip({ selected, today, onSelect, states, onPrev, onNext }:
               onClick={() => onSelect(d)}
               className="press flex flex-col items-center gap-1.5 py-1"
             >
-              <span className={cn('text-[11px] font-semibold', isToday ? 'text-accent' : 'text-muted')}>{WEEKDAY_SHORT[i]}</span>
+              <span className={cn('text-[11px] font-semibold', isToday ? 'text-accent-strong' : 'text-muted')}>{WEEKDAY_SHORT[i]}</span>
               <span
                 className={cn(
                   'num flex aspect-square w-full max-w-11 items-center justify-center rounded-full text-[15px] font-bold transition-colors duration-200',
@@ -62,7 +62,7 @@ export function DotMonth({ month, today, selected, states, onSelect }: { month: 
     <div>
       <div className="mb-2 grid grid-cols-7 gap-1.5 text-center" aria-hidden="true">
         {WEEKDAY_SHORT.map((w, i) => (
-          <span key={i} className={cn('text-[11px] font-semibold', weekdayMon0(today) === i && today.slice(0, 7) === first.slice(0, 7) ? 'text-accent' : 'text-muted')}>
+          <span key={i} className={cn('text-[11px] font-semibold', weekdayMon0(today) === i && today.slice(0, 7) === first.slice(0, 7) ? 'text-accent-strong' : 'text-muted')}>
             {w}
           </span>
         ))}

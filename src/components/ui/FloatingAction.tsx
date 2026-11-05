@@ -33,7 +33,7 @@ export function FloatingActions({ children, className }: { children: ReactNode; 
 
 type ActionProps = { icon: IconName; label: string; primary?: boolean; showLabel?: boolean }
 const cls = (primary?: boolean, showLabel?: boolean) =>
-  cn('press inline-flex h-12 items-center justify-center gap-2 rounded-full font-semibold transition-colors', showLabel ? 'px-5' : 'w-12', primary ? 'bg-accent text-accent-ink hover:brightness-105' : 'text-on-glass-dark hover:bg-white/10')
+  cn('press inline-flex h-12 items-center justify-center gap-2 rounded-full font-semibold transition-colors', showLabel ? 'px-5' : 'w-12', primary ? 'bg-on-glass-dark text-on-glass-dark-ink hover:opacity-90' : 'text-on-glass-dark hover:bg-white/10')
 
 export function FloatingButton({ icon, label, primary, showLabel = primary, onClick }: ActionProps & { onClick: () => void }) {
   return (

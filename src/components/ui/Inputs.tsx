@@ -77,7 +77,7 @@ export function Segmented<T extends string | number>({ label, options, value, on
             role="radio"
             aria-checked={o.value === value}
             onClick={() => onChange(o.value)}
-            className={cn('press min-h-10 flex-1 rounded-full px-2 text-sm font-semibold transition-colors duration-200', o.value === value ? 'bg-ink text-on-ink' : 'text-ink-2')}
+            className={cn('press min-h-10 flex-1 rounded-full px-2 text-sm font-semibold transition-colors duration-200', o.value === value ? 'bg-accent text-accent-ink' : 'text-ink-2')}
           >
             {o.label}
           </button>
@@ -102,9 +102,9 @@ export function Toggle({ label, description, checked, onChange, disabled }: { la
         aria-checked={checked}
         disabled={disabled}
         onClick={() => onChange(!checked)}
-        className={cn('press relative h-8 w-14 shrink-0 rounded-full transition-colors duration-200 disabled:opacity-40', checked ? 'bg-ink' : 'bg-dot')}
+        className={cn('press relative h-8 w-14 shrink-0 rounded-full transition-colors duration-200 disabled:opacity-40', checked ? 'bg-accent' : 'bg-dot')}
       >
-        <span className={cn('absolute left-0 top-1 h-6 w-6 rounded-full shadow transition-transform duration-200', checked ? 'translate-x-7 bg-on-ink' : 'translate-x-1 bg-elevated')} />
+        <span className={cn('absolute left-0 top-1 h-6 w-6 rounded-full shadow transition-transform duration-200', checked ? 'translate-x-7 bg-on-glass-dark' : 'translate-x-1 bg-bg')} />
       </button>
     </div>
   )

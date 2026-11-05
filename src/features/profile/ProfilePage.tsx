@@ -26,7 +26,7 @@ export function ProfilePage() {
     <div>
       <PageHeader eyebrow={user?.email ?? ''} title={p?.display_name || 'Profile'} large />
       <div className="flex items-center gap-4 rounded-[28px] bg-[var(--c-nav)] p-5 text-on-glass-dark">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent text-2xl font-extrabold text-accent-ink">{(p?.display_name?.[0] ?? '•').toUpperCase()}</span>
+        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-on-glass-dark text-2xl font-extrabold text-on-glass-dark-ink">{(p?.display_name?.[0] ?? '•').toUpperCase()}</span>
         <div>
           <p className="text-sm opacity-70">Goal</p>
           <p className="font-bold">{goal.data ? GOAL_LABEL[goal.data.goal] : 'Not set'}{goal.data?.calorie_target ? ` · ~${goal.data.calorie_target.toLocaleString()} kcal` : ''}</p>

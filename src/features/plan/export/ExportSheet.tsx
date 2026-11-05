@@ -216,7 +216,7 @@ export function ExportSheet({ open, onClose, anchorDate }: { open: boolean; onCl
             </>
           ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button variant="accent" icon="download" disabled={!output || !!busy} onClick={() => download(format)}>
+            <Button icon="download" disabled={!output || !!busy} onClick={() => download(format)}>
               Download {format.toUpperCase()}
             </Button>
             <Button variant="secondary" icon="arrow" disabled={!output || !!busy} onClick={share}>

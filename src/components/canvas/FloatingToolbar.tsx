@@ -25,7 +25,7 @@ function StreakChip() {
   const label = n === 1 ? '1-day streak' : `${n}-day streak`
   return (
     <Link to="/profile?section=progress" aria-label={`${label}. View your progress`} title={label} className={cn(glassBtn, 'w-auto gap-1 px-3 text-sm font-bold')}>
-      <Icon name="flame" size={18} filled={n > 0} className={n > 0 ? 'text-accent' : 'text-muted'} />
+      <Icon name="flame" size={18} filled={n > 0} className={n > 0 ? 'text-accent-strong' : 'text-muted'} />
       <span className="num">{n}</span>
     </Link>
   )

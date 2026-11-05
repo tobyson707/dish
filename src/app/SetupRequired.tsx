@@ -3,7 +3,7 @@ export function SetupRequired() {
     <div className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center px-6 py-16">
       <p className="label-caps">Configuration needed</p>
       <h1 className="display mt-3 text-5xl">
-        DISH<span className="text-accent">.</span>
+        DISH<span className="text-accent-strong">.</span>
       </h1>
       <p className="mt-6 text-ink-2">
         DISH needs a Supabase project to store your account and meals. Set <code className="rounded bg-surface px-1">VITE_SUPABASE_URL</code> and{' '}

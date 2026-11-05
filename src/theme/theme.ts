@@ -6,7 +6,7 @@ export type ResolvedTheme = 'light' | 'dark'
 export const THEME_KEY = 'dish-theme'
 export const THEME_DIRTY_KEY = 'dish-theme-dirty' // local change not yet saved to the profile
 export const THEME_SAVED_AT_KEY = 'dish-theme-saved-at' // when the local choice last reached the profile
-const META_COLOR: Record<ResolvedTheme, string> = { light: '#F3EEE6', dark: '#141412' }
+const META_COLOR: Record<ResolvedTheme, string> = { light: '#FFFFFF', dark: '#111111' }
 
 export const isPreference = (v: unknown): v is ThemePreference => v === 'light' || v === 'dark' || v === 'system'
 

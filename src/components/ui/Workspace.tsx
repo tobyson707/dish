@@ -44,7 +44,7 @@ export function Workspace({ open, onClose, label, children, className }: { open:
       {mounted && (
         <div
           className={cn(
-            'workspace-panel ml-auto flex h-full w-[min(88vw,480px)] flex-col overflow-hidden rounded-l-[34px] bg-[var(--c-glass-dark)] text-on-glass-dark shadow-[-30px_0_80px_-20px_rgb(0_0_0/0.45)] ring-1 ring-white/10 backdrop-blur-2xl',
+            'workspace-panel ml-auto flex h-full w-[min(88vw,480px)] flex-col overflow-hidden rounded-l-[34px] bg-[var(--c-glass-dark)] text-on-glass-dark shadow-[-30px_0_80px_-20px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-2xl',
             className,
           )}
           style={{ transform: drag.offset ? `translateX(${drag.offset}px)` : undefined, transition: drag.dragging ? 'none' : undefined, paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}

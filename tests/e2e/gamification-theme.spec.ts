@@ -123,8 +123,8 @@ test.describe('gamification', () => {
 
 test.describe('appearance', () => {
   const bg = (page: Page) => page.evaluate(() => getComputedStyle(document.body).backgroundColor)
-  const DARK_BG = 'rgb(20, 20, 18)'
-  const LIGHT_BG = 'rgb(243, 238, 230)'
+  const DARK_BG = 'rgb(17, 17, 17)'
+  const LIGHT_BG = 'rgb(255, 255, 255)'
 
   test('pre-paint script applies the stored theme before the app bundle runs (no flash)', async ({ page }) => {
     await page.emulateMedia({ colorScheme: 'light' })

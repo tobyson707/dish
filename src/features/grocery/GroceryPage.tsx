@@ -215,7 +215,7 @@ function AddItem({ listId }: { listId: string }) {
             aria-label="Quantity (e.g. 2 kg)"
             className="h-11 w-16 rounded-full bg-white/8 px-3 text-on-glass-dark outline-none ring-1 ring-inset ring-white/10 placeholder:text-on-glass-dark-muted focus:ring-white/40"
           />
-          <button type="submit" disabled={!name.trim()} className="press inline-flex h-11 items-center gap-1.5 rounded-full bg-accent px-4 font-semibold text-accent-ink disabled:opacity-45">
+          <button type="submit" disabled={!name.trim()} className="press inline-flex h-11 items-center gap-1.5 rounded-full bg-on-glass-dark px-4 font-semibold text-on-glass-dark-ink disabled:opacity-45">
             <Icon name="plus" size={18} />
             Add
           </button>

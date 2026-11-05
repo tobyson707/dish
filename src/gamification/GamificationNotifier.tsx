@@ -107,7 +107,7 @@ export function GamificationNotifier() {
         if (n.kind === 'xp')
           return (
             <div key={n.id} role="status" className="flex items-center gap-2 rounded-full bg-ink px-3.5 py-2 text-sm text-on-ink shadow-lg animate-[xp-rise_420ms_var(--ease-out)_both]">
-              <span className="num font-extrabold text-accent">+{n.amount} XP</span>
+              <span className="num font-extrabold text-accent-on-ink">+{n.amount} XP</span>
               <span className="opacity-80">— {n.label}</span>
             </div>
           )
@@ -124,7 +124,7 @@ export function GamificationNotifier() {
         if (n.kind === 'streak')
           return (
             <div key={n.id} role="status" className="flex items-center gap-2 rounded-full bg-elevated px-3.5 py-2 text-sm font-semibold shadow-lg ring-1 ring-line animate-[xp-rise_420ms_var(--ease-out)_both]">
-              <Icon name="flame" size={16} className="text-accent" /> You're on a {n.days}-day streak.
+              <Icon name="flame" size={16} className="text-accent-strong" /> You're on a {n.days}-day streak.
             </div>
           )
         const def = defs.data?.find((d) => d.id === n.achievementId)
