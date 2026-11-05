@@ -320,13 +320,19 @@ html[data-workspace] .recede-target {
 @keyframes ws-in { from { transform: translateX(104%); opacity: 0.6; } to { transform: none; opacity: 1; } }
 @keyframes ws-out { to { transform: translateX(104%); opacity: 0.4; } }
 @keyframes hero-in { from { opacity: 0; transform: scale(1.03); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
+/* No visible scrollbar indicators anywhere (scrolling itself is untouched:
+   wheel, trackpad, touch and keyboard all still work; hidden bars take no width). */
+* { scrollbar-width: none; -ms-overflow-style: none; }
+*::-webkit-scrollbar { display: none; width: 0; height: 0; background: transparent; }
+
 /* while a sheet or workspace is open the page behind must not scroll (position is kept) */
 html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
 
 /* ---- Rotary selector overlay geometry (fixed; never part of the layout) ---- */
 :root {
   --rotary-w: 70px;
-  --rotary-right: 8px; /* measured at runtime from the Home canvas edge */
+  --rotary-right: 0px; /* the dial is flush with the viewport's right edge */
+  --cat-ws-gap: 6px; /* space between the drawer and the dial (no overlap) */
   /* centred in the space between the top safe area and the mobile bottom nav */
   --rotary-top: calc(var(--safe-top) + (100dvh - var(--safe-top) - var(--nav-h) - var(--safe-bottom) - 26px) / 2);
   --cat-ws-w: 75vw;
@@ -337,8 +343,9 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
 
 /* Partial category workspace: sits flush beside the dial, slides in from the right */
 .cat-ws {
-  right: calc(var(--rotary-right) + var(--rotary-w) - 18px);
-  width: min(var(--cat-ws-w), calc(100vw - var(--rotary-right) - var(--rotary-w) + 6px));
+  /* anchored to the viewport's right edge, immediately left of the dial */
+  right: calc(var(--rotary-right) + var(--rotary-w) + var(--cat-ws-gap));
+  width: min(var(--cat-ws-w), calc(100vw - var(--rotary-right) - var(--rotary-w) - var(--cat-ws-gap) - 12px));
   top: calc(var(--safe-top) + 10px);
   bottom: calc(var(--safe-bottom) + 10px);
   animation: cat-in 520ms var(--ease-spring) both;
@@ -346,8 +353,9 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
 .cat-ws[data-closing] { animation: cat-out 320ms var(--ease-in-out) forwards; }
 .cat-scrim { animation: fade 260ms var(--ease-out) both; }
 .cat-scrim[data-closing] { animation: fade-out 300ms var(--ease-out) forwards; }
-@keyframes cat-in { from { transform: translateX(calc(100% + var(--rotary-right) + var(--rotary-w))); opacity: 0.5; } to { transform: none; opacity: 1; } }
-@keyframes cat-out { to { transform: translateX(calc(100% + var(--rotary-right) + var(--rotary-w))); opacity: 0.4; } }
+/* a physical slide from beyond the right edge (no fade as the entrance) */
+@keyframes cat-in { from { transform: translateX(calc(100% + var(--rotary-right) + var(--rotary-w) + var(--cat-ws-gap))); } to { transform: none; } }
+@keyframes cat-out { to { transform: translateX(calc(100% + var(--rotary-right) + var(--rotary-w) + var(--cat-ws-gap))); } }
 
 /* workspace content swap when the category dial turns (direction-aware) */
 .ws-swap { animation: ws-swap 340ms var(--ease-out) both; }

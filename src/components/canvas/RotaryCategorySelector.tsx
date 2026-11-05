@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { cn } from '@/lib/cn'
 import { Icon } from '@/components/ui/Icon'
@@ -17,50 +17,21 @@ export interface CategoryChange {
   open: boolean
 }
 
-/** Keep the dial attached to the right edge of the canvas element, wherever it is laid out. */
-function useAnchorRight(anchor: HTMLElement | null) {
-  const [right, setRight] = useState(8)
-  useEffect(() => {
-    if (!anchor) return
-    const measure = () => {
-      // place the dial flush with the canvas edge; then correct by any residual
-      // difference (scrollbars, zoom), so it is exact on every browser
-      const target = anchor.getBoundingClientRect().right
-      const dial = document.querySelector<HTMLElement>('[data-rotary]')
-      const current = dial ? parseFloat(dial.style.right || '0') : 0
-      const r = dial ? Math.max(0, Math.round(current + (dial.getBoundingClientRect().right - target))) : Math.max(0, Math.round(window.innerWidth - target))
-      setRight(r)
-      document.documentElement.style.setProperty('--rotary-right', `${r}px`) // the workspace aligns to the dial
-    }
-    measure()
-    const raf = requestAnimationFrame(measure) // second pass once the dial is laid out
-    const ro = new ResizeObserver(measure)
-    ro.observe(anchor)
-    ro.observe(document.documentElement)
-    window.addEventListener('resize', measure)
-    return () => {
-      cancelAnimationFrame(raf)
-      ro.disconnect()
-      window.removeEventListener('resize', measure)
-    }
-  }, [anchor])
-  return right
-}
 
 /**
  * Infinite rotary category selector — DISH's signature control. A compact
  * vertical dial floating over the Home canvas (portalled, `position: fixed`, so
- * it never takes layout space or scrolls with the content). Categories rotate
+ * it never takes layout space or scrolls with the content), snapped flush to the
+ * right edge of the viewport (right: 0). Categories rotate
  * endlessly through a fixed peach "tuning window"; an ink copy of the faces is
  * clipped inside the window so labels change colour exactly where they cross it.
  *
  * Turn by drag, mouse wheel or trackpad; tap a neighbour to turn to it; tap the
  * centre (or Enter) to open its workspace. Arrow keys turn without opening.
  */
-export function RotaryCategorySelector({ value, onChange, onActivate, anchor, workspaceOpen }: { value: Category; onChange: (c: CategoryChange) => void; onActivate: () => void; anchor: HTMLElement | null; workspaceOpen?: boolean }) {
+export function RotaryCategorySelector({ value, onChange, onActivate, workspaceOpen }: { value: Category; onChange: (c: CategoryChange) => void; onActivate: () => void; workspaceOpen?: boolean }) {
   const index = Math.max(0, CATEGORIES.findIndex((c) => c.id === value))
   const [announce, setAnnounce] = useState('')
-  const right = useAnchorRight(anchor)
 
   const { attachWheel, pointer, step, goTo } = useRotary({
     count: N,
@@ -129,7 +100,7 @@ export function RotaryCategorySelector({ value, onChange, onActivate, anchor, wo
       className={cn(
         'group fixed z-[55] w-[70px] -translate-y-1/2 cursor-grab touch-none select-none overflow-hidden rounded-l-[36px] bg-[var(--c-glass-dark)] shadow-[-12px_18px_40px_-18px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-xl active:cursor-grabbing min-[380px]:w-[78px]',
       )}
-      style={{ right, top: 'var(--rotary-top)', height: ROTARY_ITEM * VISIBLE + PAD * 2 }}
+      style={{ right: 0, top: 'var(--rotary-top)', height: ROTARY_ITEM * VISIBLE + PAD * 2 }}
     >
       {/* edge shading: the faces seem to turn away under glass */}
       <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-10 rounded-l-[36px] bg-[linear-gradient(to_bottom,var(--c-glass-dark),transparent_30%,transparent_70%,var(--c-glass-dark))]" />

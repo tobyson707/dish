@@ -43,7 +43,6 @@ export function Home() {
   const [workspaceOpen, setWorkspaceOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
-  const [canvasEl, setCanvasEl] = useState<HTMLElement | null>(null)
   useAutoExtendPlan()
 
   const todays = useMemo(() => (meals.data ?? []).filter((m) => m.date === today).sort(sortPlanned), [meals.data, today])
@@ -55,7 +54,6 @@ export function Home() {
       <h1 className="sr-only">What's cooking today?</h1>
       <div className="recede-target -mx-2 sm:mx-0">
         <HomeCanvas
-          canvasRef={setCanvasEl}
           meals={todays}
           loading={meals.isPending}
           noPlan={noPlan}
@@ -98,7 +96,6 @@ export function Home() {
 
       <RotaryCategorySelector
         value={category}
-        anchor={canvasEl}
         workspaceOpen={workspaceOpen}
         onChange={(c: CategoryChange) => {
           setCategory(c.category)
@@ -119,7 +116,7 @@ export function Home() {
  * toolbar, editorial headline, featured food, right-edge category rail,
  * overlapping next-meal panel and swipeable pagination.
  */
-function HomeCanvas({ canvasRef, meals, loading, noPlan, category, onFind }: { canvasRef: (el: HTMLElement | null) => void; meals: PlannedMeal[]; loading: boolean; noPlan: boolean; category: Category; onFind: (c: Category) => void }) {
+function HomeCanvas({ meals, loading, noPlan, category, onFind }: { meals: PlannedMeal[]; loading: boolean; noPlan: boolean; category: Category; onFind: (c: Category) => void }) {
   const filtered = useMemo(() => (category === 'all' ? meals : meals.filter((m) => m.slot === category)), [meals, category])
   const nextIdx = Math.max(0, filtered.findIndex((m) => m.status === 'planned'))
   const [picked, setPicked] = useState<{ key: string; idx: number } | null>(null)
@@ -134,7 +131,6 @@ function HomeCanvas({ canvasRef, meals, loading, noPlan, category, onFind }: { c
 
   return (
     <section
-      ref={canvasRef}
       aria-label="Today's featured meal"
       className="relative isolate h-[clamp(580px,calc(100dvh-var(--safe-top)-var(--safe-bottom)-190px),860px)] overflow-hidden rounded-[34px] shadow-[0_30px_80px_-40px_var(--c-shadow)] md:h-[clamp(600px,calc(100dvh-200px),820px)]"
       style={{ background: 'var(--c-elevated)' }}

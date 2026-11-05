@@ -51,11 +51,12 @@ test('infinite dial: loops both ways, snaps, stays fixed, no DOM growth @respons
   await home(page)
   await expect(pressed(page)).toHaveText('All')
 
-  // fixed overlay: portalled to <body>, attached to the canvas edge, not in the layout
+  // fixed overlay: portalled to <body>, flush with the viewport's right edge, not in the layout
   expect(await dial(page).evaluate((e) => e.parentElement === document.body && getComputedStyle(e).position === 'fixed')).toBe(true)
-  const canvasRight = await page.getByRole('region', { name: "Today's featured meal" }).evaluate((e) => e.getBoundingClientRect().right)
+  const vw = await page.evaluate(() => innerWidth)
   const b0 = (await dial(page).boundingBox())!
-  expect(Math.abs(b0.x + b0.width - canvasRight)).toBeLessThanOrEqual(1)
+  expect(Math.abs(b0.x + b0.width - vw)).toBeLessThanOrEqual(0.5)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBe(0) // no horizontal overflow
   expect(b0.height).toBeLessThan(260) // three positions
   await page.evaluate(() => scrollTo(0, 400))
   await page.waitForTimeout(200)
@@ -129,6 +130,9 @@ test('partial workspace: overlays Home without pushing it, switches in place, re
   const vw = page.viewportSize()!.width
   expect(wb.x).toBeGreaterThanOrEqual(0)
   expect(wb.width).toBeLessThan(vw) // partial: part of Home stays visible
+  expect(wb.x + wb.width).toBeLessThanOrEqual((await dial(page).boundingBox())!.x) // sits beside the dial, never under it
+  // no visible scrollbars, yet the panel scrolls
+  expect(await ws.locator('.overflow-y-auto').evaluate((e) => (e as HTMLElement).offsetWidth - e.clientWidth)).toBe(0)
   // the dial stays above the workspace and usable
   const db = (await dial(page).boundingBox())!
   expect(await page.evaluate(([x, y]) => !!document.elementFromPoint(x, y)?.closest('[data-rotary]'), [db.x + db.width / 2, db.y + db.height / 2])).toBe(true)
