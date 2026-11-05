@@ -143,8 +143,8 @@ test('planned vs eaten, locking, regenerate, grocery list, and offline sync', as
   await completeOnboardingFor(uid, { allergies: ['peanut'], cook_time: '30_60' })
   await signIn(page, email)
   await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
-  await expect(page.getByText('No meal plan yet')).toBeVisible()
-  await page.getByRole('link', { name: 'Create my meal plan' }).click()
+  await expect(page.getByRole('heading', { name: "Let's plan your first meals." })).toBeVisible()
+  await page.getByRole('link', { name: 'Plan my meals' }).click()
   await page.getByRole('button', { name: 'Create my plan' }).click()
   await expect(page).toHaveURL(/\/plan\?date=/, { timeout: 30_000 })
 

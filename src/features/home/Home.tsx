@@ -2,14 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { addDays, startOfWeek } from '@domain/dates.ts'
 import type { PlannedMeal } from '@/types/db'
-import { useActivePlan, usePlannedMeals, sortPlanned } from '@/data/plans'
+import { useActivePlan, useLatestPlan, usePlannedMeals, sortPlanned } from '@/data/plans'
 import { useProfile } from '@/data/profile'
 import { useGeneratePlan } from '@/data/ai'
 import { useToday } from '@/hooks/useToday'
-import { longDate } from '@/lib/format'
-import { ButtonLink } from '@/components/ui/Button'
+import { dayLabel, longDate } from '@/lib/format'
 import { Icon } from '@/components/ui/Icon'
-import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
+import { ErrorState, Skeleton } from '@/components/ui/States'
 import { MealHeroCard } from '@/components/meal/MealCard'
 import { MealActionsSheet } from '@/components/meal/MealActions'
 import { friendlyError } from '@/lib/errors'
@@ -25,6 +24,7 @@ import { UtilityDock } from '@/components/canvas/UtilityDock'
 import { CategoryWorkspace } from '@/components/canvas/CategoryWorkspace'
 import { SearchWorkspace } from '@/components/canvas/SearchWorkspace'
 import { categoryLabel, type Category } from '@/components/canvas/categories'
+import { dayState, emptyCopy, tipFor, tomorrow, type DayState } from './homeState'
 
 /**
  * Home: header controls → editorial headline → featured meal → next meal →
@@ -46,17 +46,28 @@ export function Home() {
   const [addOpen, setAddOpen] = useState(false)
   useAutoExtendPlan()
 
+  const latest = useLatestPlan()
   const todays = useMemo(() => (meals.data ?? []).filter((m) => m.date === today).sort(sortPlanned), [meals.data, today])
-  const noPlan = plan.isSuccess && !plan.data && todays.length === 0
+  const state = dayState({
+    today,
+    todays,
+    active: plan.data,
+    latest: latest.data,
+    loading: meals.isPending || plan.isPending || latest.isPending,
+    failed: (meals.isError && !meals.data) || (plan.isError && !plan.data),
+  })
+  const retry = () => void Promise.all([meals.refetch(), plan.refetch(), latest.refetch()])
 
   return (
     <div className="pb-4">
       <div className="recede-target -mx-2 sm:mx-0">
         <HomeCanvas
           greeting={greeting(profile.data?.display_name, profile.data?.timezone)}
+          tip={tipFor(state, today, todays)}
           meals={todays}
-          loading={meals.isPending}
-          noPlan={noPlan}
+          state={state}
+          today={today}
+          onRetry={retry}
           category={category}
           onFind={(c) => {
             setCategory(c)
@@ -75,14 +86,13 @@ export function Home() {
           </div>
           <Link to="/plan" className="shrink-0 text-sm font-semibold underline-offset-2 hover:underline">Full plan →</Link>
         </div>
-        {meals.isPending ? (
+        {state.kind === 'loading' ? (
           <div className="flex flex-col gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
-        ) : meals.isError && !meals.data ? (
-          <ErrorState message={friendlyError(meals.error)} onRetry={() => meals.refetch()} />
-        ) : noPlan ? (
-          <p className="text-ink-2">Your meals will appear here once you create a plan.</p>
+        ) : state.kind === 'error' ? (
+          <ErrorState message={friendlyError(meals.error ?? plan.error)} onRetry={retry} />
         ) : todays.length === 0 ? (
-          <EmptyState title="Nothing planned today" message="Add a meal, or let DISH suggest one." action={<div className="flex flex-wrap justify-center gap-2"><ButtonLink to="/surprise">Surprise me</ButtonLink><ButtonLink variant="secondary" to={`/plan?date=${today}&add=1`}>Add a meal</ButtonLink></div>} />
+          // the invitation lives in the hero above; here, one quiet line
+          <p className="text-callout text-muted">{state.kind === 'first' ? 'Your meals will appear here once you have a plan.' : 'No meals on today’s menu.'}</p>
         ) : (
           <div className="flex flex-col gap-3">
             {todays.map((m) => (
@@ -133,7 +143,8 @@ export function Home() {
  * toolbar, editorial headline, featured food, right-edge category rail,
  * overlapping next-meal panel and swipeable pagination.
  */
-function HomeCanvas({ greeting, meals, loading, noPlan, category, onFind }: { greeting: string; meals: PlannedMeal[]; loading: boolean; noPlan: boolean; category: Category; onFind: (c: Category) => void }) {
+function HomeCanvas({ greeting, tip, meals, state, today, onRetry, category, onFind }: { greeting: string; tip: string; meals: PlannedMeal[]; state: DayState; today: string; onRetry: () => void; category: Category; onFind: (c: Category) => void }) {
+  const loading = state.kind === 'loading'
   const filtered = useMemo(() => (category === 'all' ? meals : meals.filter((m) => m.slot === category)), [meals, category])
   const nextIdx = Math.max(0, filtered.findIndex((m) => m.status === 'planned'))
   const [picked, setPicked] = useState<{ key: string; idx: number } | null>(null)
@@ -157,7 +168,15 @@ function HomeCanvas({ greeting, meals, loading, noPlan, category, onFind }: { gr
 
       <div className="absolute left-5 right-[92px] top-[92px] z-10 sm:left-8 lg:right-[45%] lg:top-[120px]">
         <h1 className="font-serif text-display leading-[0.95] tracking-[-0.01em] text-ink animate-[rise_520ms_var(--ease-out)_both]">{greeting}</h1>
-        <p className="mt-4 max-w-[22ch] text-headline leading-snug text-ink-2 animate-[fade_500ms_ease-out_120ms_both]">What are you in the mood for today?</p>
+        <p className="mt-4 max-w-[24ch] text-headline leading-snug text-ink-2 animate-[fade_500ms_ease-out_120ms_both]">Let's make today delicious.</p>
+        {/* on small phones the invitation panel takes this space, so the tip steps aside */}
+        <p className={cn('mt-3 flex max-w-[30ch] items-start gap-1.5 text-footnote text-muted animate-[fade_500ms_ease-out_240ms_both]', !loading && (!featured || state.kind === 'done' || state.kind === 'error') && 'max-sm:hidden')}>
+          <Icon name="leaf" size={14} className="mt-[3px] shrink-0 text-accent-strong" aria-hidden="true" />
+          <span>
+            <span className="sr-only">Tip: </span>
+            {tip}
+          </span>
+        </p>
       </div>
 
       {/* featured food — swipe between meals */}
@@ -179,16 +198,18 @@ function HomeCanvas({ greeting, meals, loading, noPlan, category, onFind }: { gr
 
 
       <div className="absolute bottom-[42px] left-4 right-[24%] z-20 sm:left-6 sm:right-auto sm:w-[min(72%,420px)] lg:bottom-12 lg:left-8">
-        {loading ? null : featured ? (
+        {loading ? null : state.kind === 'error' ? (
+          <EmptyCanvasPanel title="We couldn't load today's meals." body="Check your connection and try again." primary={<button type="button" onClick={onRetry} className={PRIMARY}>Try again <Icon name="refresh" size={16} /></button>} />
+        ) : featured && (state.kind !== 'done' || category !== 'all') ? (
           <NextMealPanel meal={featured} label={label} />
-        ) : noPlan ? (
-          <EmptyCanvasPanel title="No meal plan yet" body="Tell DISH how long to plan for." action={<Link to="/plan/new" className="press inline-flex h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-bold text-on-ink">Create my meal plan <Icon name="right" size={16} /></Link>} />
-        ) : (
+        ) : category !== 'all' && state.kind === 'meals' ? (
           <EmptyCanvasPanel
-            title={category === 'all' ? 'Nothing planned today' : `No ${categoryLabel(category).toLowerCase()} planned`}
+            title={`No ${categoryLabel(category).toLowerCase()} planned`}
             body="Let's find something you'll enjoy."
-            action={<button type="button" onClick={() => onFind(category)} className="press inline-flex h-10 items-center gap-1.5 rounded-full bg-ink px-4 text-sm font-bold text-on-ink">Find a meal <Icon name="right" size={16} /></button>}
+            primary={<button type="button" onClick={() => onFind(category)} className={PRIMARY}>Find a meal <Icon name="right" size={16} /></button>}
           />
+        ) : (
+          <HomeEmpty state={state} today={today} />
         )}
       </div>
 
@@ -205,14 +226,41 @@ function HomeCanvas({ greeting, meals, loading, noPlan, category, onFind }: { gr
   )
 }
 
-function EmptyCanvasPanel({ title, body, action }: { title: string; body: string; action: React.ReactNode }) {
+const PRIMARY = 'press inline-flex h-11 items-center gap-1.5 rounded-full bg-ink px-5 text-sm font-bold text-on-ink'
+const SECONDARY = 'press inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold text-ink ring-1 ring-inset ring-line hover:bg-surface'
+
+function EmptyCanvasPanel({ title, body, primary, secondary, extra }: { title: string; body: string; primary: React.ReactNode; secondary?: React.ReactNode; extra?: React.ReactNode }) {
   return (
-    <div className="rounded-[26px] bg-[var(--c-glass)] p-5 shadow-[0_18px_40px_-20px_var(--c-shadow)] ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-xl animate-[info-in_380ms_var(--ease-out)_both]">
-      <p className="text-headline font-bold text-ink">{title}</p>
+    <div role="region" aria-label={title} className="rounded-[26px] bg-[var(--c-glass)] p-5 shadow-[0_18px_40px_-20px_var(--c-shadow)] ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-xl animate-[info-in_380ms_var(--ease-out)_both]">
+      <h2 className="font-serif text-title-3 text-ink">{title}</h2>
       <p className="mt-1 text-footnote text-ink-2">{body}</p>
-      <div className="mt-3">{action}</div>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        {primary}
+        {secondary}
+      </div>
+      {extra && <div className="mt-3">{extra}</div>}
     </div>
   )
+}
+
+/** The invitation when there's nothing left to eat today; wording follows the real situation. */
+function HomeEmpty({ state, today }: { state: DayState; today: string }) {
+  const copy = emptyCopy(state, today, (d) => dayLabel(d, today).toLowerCase())
+  if (!copy) return null
+  const surprise = (
+    <Link to="/surprise" className="inline-flex items-center gap-1.5 text-footnote font-semibold text-ink underline-offset-2 hover:underline">
+      <Icon name="sparkle" size={14} /> Surprise me
+    </Link>
+  )
+  const explore = <Link to="/discover" className={SECONDARY}>Explore meals</Link>
+  if (state.kind === 'done')
+    return <EmptyCanvasPanel title={copy.title} body={copy.body} primary={<Link to={`/plan?date=${tomorrow(today)}`} className={PRIMARY}>See tomorrow <Icon name="right" size={16} /></Link>} secondary={explore} />
+  if (state.kind === 'upcoming')
+    return <EmptyCanvasPanel title={copy.title} body={copy.body} primary={<Link to={`/plan?date=${state.starts}`} className={PRIMARY}>View my plan <Icon name="right" size={16} /></Link>} secondary={explore} extra={surprise} />
+  if (state.kind === 'gap')
+    return <EmptyCanvasPanel title={copy.title} body={copy.body} primary={<Link to={`/plan?date=${today}&add=1`} className={PRIMARY}>Plan my meals <Icon name="right" size={16} /></Link>} secondary={explore} extra={surprise} />
+  // first plan, or the last one has finished: the full planning flow
+  return <EmptyCanvasPanel title={copy.title} body={copy.body} primary={<Link to="/plan/new" className={PRIMARY}>Plan my meals <Icon name="right" size={16} /></Link>} secondary={explore} extra={surprise} />
 }
 
 /** Long plans are generated a week at a time; top up when the next week is near. */

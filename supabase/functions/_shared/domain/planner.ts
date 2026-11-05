@@ -9,6 +9,8 @@ import { DEFAULT_SIMILARITY, mealProfile, mealSimilarity, type SimilarityThresho
 export interface HistoryItem {
   food_item_id: string
   date: ISODate
+  /** known for planned meals; diary entries may not have one */
+  slot?: MealSlot
 }
 
 export interface ScoredCandidate {
@@ -284,11 +286,14 @@ export interface VarietyOptions {
 
 type Placed = { date: ISODate; slot: MealSlot; food_item_id: string | null }
 
+/** A recipe never repeats within this many days (a week), however long the plan. */
+export const REPEAT_WINDOW_DAYS = 7
+
 /**
- * May `meal` go in (date, slot) given what is already placed? Same recipe
- * twice in a block is refused (except as next-day leftovers for lunch or
- * dinner when the person allows leftovers), and so is a near-copy on the same
- * or the next day.
+ * May `meal` go in (date, slot) given what is already placed? The same recipe
+ * within a week is refused (except as next-day leftovers for lunch or dinner
+ * when the person allows leftovers), and so is a near-copy on the same or the
+ * next day. Longer plans repeat favourites only after a week has passed.
  */
 export function fitsVariety(meal: CatalogueMeal, at: { date: ISODate; slot: MealSlot }, placed: Placed[], lookup: Map<string, CatalogueMeal>, opts: VarietyOptions): boolean {
   const t = opts.similarity ?? DEFAULT_SIMILARITY
@@ -297,6 +302,7 @@ export function fitsVariety(meal: CatalogueMeal, at: { date: ISODate; slot: Meal
     if (!p.food_item_id || (p.date === at.date && p.slot === at.slot)) continue
     const gap = Math.abs(diffDays(p.date, at.date))
     if (p.food_item_id === meal.id) {
+      if (gap >= REPEAT_WINDOW_DAYS) continue
       if (opts.leftovers_ok && main && gap === 1 && (p.slot === 'lunch' || p.slot === 'dinner')) continue
       return false
     }
@@ -405,7 +411,7 @@ const bySlotTime = (a: PlanSlotRequest, b: PlanSlotRequest) => (a.date === b.dat
 
 /**
  * Fill every requested slot. Slots with nothing suitable are returned in
- * `unfilled`. The block has no repeated recipes (bar allowed leftovers), no
+ * `unfilled`. No recipe repeats within a week (bar allowed leftovers), no
  * near-identical meals on the same or consecutive days, and spreads the main
  * protein and base across the week.
  */
@@ -416,15 +422,26 @@ export function generateSelections(input: GenerateInput): { selections: PlannedS
     ...input.history,
     ...input.keep.filter((k) => k.food_item_id).map((k) => ({ food_item_id: k.food_item_id!, date: k.date })),
   ]
-  const placed: Placed[] = input.keep.map((k) => ({ date: k.date, slot: k.slot, food_item_id: k.food_item_id }))
-  const usage = { protein: new Map<string, number>(), base: new Map<string, number>() }
-  const count = (m: CatalogueMeal | undefined) => {
-    if (!m) return
-    const p = mealProfile(m)
-    usage.protein.set(p.protein, (usage.protein.get(p.protein) ?? 0) + 1)
-    usage.base.set(p.base, (usage.base.get(p.base) ?? 0) + 1)
+  const keyOf = (x: { date: ISODate; slot?: MealSlot }) => `${x.date}|${x.slot ?? ''}`
+  const requested = new Set(input.slots.map(keyOf))
+  const placed: Placed[] = [
+    ...input.keep.map((k) => ({ date: k.date, slot: k.slot, food_item_id: k.food_item_id })),
+    // recent meals outside this block (e.g. the previous generation chunk) count too
+    ...input.history.filter((h) => h.slot && !requested.has(keyOf(h))).map((h) => ({ date: h.date, slot: h.slot!, food_item_id: h.food_item_id })),
+  ]
+  // main protein / base counts over the surrounding week (rolling, so long plans stay varied all year)
+  const usageAround = (date: ISODate) => {
+    const usage = { protein: new Map<string, number>(), base: new Map<string, number>() }
+    for (const p of placed) {
+      if (!p.food_item_id || Math.abs(diffDays(p.date, date)) >= REPEAT_WINDOW_DAYS) continue
+      const m = lookup.get(p.food_item_id)
+      if (!m) continue
+      const pr = mealProfile(m)
+      usage.protein.set(pr.protein, (usage.protein.get(pr.protein) ?? 0) + 1)
+      usage.base.set(pr.base, (usage.base.get(pr.base) ?? 0) + 1)
+    }
+    return usage
   }
-  for (const k of input.keep) if (k.food_item_id) count(lookup.get(k.food_item_id))
   const opts: VarietyOptions = { leftovers_ok: input.prefs.leftovers_ok, similarity: input.similarity }
   const keepSet = new Set(input.keep.map((k) => `${k.date}|${k.slot}`))
   const selections: PlannedSelection[] = []
@@ -435,7 +452,7 @@ export function generateSelections(input: GenerateInput): { selections: PlannedS
     if (keepSet.has(`${req.date}|${req.slot}`)) continue
     const ranked = rankCandidates(
       input.meals,
-      { prefs: input.prefs, slot: req.slot, mealsPerDay: input.mealsPerDay, date: req.date, history, kitchenNames: input.kitchenNames, rng, lookup, similarity: input.similarity, usage },
+      { prefs: input.prefs, slot: req.slot, mealsPerDay: input.mealsPerDay, date: req.date, history, kitchenNames: input.kitchenNames, rng, lookup, similarity: input.similarity, usage: usageAround(req.date) },
       salt++,
       (m) => fitsVariety(m, req, placed, lookup, opts),
     )
@@ -453,7 +470,6 @@ export function generateSelections(input: GenerateInput): { selections: PlannedS
     })
     history.push({ food_item_id: pick.meal.id, date: req.date })
     placed.push({ ...req, food_item_id: pick.meal.id })
-    count(pick.meal)
   }
   return { selections, unfilled }
 }

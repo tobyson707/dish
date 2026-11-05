@@ -8,6 +8,9 @@ import { useDragDismiss, usePresence } from '@/components/ui/usePresence'
 import { cn } from '@/lib/cn'
 import { CATEGORIES, categoryIcon, categoryLabel, type Category } from './categories'
 import { MealOptionList } from './MealOptionList'
+import { FoodImage } from '@/components/ui/FoodImage'
+import { SLOT_LABEL, type MealSlot } from '@domain/types.ts'
+import type { FoodItem } from '@/types/db'
 import { useAddToToday } from './useAddToToday'
 import { slotFor, useRankedMeals } from './useRankedMeals'
 
@@ -94,6 +97,21 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
     return list.slice(0, 12)
   }, [ranked.items, tab])
 
+  const view = (f: FoodItem) => {
+    onClose()
+    nav(`/recipes/${f.slug}`)
+  }
+  const addMeal = async (f: FoodItem) => {
+    if (added.has(f.id)) return // no duplicate adds from repeated taps
+    setBusyId(f.id)
+    const ok = await add(f, category === 'all' ? slotFor(f, prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']) : category)
+    setBusyId(null)
+    if (ok) {
+      setAdded((s) => new Set(s).add(f.id))
+      setTimeout(onClose, 450) // let the confirmation register, then return to the canvas
+    }
+  }
+
   if (!mounted) return null
   const label = category === 'all' ? 'All meal ideas' : `${categoryLabel(category)} ideas`
 
@@ -106,11 +124,12 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
         aria-modal="false"
         aria-label={label}
         data-closing={closing || undefined}
-        className="cat-ws fixed z-50 flex flex-col overflow-hidden rounded-[30px] bg-[var(--c-glass-dark)] text-on-glass-dark shadow-[-24px_0_70px_-20px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-xl"
+        className="cat-ws fixed z-50 flex flex-col overflow-hidden rounded-r-[28px] bg-[var(--c-glass-dark)] sm:rounded-[32px] text-on-glass-dark shadow-[-24px_0_70px_-20px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-xl"
         style={{ translate: drag.offset ? `${drag.offset}px 0` : undefined, transition: drag.dragging ? 'none' : 'translate 260ms var(--ease-out)' }}
       >
         <header
-          className="flex shrink-0 items-start gap-2 pb-1 pl-5 pr-7 pt-4 touch-pan-y"
+          className="flex shrink-0 items-start gap-3 px-5 pb-2 touch-pan-y sm:px-8 lg:px-10"
+          style={{ paddingTop: 'calc(var(--safe-top) + 28px)' }}
           {...drag.handlers}
           onPointerDown={(e) => {
             // swipe right to close — but never capture a press meant for a button (e.g. Close)
@@ -119,18 +138,18 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
           }}
         >
           <div key={category} className="ws-swap min-w-0 flex-1 pt-2" style={{ ['--swap-dir' as string]: dir }}>
-            <div className="flex items-center gap-2.5">
-              <Icon name={categoryIcon(category)} size={26} />
-              <h2 ref={heading} tabIndex={-1} className="truncate font-serif text-title-2 leading-none outline-none">
+            <div className="flex items-center gap-3">
+              <Icon name={categoryIcon(category)} size={28} />
+              <h2 ref={heading} tabIndex={-1} className="truncate font-serif text-title-1 leading-none outline-none">
                 {categoryLabel(category)}
               </h2>
             </div>
-            <p className="mt-2 text-footnote text-on-glass-dark-muted">{CATEGORY_LINE[category]}</p>
+            <p className="mt-3 text-callout text-on-glass-dark-muted">{CATEGORY_LINE[category]}</p>
           </div>
           <IconButton icon="x" label="Close" onClick={onClose} className="-mr-1 shrink-0 text-on-glass-dark hover:bg-white/10" />
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6 pl-5 pr-7">
-          <div role="tablist" aria-label="Filter" className="mt-3 flex gap-1">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 sm:px-8 lg:px-10" style={{ paddingBottom: 'calc(var(--safe-bottom) + 40px)' }}>
+          <div role="tablist" aria-label="Filter" className="mt-6 flex flex-wrap gap-1">
             {TABS.map((t) => (
               <button
                 key={t.id}
@@ -138,16 +157,16 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
                 type="button"
                 aria-selected={tab === t.id}
                 onClick={() => setTab(t.id)}
-                className={cn('press h-10 rounded-full px-4 text-sm font-semibold transition-colors duration-300', tab === t.id ? 'bg-accent text-accent-ink' : 'text-on-glass-dark-muted hover:text-on-glass-dark')}
+                className={cn('press h-10 rounded-full px-3.5 text-sm font-semibold transition-colors duration-300 sm:px-4', tab === t.id ? 'bg-accent text-accent-ink' : 'text-on-glass-dark-muted hover:text-on-glass-dark')}
               >
                 {t.label}
               </button>
             ))}
           </div>
-          <p className="mt-2.5 text-caption text-on-glass-dark-muted">{TAB_HINT[tab]}</p>
-          <div className="ws-swap mt-4" key={`${category}:${tab}`} style={{ ['--swap-dir' as string]: dir }}>
+          <p className="mt-3 text-footnote text-on-glass-dark-muted">{TAB_HINT[tab]}</p>
+          <div className="ws-swap mt-10" key={`${category}:${tab}`} style={{ ['--swap-dir' as string]: dir }}>
             {ranked.pending ? (
-              <div className="flex flex-col gap-3">{[0, 1, 2].map((i) => <div key={i} className="h-[84px] animate-pulse rounded-[22px] bg-white/[0.06]" />)}</div>
+              <div className="grid gap-8 sm:grid-cols-2">{[0, 1].map((i) => <div key={i} className="aspect-[4/3] animate-pulse rounded-[24px] bg-white/[0.06]" />)}</div>
             ) : items.length === 0 ? (
               <div className="rounded-[22px] bg-white/[0.05] p-5 ring-1 ring-inset ring-white/10">
                 <p className="font-semibold text-on-glass-dark">Nothing fits here right now</p>
@@ -163,32 +182,61 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
                 </p>
               </div>
             ) : (
-              <MealOptionList
-                compact
-                items={items}
-                busyId={busy ? busyId : null}
-                addedIds={added}
-                onOpen={(f) => {
-                  onClose()
-                  nav(`/recipes/${f.slug}`)
-                }}
-                onAdd={async (f) => {
-                  if (added.has(f.id)) return // no duplicate adds from repeated taps
-                  setBusyId(f.id)
-                  const ok = await add(f, category === 'all' ? slotFor(f, prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']) : category)
-                  setBusyId(null)
-                  if (ok) {
-                    setAdded((s) => new Set(s).add(f.id))
-                    setTimeout(onClose, 450) // let the confirmation register, then return to the canvas
-                  }
-                }}
-              />
+              <>
+                <section aria-label="Recommended">
+                  <h3 className="label-caps !text-on-glass-dark-muted">Recommended for you</h3>
+                  <ul className="mt-5 grid gap-x-6 gap-y-10 sm:grid-cols-2">
+                    {items.slice(0, 2).map((f) => (
+                      <FeaturedMeal key={f.id} food={f} slot={category === 'all' ? slotFor(f, prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']) : category} added={added.has(f.id)} busy={busy && busyId === f.id} disabled={busy} onView={() => view(f)} onAdd={() => void addMeal(f)} />
+                    ))}
+                  </ul>
+                </section>
+                {items.length > 2 && (
+                  <section aria-label="More ideas" className="mt-14 border-t border-white/10 pt-10">
+                    <h3 className="label-caps !text-on-glass-dark-muted">More ideas</h3>
+                    <div className="mt-5">
+                      <MealOptionList items={items.slice(2)} busyId={busy ? busyId : null} addedIds={added} addLabel="Add to plan" onOpen={view} onAdd={(f) => void addMeal(f)} />
+                    </div>
+                  </section>
+                )}
+              </>
             )}
           </div>
-          <p className="mt-6 text-micro text-on-glass-dark-muted">Nutrition values are estimates. Allergens are filtered, but always check ingredients.</p>
+          <p className="mt-12 text-caption text-on-glass-dark-muted">Nutrition values are estimates. Allergens are filtered, but always check ingredients.</p>
         </div>
       </section>
     </>,
     document.body,
+  )
+}
+
+/** A recommended meal: photo first, the name prominent, time and meal secondary. */
+function FeaturedMeal({ food: f, slot, added, busy, disabled, onView, onAdd }: { food: FoodItem; slot: MealSlot; added: boolean; busy: boolean; disabled: boolean; onView: () => void; onAdd: () => void }) {
+  const mins = f.can_cook ? f.prep_minutes + f.cook_minutes : null
+  return (
+    <li className="animate-[info-in_320ms_var(--ease-out)_both]">
+      <button type="button" onClick={onView} className="press block w-full" aria-label={`View ${f.name}`}>
+        <FoodImage path={f.image_path} name={f.name} slug={f.slug} className="aspect-[4/3] w-full rounded-[24px]" width={720} />
+      </button>
+      <h4 className="mt-5 font-serif text-title-3 leading-snug text-on-glass-dark">{f.name}</h4>
+      <p className="num mt-1.5 text-footnote text-on-glass-dark-muted">
+        {mins != null ? `${mins} min` : 'Ready to buy'} · {SLOT_LABEL[slot]}
+      </p>
+      <div className="mt-5 flex flex-wrap gap-2">
+        <button type="button" onClick={onView} className="press h-10 rounded-full px-4 text-sm font-semibold text-on-glass-dark ring-1 ring-inset ring-white/20 hover:bg-white/10">
+          View meal
+        </button>
+        <button
+          type="button"
+          onClick={onAdd}
+          disabled={disabled || added}
+          aria-label={added ? `${f.name} added` : `Add to plan: ${f.name}`}
+          className={cn('press inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-bold transition-colors disabled:cursor-default', added ? 'bg-accent text-accent-ink' : 'bg-on-glass-dark text-on-glass-dark-ink hover:bg-accent hover:text-accent-ink')}
+        >
+          {busy ? <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent" style={{ animation: 'spin .8s linear infinite' }} /> : <Icon name={added ? 'check' : 'plus'} size={16} />}
+          {added ? 'Added' : 'Add to plan'}
+        </button>
+      </div>
+    </li>
   )
 }

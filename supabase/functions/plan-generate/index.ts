@@ -18,6 +18,8 @@ const Body = z
     plan_id: z.string().guid().optional(),
     regenerate: z.object({ from: ISO, to: ISO }).optional(),
     next_block: z.boolean().optional(),
+    /** size of the block to fill (long plans are filled in chunks); default a week */
+    days: z.number().int().min(1).max(31).optional(),
   })
   .refine((b) => !!b.create !== !!b.plan_id, { message: 'Provide either create or plan_id' })
   .refine((b) => !b.plan_id || !!b.regenerate !== !!b.next_block, { message: 'With plan_id provide either regenerate or next_block' })
@@ -26,7 +28,8 @@ Deno.serve(
   handler(async (req, raw) => {
     const { user, db } = await authenticate(req)
     const body = parseBody(Body, raw)
-    await checkRequestBurst(user.id, 'plan_block', 12)
+    // a year is filled in ~13 chunks of four weeks; this still caps runaway clients
+    await checkRequestBurst(user.id, 'plan_block', 40)
     const ctx = await loadUserContext(db, user.id)
 
     // ── Resolve plan + the block to fill ───────────────────────────────────
@@ -39,9 +42,11 @@ Deno.serve(
     if (body.create) {
       const c = body.create
       if (c.start_date < addDays(body.today, -1) || c.start_date > addDays(body.today, 60)) throw new HttpError(400, 'Choose a start date between today and two months from now.', 'validation')
+      let replaced: string[] = []
       if (c.replace_active) {
-        const { error } = await db.from('meal_plans').update({ status: 'archived' }).eq('user_id', user.id).eq('status', 'active')
+        const { data: old, error } = await db.from('meal_plans').update({ status: 'archived' }).eq('user_id', user.id).eq('status', 'active').select('id')
         if (error) throw error
+        replaced = (old ?? []).map((r) => r.id as string)
       }
       const end = planEndDate(c.start_date, c.duration)
       const { data, error } = await db
@@ -51,7 +56,16 @@ Deno.serve(
         .single()
       if (error) throw error
       plan = data
-      const blk = nextBlock(c.start_date, end, null, c.duration === 'day' ? 1 : 7)!
+      if (replaced.length) {
+        // The replaced plan's still-planned future meals would otherwise sit in the new
+        // plan's slots. Eaten and skipped meals stay (they're history); locked ones are
+        // the person's own choice, so they move to the new plan and are planned around.
+        const { error: delErr } = await db.from('planned_meals').delete().in('plan_id', replaced).eq('status', 'planned').eq('locked', false).gte('date', c.start_date)
+        if (delErr) throw delErr
+        const { error: movErr } = await db.from('planned_meals').update({ plan_id: data.id }).in('plan_id', replaced).eq('status', 'planned').eq('locked', true).gte('date', c.start_date).lte('date', end)
+        if (movErr) throw movErr
+      }
+      const blk = nextBlock(c.start_date, end, null, c.duration === 'day' ? 1 : Math.min(body.days ?? 7, 31))!
       ;({ start: from, end: to } = blk)
       mode = 'create'
     } else {
@@ -59,7 +73,7 @@ Deno.serve(
       if (error || !data) throw new HttpError(404, 'That plan was not found.', 'not_found')
       plan = data
       if (body.next_block) {
-        const blk = nextBlock(data.start_date, data.end_date, data.generated_through)
+        const blk = nextBlock(data.start_date, data.end_date, data.generated_through, body.days ?? 7)
         if (!blk) return json({ plan, created: 0, kept_locked: 0, unfilled: [], engine: 'deterministic', ai_used: false, notice: 'This plan is fully generated.' })
         ;({ start: from, end: to } = blk)
         mode = 'next'
@@ -97,7 +111,8 @@ Deno.serve(
 
     // ── Optional AI re-rank within the safe shortlist ─────────────────────
     const provider = getProvider()
-    let aiAllowed = !!provider && selections.length > 0
+    // AI re-ranking is for week-sized blocks; long-plan chunks use the deterministic planner (fast, bounded)
+    let aiAllowed = !!provider && selections.length > 0 && selections.length <= 28
     if (aiAllowed) aiAllowed = (await checkAiQuota(db, false)) > 0
     const jobId = await startJob(user.id, 'plan_block', aiAllowed ? provider!.name : 'deterministic', {
       model: aiAllowed ? provider!.textModel : null,
@@ -138,14 +153,28 @@ Deno.serve(
           client_updated_at: new Date().toISOString(),
         }
       })
+      // Claim the block before writing: only the request that moves generated_through
+      // from the value it read may save meals, so a double submit or two open tabs can't
+      // write the same dates twice. If saving fails the claim is released for a retry.
+      const before = plan.generated_through
+      if (mode !== 'regenerate') {
+        let claim = db.from('meal_plans').update({ generated_through: to }).eq('id', plan.id)
+        claim = before == null ? claim.is('generated_through', null) : claim.eq('generated_through', before)
+        const { data: claimed, error } = await claim.select('*')
+        if (error) throw error
+        if (!claimed?.length) {
+          await finishJob(jobId, { status: 'succeeded', result: { picks: 0, skipped: 'already_generated' } })
+          const { data: fresh } = await db.from('meal_plans').select('*').eq('id', plan.id).single()
+          return json({ plan: fresh ?? plan, created: 0, kept_locked: 0, unfilled: [], engine: 'deterministic', ai_used: false, already: true })
+        }
+        plan = claimed[0]
+      }
       if (rows.length) {
         const { error } = await db.from('planned_meals').insert(rows)
-        if (error) throw error
-      }
-      if (mode !== 'regenerate') {
-        const { data, error } = await db.from('meal_plans').update({ generated_through: to }).eq('id', plan.id).select('*').single()
-        if (error) throw error
-        plan = data
+        if (error) {
+          if (mode !== 'regenerate') await db.from('meal_plans').update({ generated_through: before }).eq('id', plan.id).eq('generated_through', to)
+          throw error
+        }
       }
       if (!aiAllowed) await finishJob(jobId, { status: 'succeeded', result: { picks: rows.length } })
       return json({

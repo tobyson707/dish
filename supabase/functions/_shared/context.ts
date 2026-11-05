@@ -95,11 +95,11 @@ export async function loadHistory(db: SupabaseClient, userId: string, around: st
   const from = addDays(around, -days)
   const to = addDays(around, days)
   const [{ data: planned }, { data: eaten }] = await Promise.all([
-    db.from('planned_meals').select('food_item_id, date').eq('user_id', userId).gte('date', from).lte('date', to).not('food_item_id', 'is', null),
+    db.from('planned_meals').select('food_item_id, date, slot').eq('user_id', userId).gte('date', from).lte('date', to).not('food_item_id', 'is', null),
     db.from('food_diary_entries').select('food_item_id, local_date').eq('user_id', userId).gte('local_date', from).lte('local_date', to).not('food_item_id', 'is', null),
   ])
   return [
-    ...(planned ?? []).map((r: Row) => ({ food_item_id: r.food_item_id, date: r.date })),
+    ...(planned ?? []).map((r: Row) => ({ food_item_id: r.food_item_id, date: r.date, slot: r.slot })),
     ...(eaten ?? []).map((r: Row) => ({ food_item_id: r.food_item_id, date: r.local_date })),
   ]
 }

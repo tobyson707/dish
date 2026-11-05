@@ -12,7 +12,9 @@ test('home canvas: rail → workspace → add, search, appearance, featured pagi
   await completeOnboardingFor(uid)
   await signIn(page, email)
   await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
-  await expect(page.getByText('No meal plan yet')).toBeVisible() // honest empty state, no fake meals
+  await expect(page.getByRole('heading', { name: "Let's plan your first meals." })).toBeVisible() // honest empty state, no fake meals
+  await expect(page.getByText("Let's make today delicious.")).toBeVisible()
+  await expect(page.getByText("What's cooking today?")).toHaveCount(0)
   await expectNoHorizontalScroll(page)
 
   // Turning the rotary dial three detents (All → Breakfast → Lunch → Dinner) opens the
@@ -42,8 +44,8 @@ test('home canvas: rail → workspace → add, search, appearance, featured pagi
   await ws.getByRole('tab', { name: 'Quick' }).click()
   await expect(ws.getByRole('tab', { name: 'Quick' })).toHaveAttribute('aria-selected', 'true')
   await ws.getByRole('tab', { name: 'For You' }).click()
-  const addBtn = ws.getByRole('button', { name: /^Add to today: / }).first()
-  const meal = (await addBtn.getAttribute('aria-label'))!.replace(/^Add to today: /, '')
+  const addBtn = ws.getByRole('button', { name: /^Add to (plan|today): / }).first()
+  const meal = (await addBtn.getAttribute('aria-label'))!.replace(/^Add to (plan|today): /, '')
   await addBtn.click()
   await expect(page.getByText(`Added ${meal} to today's dinner.`)).toBeVisible()
   await expect(ws).toBeHidden()

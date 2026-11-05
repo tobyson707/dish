@@ -23,6 +23,20 @@ export function useActivePlan() {
   })
 }
 
+/** The most recent plan of any status (or null if the person has never made one). */
+export function useLatestPlan() {
+  const uid = useUserId()
+  return useQuery({
+    queryKey: [...qk.activePlan(uid), 'latest-any'],
+    meta: persistMeta(uid),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('meal_plans').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(1).maybeSingle()
+      if (error) throw error
+      return (data as MealPlan | null) ?? null
+    },
+  })
+}
+
 export function usePlannedMeals(from: string, to: string, opts: { enabled?: boolean } = {}) {
   const uid = useUserId()
   return useQuery({

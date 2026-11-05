@@ -27,16 +27,14 @@ export function AppShell() {
       <OfflineIndicator />
       {/* Desktop primary rail: fixed, vertically centred on the left. The secondary
           rail (the category dial) mirrors it on the right on Home. */}
-      <nav aria-label="Main" className="fixed left-4 top-1/2 z-30 hidden w-20 -translate-y-1/2 flex-col items-center gap-2 rounded-[30px] bg-nav py-5 text-on-glass-dark shadow-[0_20px_50px_-24px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-xl md:flex">
-        <span className="mb-5 text-footnote font-extrabold tracking-[0.2em]" aria-hidden="true">
-          DISH<span className="text-accent">.</span>
-        </span>
+      <nav aria-label="Main" className="fixed left-4 top-1/2 z-30 hidden h-auto w-20 -translate-y-1/2 flex-col items-center gap-1.5 rounded-[30px] bg-nav p-2 text-on-glass-dark shadow-[0_20px_50px_-24px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-xl md:flex">
         {NAV.map((n) => (
           <NavLink
             key={n.to}
             to={n.to}
             end={n.to === '/'}
-            className={({ isActive }) => cn('press flex w-16 flex-col items-center gap-1 rounded-[22px] py-2.5 text-micro font-semibold transition-colors duration-300', isActive ? 'bg-accent text-accent-ink' : 'text-on-glass-dark-muted hover:text-on-glass-dark')}
+            title={n.label}
+            className={({ isActive }) => cn('press flex w-16 flex-col items-center gap-1 rounded-[22px] py-3 text-micro font-semibold outline-none transition-colors duration-300 focus-visible:ring-2 focus-visible:ring-accent', isActive ? 'bg-accent text-accent-ink' : 'text-on-glass-dark-muted hover:bg-white/[0.06] hover:text-on-glass-dark')}
           >
             <Icon name={n.icon} size={22} />
             {n.label}

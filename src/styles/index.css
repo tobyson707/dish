@@ -357,19 +357,21 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
   --cat-ws-gap: 6px; /* space between the drawer and the dial (no overlap) */
   /* centred in the space between the top safe area and the mobile bottom nav */
   --rotary-top: calc(var(--safe-top) + (100dvh - var(--safe-top) - var(--nav-h) - var(--safe-bottom) - 26px) / 2);
-  --cat-ws-w: 75vw;
+  /* phones: everything left of the dial (a near-full-screen panel) */
+  --cat-ws-w: 100vw;
 }
 @media (min-width: 380px) { :root { --rotary-w: 78px; } }
-@media (min-width: 640px) { :root { --cat-ws-w: 60vw; } }
-@media (min-width: 768px) { :root { --rotary-top: 50dvh; --cat-ws-w: min(46vw, 520px); } }
+@media (min-width: 640px) { :root { --cat-ws-w: 76vw; } }
+@media (min-width: 768px) { :root { --rotary-top: 50dvh; --cat-ws-w: min(60vw, 680px); } }
+@media (min-width: 1280px) { :root { --cat-ws-w: min(50vw, 760px); } }
 
-/* Partial category workspace: sits flush beside the dial, slides in from the right */
+/* Category drawer: a full-height application panel anchored to the right,
+   immediately left of the dial (never under it), sliding in from beyond the edge */
 .cat-ws {
-  /* anchored to the viewport's right edge, immediately left of the dial */
   right: calc(var(--rotary-right) + var(--rotary-w) + var(--cat-ws-gap));
-  width: min(var(--cat-ws-w), calc(100vw - var(--rotary-right) - var(--rotary-w) - var(--cat-ws-gap) - 12px));
-  top: calc(var(--safe-top) + 10px);
-  bottom: calc(var(--safe-bottom) + 10px);
+  width: min(var(--cat-ws-w), calc(100vw - var(--rotary-right) - var(--rotary-w) - var(--cat-ws-gap)));
+  top: 0;
+  bottom: 0;
   animation: cat-in 520ms var(--ease-spring) both;
 }
 .cat-ws[data-closing] { animation: cat-out 320ms var(--ease-in-out) forwards; }

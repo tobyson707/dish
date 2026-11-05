@@ -15,7 +15,7 @@ import { FloatingActions, FloatingButton } from '@/components/ui/FloatingAction'
 import { PageHeader } from '@/components/ui/Layout'
 import { Segmented } from '@/components/ui/Inputs'
 import { DateStrip, DotMonth, type DayState } from '@/components/ui/Calendar'
-import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
+import { EmptyState, ErrorState, LoadingBlock } from '@/components/ui/States'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { Icon } from '@/components/ui/Icon'
@@ -26,6 +26,7 @@ import { ExportSheet } from './export/ExportSheet'
 import { useAutoExtendPlan } from '@/features/home/Home'
 import { useUserId } from '@/features/auth/AuthProvider'
 import { PlanWalkthrough, walkthroughSeen } from './PlanWalkthrough'
+import { daysSaved, isComplete, planDays, usePlanFill } from './usePlanFill'
 
 type View = 'day' | 'week' | 'month'
 
@@ -49,6 +50,7 @@ export function PlanPage() {
   const uid = useUserId()
   const [tour, setTour] = useState(() => params.get('welcome') === '1' && !walkthroughSeen(uid))
   useAutoExtendPlan()
+  const { fill, progress: fillProgress, running: fillRunning } = usePlanFill()
 
   const range = useMemo(() => {
     if (view === 'month') {
@@ -156,14 +158,20 @@ export function PlanPage() {
               </div>
             </div>
           )}
-          {notGenerated(date) && (
-            <Notice>
-              Long plans are prepared a week at a time so they stay fresh. This week will be filled in automatically as it gets closer, or{' '}
-              <button type="button" className="font-semibold underline" disabled={gen.isPending} onClick={() => p && gen.mutate({ plan_id: p.id, next_block: true, today }, { onError: (e) => toast.error(friendlyError(e)) })}>
-                {gen.isPending ? 'generating…' : 'generate the next week now'}
-              </button>
-              .
-            </Notice>
+          {p && !isComplete(p) && (
+            <div className="mt-5 rounded-lg bg-elevated p-4 ring-1 ring-inset ring-line" role="status" aria-live="polite">
+              <p className="font-semibold">{fillRunning ? 'Building your schedule.' : `${daysSaved(p)} of ${planDays(p)} days are planned.`}</p>
+              {fillRunning && fillProgress ? (
+                <p className="num mt-1 text-footnote text-muted">{fillProgress.done} of {fillProgress.total} days saved</p>
+              ) : (
+                <p className="mt-1 text-footnote text-muted">The rest of your plan isn't filled in yet. Finishing picks up where it stopped.</p>
+              )}
+              {!fillRunning && (
+                <Button size="sm" className="mt-3" icon="refresh" onClick={() => void fill(p, today).then((r) => !isComplete(r.plan) ? toast.error('Part of the plan could not be saved. Try again.') : toast.show('Your plan is complete.', { tone: 'success' })).catch((e) => toast.error(friendlyError(e)))}>
+                  Finish planning
+                </Button>
+              )}
+            </div>
           )}
         </>
       )}

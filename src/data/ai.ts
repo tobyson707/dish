@@ -55,6 +55,8 @@ export interface GeneratePlanInput {
   regenerate?: { from: string; to: string }
   /** generate the next weekly block of a long plan */
   next_block?: boolean
+  /** block size in days (1..31); long plans are filled four weeks at a time */
+  days?: number
   today: string
 }
 export interface GeneratePlanResult {
@@ -65,6 +67,8 @@ export interface GeneratePlanResult {
   engine: string
   ai_used: boolean
   notice?: string
+  /** this block had already been saved by another request (double submit, other tab) */
+  already?: boolean
 }
 
 export function useGeneratePlan() {
