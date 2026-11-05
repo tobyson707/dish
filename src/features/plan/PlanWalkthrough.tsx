@@ -38,7 +38,7 @@ export function PlanWalkthrough({ uid, onDone }: { uid: string; onDone: () => vo
           <p className="text-caption font-semibold uppercase tracking-[0.14em] text-accent-on-ink">
             Tip {i + 1} of {STEPS.length}
           </p>
-          <h2 className="mt-1 font-serif text-title-3">{s.title}</h2>
+          <h2 className="mt-1 text-title-3">{s.title}</h2>
           <p className="mt-1 text-callout text-on-ink/75">{s.body}</p>
         </div>
         <button type="button" onClick={finish} aria-label="Close the tour" className="press -mr-1 -mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full hover:bg-white/10">

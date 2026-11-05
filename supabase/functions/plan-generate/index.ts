@@ -1,3 +1,4 @@
+import { budgetMealsPerDay } from '../_shared/domain/budget.ts'
 import { z } from 'zod'
 import { handler, json, parseBody, HttpError } from '../_shared/http.ts'
 import { authenticate } from '../_shared/supabase.ts'
@@ -102,7 +103,7 @@ Deno.serve(
       slots,
       meals: catalogue,
       prefs: ctx.prefs,
-      mealsPerDay: ctx.slots.length,
+      mealsPerDay: budgetMealsPerDay(ctx.slots),
       keep: existing ?? [],
       history: [...history, ...replacedOut],
       kitchenNames: kitchen.map((k) => k.name),

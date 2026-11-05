@@ -47,7 +47,7 @@ function Preview({ f, onClose }: { f: FoodItem; onClose: () => void }) {
     <div className="-mt-4">
       <HeroFood path={f.image_path} name={f.name} slug={f.slug} className="mx-auto aspect-square w-[min(70%,260px)]" />
       <p className="label-caps mt-4 text-on-glass-dark-muted">{f.cuisine}</p>
-      <h2 className="mt-1 font-serif text-title-2 leading-[1.05] text-on-glass-dark">{f.name}</h2>
+      <h2 className="mt-1 text-title-2 leading-[1.05] text-on-glass-dark">{f.name}</h2>
       {f.description && <p className="mt-3 text-callout leading-relaxed text-on-glass-dark-muted">{f.description}</p>}
 
       <dl className="num mt-5 grid grid-cols-3 gap-2 text-center">

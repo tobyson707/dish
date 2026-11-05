@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { PlannedMeal } from '@/types/db'
-import { buildExportModel, exportFilename, MAX_EXPORT_DAYS, rangeLabel, shortRange, validateRange } from './model'
+import { buildExportModel, buildGrid, exportFilename, MAX_EXPORT_DAYS, rangeLabel, shortRange, validateRange } from './model'
 import { buildPdf } from './pdf'
 import { dayBlockHeight, groupForPng, paginate, PAGE_H } from './render'
 
@@ -144,5 +144,30 @@ describe('PDF writer', () => {
     const hex = text.match(/\/Author <FEFF([0-9A-F]+)>/)![1]!
     const decoded = String.fromCharCode(...hex.match(/.{4}/g)!.map((h) => parseInt(h, 16)))
     expect(decoded).toBe('Adaeze Ọkọ')
+  })
+})
+
+describe('grid / table layout', () => {
+  const meal = (id: string, date: string, slot: PlannedMeal['slot'], name: string) =>
+    ({ id, date, slot, name, status: 'planned', portion: 1, method: 'cook', calories: null, scheduled_time: null, food_item: null }) as unknown as PlannedMeal
+  it('represents exactly the same meals as the list, one table per seven days', () => {
+    const meals = [meal('a', '2026-11-02', 'breakfast', 'Akara and pap'), meal('b', '2026-11-02', 'drink', 'Zobo drink'), meal('c', '2026-11-09', 'dinner', 'Grilled tilapia'), meal('d', '2026-11-12', 'snack', 'Kelewele')]
+    const model = buildExportModel({ meals, from: '2026-11-02', to: '2026-11-12', displayName: 'Ada', includeNutrition: false })
+    const grid = buildGrid(model)
+    expect(grid.map((w) => w.days.length)).toEqual([7, 4])
+    expect(grid[0]!.days[0]!.date).toBe('2026-11-02')
+    expect(grid[1]!.days.at(-1)!.date).toBe('2026-11-12')
+    expect(grid[0]!.rows.map((r) => r.label)).toEqual(['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks'])
+    const inGrid = grid.flatMap((w) => w.rows.flatMap((r) => r.cells.flat().map((m) => m.id))).sort()
+    const inList = model.days.flatMap((d) => d.meals.map((m) => m.id)).sort()
+    expect(inGrid).toEqual(inList)
+    // a drink sits in the Drinks row, never under Snacks
+    const drinks = grid[0]!.rows.find((r) => r.slot === 'drink')!
+    expect(drinks.cells[0]!.map((m) => m.name)).toEqual(['Zobo drink'])
+    expect(grid[0]!.rows.find((r) => r.slot === 'snack')!.cells[0]).toEqual([])
+  })
+  it('keeps Breakfast, Lunch and Dinner rows even when empty, and only adds Snacks/Drinks when used', () => {
+    const model = buildExportModel({ meals: [meal('a', '2026-11-02', 'lunch', 'Jollof rice')], from: '2026-11-02', to: '2026-11-02', displayName: null, includeNutrition: false })
+    expect(buildGrid(model)[0]!.rows.map((r) => r.slot)).toEqual(['breakfast', 'lunch', 'dinner'])
   })
 })

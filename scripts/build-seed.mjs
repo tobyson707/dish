@@ -45,15 +45,17 @@ for (const m of MEALS) {
   const derived = p * 4 + c * 4 + f * 9
   if (Math.abs(derived - kcal) / kcal > 0.2) errors.push(`${m.slug}: kcal ${kcal} vs macros ${derived}`)
   if (m.cook_ok && m.steps.length === 0) errors.push(`${m.slug}: cookable but no steps`)
+  // a beverage is only ever a drink; a food is never a drink
+  if ((m.kind === 'beverage') !== (m.types.length === 1 && m.types[0] === 'drink') || (m.kind !== 'beverage' && m.types.includes('drink'))) errors.push(`${m.slug}: food type and occasion disagree`)
   lines.push(
-    `insert into public.food_items (id, slug, name, description, cuisine, meal_types, dietary_tags, allergens, ingredients_complete, spice_level, richness, prep_minutes, cook_minutes, can_cook, can_buy, est_cost_min, est_cost_max, cost_currency, cost_source, serving_qty, serving_unit, serving_grams, calories, protein_g, carbs_g, fat_g, nutrition_source, nutrition_is_estimate, nutrition_confidence, nutrition_notes, image_alt, is_sample) values (` +
+    `insert into public.food_items (id, slug, name, description, cuisine, meal_types, dietary_tags, allergens, ingredients_complete, spice_level, richness, prep_minutes, cook_minutes, can_cook, can_buy, est_cost_min, est_cost_max, cost_currency, cost_source, serving_qty, serving_unit, serving_grams, calories, protein_g, carbs_g, fat_g, nutrition_source, nutrition_is_estimate, nutrition_confidence, nutrition_notes, image_alt, is_sample, food_type) values (` +
       [
         foodId(m.slug), q(m.slug), q(m.name), q(m.description), q(m.cuisine), arr(m.types), arr(m.tags), arr([...allergens]),
         m.complete, m.spice, m.rich, m.prep, m.cook, m.cook_ok, m.buy, m.cost[0], m.cost[1], q('NGN'), q('rough_estimate'),
         m.serving[0], q(m.serving[1]), m.serving[2], kcal, p, c, f, q('reference_estimate'), true, 0.5, q(NUTRITION_NOTE),
-        q(`A serving of ${m.name.toLowerCase()}`), true,
+        q(`A serving of ${m.name.toLowerCase()}`), true, q(m.kind ?? 'food'),
       ].join(', ') +
-      `) on conflict (slug) do update set name = excluded.name, description = excluded.description, cuisine = excluded.cuisine, meal_types = excluded.meal_types, dietary_tags = excluded.dietary_tags, allergens = excluded.allergens, ingredients_complete = excluded.ingredients_complete, spice_level = excluded.spice_level, richness = excluded.richness, prep_minutes = excluded.prep_minutes, cook_minutes = excluded.cook_minutes, can_cook = excluded.can_cook, can_buy = excluded.can_buy, est_cost_min = excluded.est_cost_min, est_cost_max = excluded.est_cost_max, calories = excluded.calories, protein_g = excluded.protein_g, carbs_g = excluded.carbs_g, fat_g = excluded.fat_g;`,
+      `) on conflict (slug) do update set name = excluded.name, description = excluded.description, cuisine = excluded.cuisine, meal_types = excluded.meal_types, food_type = excluded.food_type, dietary_tags = excluded.dietary_tags, allergens = excluded.allergens, ingredients_complete = excluded.ingredients_complete, spice_level = excluded.spice_level, richness = excluded.richness, prep_minutes = excluded.prep_minutes, cook_minutes = excluded.cook_minutes, can_cook = excluded.can_cook, can_buy = excluded.can_buy, est_cost_min = excluded.est_cost_min, est_cost_max = excluded.est_cost_max, calories = excluded.calories, protein_g = excluded.protein_g, carbs_g = excluded.carbs_g, fat_g = excluded.fat_g;`,
   )
   lines.push(
     `insert into public.recipes (id, food_item_id, servings, steps, source) values (${recipeId(m.slug)}, ${foodId(m.slug)}, ${m.servings}, ${arr(m.steps)}, 'DISH original') on conflict (food_item_id) do update set servings = excluded.servings, steps = excluded.steps;`,

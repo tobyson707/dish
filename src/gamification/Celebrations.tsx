@@ -145,7 +145,7 @@ export function Celebrations() {
           ))}
         </span>
         <p className="relative mt-6 text-caption font-bold uppercase tracking-[0.18em] text-accent">{label}</p>
-        <h2 id="celebration-title" className="relative mt-2 font-serif text-title-2 leading-tight">
+        <h2 id="celebration-title" className="relative mt-2 text-title-2 leading-tight">
           {title}
         </h2>
         {line && <p className="relative mt-2 text-callout text-on-glass-dark-muted">{line}</p>}

@@ -82,7 +82,7 @@ export function SearchSelect({
         }}
         className="press flex h-14 w-full items-center gap-3 rounded-md bg-input px-4 text-left ring-1 ring-inset ring-input-border transition-shadow focus-visible:ring-2 focus-visible:ring-focus"
       >
-        {selected?.lead && <span aria-hidden="true" className="text-xl leading-none">{selected.lead}</span>}
+        {selected?.lead && <span aria-hidden="true" className="text-title-3 leading-none">{selected.lead}</span>}
         <span id={`${id}-value`} className={cn('min-w-0 flex-1 truncate text-base', !selected && 'text-muted')}>
           {selected ? selected.label : placeholder}
         </span>
@@ -147,7 +147,7 @@ export function SearchSelect({
                     divider && 'mt-2 border-t border-line pt-2',
                   )}
                 >
-                  {o.lead && <span aria-hidden="true" className="w-7 text-center text-xl leading-none">{o.lead}</span>}
+                  {o.lead && <span aria-hidden="true" className="w-7 text-center text-title-3 leading-none">{o.lead}</span>}
                   <span className="min-w-0 flex-1 truncate">{o.label}</span>
                   {o.hint && <span className="text-sm text-muted">{o.hint}</span>}
                   {on && <Icon name="check" size={18} className="text-accent-strong" aria-label="Selected" />}

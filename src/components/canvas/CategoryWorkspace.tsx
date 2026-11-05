@@ -31,6 +31,7 @@ const CATEGORY_LINE: Record<Category, string> = {
   lunch: 'Satisfying midday plates.',
   dinner: 'Comforting evening meals.',
   snack: 'Light bites and small plates between meals.',
+  drink: 'Drinks to enjoy with a meal or on their own.',
 }
 
 
@@ -140,7 +141,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
           <div key={category} className="ws-swap min-w-0 flex-1 pt-2" style={{ ['--swap-dir' as string]: dir }}>
             <div className="flex items-center gap-3">
               <Icon name={categoryIcon(category)} size={28} />
-              <h2 ref={heading} tabIndex={-1} className="truncate font-serif text-title-1 leading-none outline-none">
+              <h2 ref={heading} tabIndex={-1} className="truncate text-title-1 leading-none outline-none">
                 {categoryLabel(category)}
               </h2>
             </div>
@@ -218,7 +219,7 @@ function FeaturedMeal({ food: f, slot, added, busy, disabled, onView, onAdd }: {
       <button type="button" onClick={onView} className="press block w-full" aria-label={`View ${f.name}`}>
         <FoodImage path={f.image_path} name={f.name} slug={f.slug} className="aspect-[4/3] w-full rounded-[24px]" width={720} />
       </button>
-      <h4 className="mt-5 font-serif text-title-3 leading-snug text-on-glass-dark">{f.name}</h4>
+      <h4 className="mt-5 text-title-3 leading-snug text-on-glass-dark">{f.name}</h4>
       <p className="num mt-1.5 text-footnote text-on-glass-dark-muted">
         {mins != null ? `${mins} min` : 'Ready to buy'} · {SLOT_LABEL[slot]}
       </p>

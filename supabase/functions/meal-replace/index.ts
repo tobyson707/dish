@@ -1,3 +1,4 @@
+import { budgetMealsPerDay } from '../_shared/domain/budget.ts'
 import { z } from 'zod'
 import { handler, json, parseBody, HttpError } from '../_shared/http.ts'
 import { authenticate } from '../_shared/supabase.ts'
@@ -35,7 +36,7 @@ Deno.serve(
       const m = catalogue.find((c) => c.id === body.choose_food_item_id)
       if (!m) throw new HttpError(404, 'That meal is not in the catalogue.', 'not_found')
       // Hard constraints are re-checked server-side, regardless of what the client sent.
-      const why = exclusionReason(m, { prefs: ctx.prefs, slot: meal.slot, mealsPerDay: ctx.slots.length, relax: true })
+      const why = exclusionReason(m, { prefs: ctx.prefs, slot: meal.slot, mealsPerDay: budgetMealsPerDay(ctx.slots), relax: true })
       if (why === 'slot') throw new HttpError(422, `${m.name} isn't usually a ${meal.slot} meal.`, 'slot')
       if (why === 'allergy') throw new HttpError(422, `${m.name} may contain one of your allergens, or its ingredients can't be confirmed.`, 'allergy')
       if (why) throw new HttpError(422, `${m.name} doesn't fit your food preferences.`, why)
@@ -54,7 +55,7 @@ Deno.serve(
     const history = await loadHistory(db, user.id, meal.date, 7)
     const cands = replacementCandidates(
       catalogue.filter((c) => !(body.exclude ?? []).includes(c.id)),
-      { slot: meal.slot, date: meal.date, currentId: meal.food_item_id, prefs: ctx.prefs, mealsPerDay: ctx.slots.length, history, seed: `${user.id}:${meal.id}:${Date.now()}`, count: 6 },
+      { slot: meal.slot, date: meal.date, currentId: meal.food_item_id, prefs: ctx.prefs, mealsPerDay: budgetMealsPerDay(ctx.slots), history, seed: `${user.id}:${meal.id}:${Date.now()}`, count: 6 },
     )
     const provider = getProvider()
     const aiAllowed = !!provider && cands.length > 1 && (await checkAiQuota(db, false)) > 0

@@ -2,6 +2,7 @@
 // (never a screenshot of the app). Uses only real data: the achievement or
 // level, the user's display name when saved, and the actual unlock date.
 import { ICON_PATHS, type IconName } from '@/components/ui/Icon'
+import { NEUTRAL, ORANGE } from '@/styles/palette'
 
 export interface ShareCardInput {
   label: string // "Achievement unlocked" | "New level"
@@ -14,8 +15,7 @@ export interface ShareCardInput {
 
 const W = 1080
 const H = 1350
-const C = { bg: '#111111', ink: '#ffffff', muted: '#a3a3a3', accent: '#ff6b35', ring: '#2a2a2a' }
-const SERIF = '"DM Serif Display", Georgia, serif'
+const C = { bg: NEUTRAL.black, ink: NEUTRAL.white, muted: '#a3a3a3', accent: ORANGE[400], ring: '#2a2a2a' }
 const SANS = '"Manrope Variable", Manrope, system-ui, sans-serif'
 
 function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number): string[] {
@@ -34,7 +34,7 @@ function wrap(ctx: CanvasRenderingContext2D, text: string, maxW: number): string
 }
 
 export async function renderShareCard(d: ShareCardInput): Promise<Blob> {
-  await Promise.all(['400 80px "DM Serif Display"', '600 30px "Manrope Variable"', '800 30px "Manrope Variable"'].map((f) => document.fonts?.load(f).catch(() => null)))
+  await Promise.all(['500 30px "Manrope Variable"', '600 30px "Manrope Variable"', '800 30px "Manrope Variable"'].map((f) => document.fonts?.load(f).catch(() => null)))
   const c = document.createElement('canvas')
   c.width = W
   c.height = H
@@ -76,7 +76,7 @@ export async function renderShareCard(d: ShareCardInput): Promise<Blob> {
   ctx.fillText(d.label.toUpperCase(), cx, 790)
   if ('letterSpacing' in ctx) (ctx as CanvasRenderingContext2D & { letterSpacing: string }).letterSpacing = '0px'
   ctx.fillStyle = C.ink
-  ctx.font = `400 88px ${SERIF}`
+  ctx.font = `800 88px ${SANS}`
   let y = 890
   for (const l of wrap(ctx, d.title, W - 180)) {
     ctx.fillText(l, cx, y)

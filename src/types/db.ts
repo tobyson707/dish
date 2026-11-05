@@ -1,6 +1,6 @@
 // Row types mirroring supabase/migrations. Kept hand-written and minimal;
 // regenerate with `supabase gen types typescript` if you prefer generated types.
-import type { Allergen, CookTime, CookingMode, DietPattern, Goal, GroceryCategory, MealSlot, NutritionSource, PlanDuration, PlanningGoal } from '@domain/types.ts'
+import type { Allergen, CookTime, CookingMode, DietPattern, Goal, GroceryCategory, MealSlot, NutritionSource, PlanDuration, PlanningGoal, FoodType } from '@domain/types.ts'
 import type { ISODate } from '@domain/dates.ts'
 
 export interface Profile {
@@ -100,6 +100,8 @@ export interface FoodItem {
   description: string
   cuisine: string
   meal_types: MealSlot[]
+  /** food or beverage; a beverage is only ever scheduled as a drink */
+  food_type?: FoodType
   dietary_tags: string[]
   allergens: string[]
   ingredients_complete: boolean
@@ -201,7 +203,7 @@ export interface PlannedMeal {
   rationale: string | null
   client_updated_at: string | null
   updated_at: string
-  food_item?: Pick<FoodItem, 'id' | 'slug' | 'image_path' | 'image_alt' | 'cuisine' | 'prep_minutes' | 'cook_minutes' | 'allergens' | 'ingredients_complete' | 'description'> | null
+  food_item?: Pick<FoodItem, 'id' | 'slug' | 'food_type' | 'image_path' | 'image_alt' | 'cuisine' | 'prep_minutes' | 'cook_minutes' | 'allergens' | 'ingredients_complete' | 'description'> | null
 }
 
 export interface NutritionEntry {

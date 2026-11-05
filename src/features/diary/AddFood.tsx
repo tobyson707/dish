@@ -20,6 +20,7 @@ import { Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { CataloguePicker } from '@/components/meal/CataloguePicker'
 import { friendlyError } from '@/lib/errors'
+import { DateField } from '@/components/ui/DateField'
 
 const n = (v: string) => (v.trim() === '' || !Number.isFinite(Number(v)) ? null : Number(v))
 const s = (v: number | null | undefined) => (v == null ? '' : String(v))
@@ -141,7 +142,7 @@ export function AddFood() {
             <TextField label="What did you eat?" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} maxLength={120} />
             <div className="grid grid-cols-2 gap-3">
               <Select label="Meal" value={f.slot} onChange={(e) => setF({ ...f, slot: e.target.value as MealSlot })} options={MEAL_SLOTS.map((x) => ({ value: x, label: SLOT_LABEL[x] }))} />
-              <TextField label="Date" type="date" max={today} value={f.date} onChange={(e) => setF({ ...f, date: e.target.value })} />
+              <DateField label="Date" max={today} value={f.date} onChange={(d) => d && setF({ ...f, date: d })} />
             </div>
             <Stepper label="Servings" value={f.servings} onChange={(servings) => setF({ ...f, servings })} format={(v) => `×${v}`} />
             <TextField label="Serving description (optional)" placeholder="e.g. 1 plate, 2 slices" value={f.serving_desc} onChange={(e) => setF({ ...f, serving_desc: e.target.value })} />

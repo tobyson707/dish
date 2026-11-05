@@ -69,7 +69,7 @@ export function FirstPlan() {
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col items-center justify-center px-6 text-center" style={{ paddingTop: 'var(--safe-top)', paddingBottom: 'var(--safe-bottom)' }}>
       {err ? (
         <div className="flex w-full flex-col gap-4">
-          <h1 className="font-serif text-title-2">We couldn't finish your plan.</h1>
+          <h1 className="text-title-2">We couldn't finish your plan.</h1>
           <Notice tone="error">{err}</Notice>
           <p className="text-sm text-muted">Your answers are saved. Trying again won't create a second plan.</p>
           <Button size="lg" block icon="refresh" onClick={() => void run()}>
@@ -86,7 +86,7 @@ export function FirstPlan() {
               <span key={i} className={i === 10 ? 'h-4 w-4 rounded-full bg-accent animate-[pop_500ms_var(--ease-out)_both]' : 'h-4 w-4 rounded-full bg-ink animate-[pop_500ms_var(--ease-out)_both]'} style={{ animationDelay: `${i * 40}ms` }} />
             ))}
           </div>
-          <h1 className="mt-8 font-serif text-title-2">{MESSAGES[msg]}</h1>
+          <h1 className="mt-8 text-title-2">{MESSAGES[msg]}</h1>
           <p className="mt-2 text-sm text-muted">Your first week, from what you just told us.</p>
         </div>
       )}

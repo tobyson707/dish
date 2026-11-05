@@ -82,3 +82,22 @@ describe('long plans fill in chunks that cover every date exactly once', () => {
     })
   }
 })
+
+import { budgetAllowance, budgetMealsPerDay, budgetPosition, summariseBudget } from './budget.ts'
+describe('budget position', () => {
+  it('remaining, over budget and progress are honest', () => {
+    expect(budgetPosition(100_000, 57_500)).toEqual({ remaining: 42_500, over: false, fraction: 0.575 })
+    expect(budgetPosition(10_000, 12_500)).toEqual({ remaining: -2_500, over: true, fraction: 1 })
+    expect(budgetPosition(10_000, 0)).toEqual({ remaining: 10_000, over: false, fraction: 0 })
+    expect(budgetPosition(0, 500).fraction).toBe(1)
+  })
+  it('planned meal estimates never count as spending', () => {
+    const s = summariseBudget([{ date: '2026-11-05', slot: 'lunch', est_cost: 3000, status: 'planned' }], [{ spent_on: '2026-11-05', amount: 1200, category: 'groceries' }], '2026-11-05', '2026-11-05')
+    expect(s.actual).toBe(1200)
+    expect(s.estimated).toBe(3000)
+  })
+  it('a per-meal budget ignores drinks', () => {
+    expect(budgetMealsPerDay(['breakfast', 'lunch', 'dinner', 'drink'])).toBe(3)
+    expect(budgetAllowance(2000, 'meal', budgetMealsPerDay(['lunch', 'dinner', 'drink']), 7)).toBe(28_000)
+  })
+})

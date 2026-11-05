@@ -78,7 +78,7 @@ export function PlannedMealPage() {
           ].map(([k, v]) => (
             <div key={k}>
               <dt className="text-micro font-semibold uppercase tracking-wider text-muted">{k}</dt>
-              <dd className="num mt-1 text-xl font-extrabold">{v}</dd>
+              <dd className="num mt-1 text-title-3 font-extrabold">{v}</dd>
             </div>
           ))}
         </dl>
@@ -88,12 +88,12 @@ export function PlannedMealPage() {
       <section className="mt-4 grid grid-cols-2 gap-2 text-sm">
         <div className="rounded-lg bg-elevated p-4">
           <p className="label-caps">Est. cost</p>
-          <p className="num mt-1 text-lg font-bold">{m.est_cost == null ? '–' : `~${formatMoney(m.est_cost * m.portion, m.est_cost_currency ?? 'NGN')}`}</p>
+          <p className="num mt-1 text-title-3 font-bold">{m.est_cost == null ? '–' : `~${formatMoney(m.est_cost * m.portion, m.est_cost_currency ?? 'NGN')}`}</p>
           <p className="text-xs text-muted">Rough estimate. Prices vary.</p>
         </div>
         <div className="rounded-lg bg-elevated p-4">
           <p className="label-caps">Time</p>
-          <p className="mt-1 text-lg font-bold">{food ? (m.method === 'cook' ? formatMinutes(food.prep_minutes + food.cook_minutes) : 'Ready to buy') : '–'}</p>
+          <p className="mt-1 text-title-3 font-bold">{food ? (m.method === 'cook' ? formatMinutes(food.prep_minutes + food.cook_minutes) : 'Ready to buy') : '–'}</p>
           {food && m.method === 'cook' && <p className="text-xs text-muted">{food.prep_minutes} min prep · {food.cook_minutes} min cook</p>}
         </div>
       </section>

@@ -130,7 +130,7 @@ function Flow({ initial, initialStep }: { initial: Draft; initialStep: number })
       </div>
       <main key={step} className={cn('flex-1 pt-8', s.key === 'summary' ? 'pb-60' : 'pb-36')} style={{ animation: `${dir > 0 ? 'swap-in' : 'rise'} 280ms var(--ease-out) both` }}>
         <p className="label-caps">{s.eyebrow}</p>
-        <h1 ref={headingRef} tabIndex={-1} className="mt-3 font-serif text-title-1 outline-none">
+        <h1 ref={headingRef} tabIndex={-1} className="mt-3 text-title-1 outline-none">
           {s.title}
         </h1>
         <div className="mt-8">
@@ -194,11 +194,11 @@ function ProfileCard({ d, onEdit }: { d: Draft; onEdit: (key: StepKey) => void }
       <p className="text-ink-2">This is what DISH will use to plan. You can change any of it later in Profile.</p>
       <article aria-label="Your profile" className="overflow-hidden rounded-[28px] bg-elevated ring-1 ring-inset ring-line">
         <div className="flex items-center gap-4 bg-ink px-5 py-5 text-on-ink">
-          <span aria-hidden="true" className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent font-serif text-title-3 text-accent-ink">
+          <span aria-hidden="true" className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-title-3 text-accent-ink">
             {initial}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="truncate font-serif text-title-3">{d.display_name.trim() || 'You'}</p>
+            <p className="truncate text-title-3">{d.display_name.trim() || 'You'}</p>
             <p className="mt-0.5 truncate text-footnote text-on-ink/70">
               {country ? `${country.flag} ${country.name}` : 'Country not set'} · {currency ? `${currency.code}` : d.currency}
             </p>

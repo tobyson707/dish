@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router'
-import { addDays, addMonths, daysInMonth, startOfMonth, startOfWeek, type ISODate } from '@domain/dates.ts'
+import { useNavigate, useSearchParams } from 'react-router'
+import { addDays, daysInMonth, startOfMonth, startOfWeek, type ISODate } from '@domain/dates.ts'
 import { SLOT_LABEL, type MealSlot } from '@domain/types.ts'
 import { PLAN_DURATION_LABEL } from '@domain/types.ts'
 import type { PlannedMeal } from '@/types/db'
@@ -8,13 +8,14 @@ import { useActivePlan, usePlannedMeals, sortPlanned } from '@/data/plans'
 import { usePreferences } from '@/data/profile'
 import { useGeneratePlan } from '@/data/ai'
 import { useToday } from '@/hooks/useToday'
-import { dayLabel, monthName } from '@/lib/format'
+import { dayLabel } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { Button, ButtonLink, IconButton } from '@/components/ui/Button'
 import { FloatingActions, FloatingButton } from '@/components/ui/FloatingAction'
 import { PageHeader } from '@/components/ui/Layout'
 import { Segmented } from '@/components/ui/Inputs'
-import { DateStrip, DotMonth, type DayState } from '@/components/ui/Calendar'
+import { DateStrip, type DayState } from '@/components/ui/Calendar'
+import { DishCalendar } from '@/components/ui/DishCalendar'
 import { EmptyState, ErrorState, LoadingBlock } from '@/components/ui/States'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
@@ -115,16 +116,8 @@ export function PlanPage() {
         <>
           <div className="mt-5">
             {view === 'month' ? (
-              <div>
-                <div className="mb-3 flex items-center justify-between">
-                  <IconButton icon="left" label="Previous month" onClick={() => setDate(addMonths(startOfMonth(date), -1))} size={40} />
-                  <h2 className="text-lg font-bold" aria-live="polite">
-                    {monthName(date)} {date.slice(0, 4)}
-                  </h2>
-                  <IconButton icon="right" label="Next month" onClick={() => setDate(addMonths(startOfMonth(date), 1))} size={40} />
-                </div>
-                <DotMonth month={date} today={today} selected={date} states={states} onSelect={setDate} />
-                <Legend />
+              <div className="rounded-[24px] bg-elevated p-4 sm:p-5">
+                <DishCalendar today={today} value={date} month={date} onMonthChange={(m) => setDate(m.slice(0, 7) === today.slice(0, 7) ? today : m)} onChange={setDate} markers={states} />
               </div>
             ) : (
               <DateStrip selected={date} today={today} states={states} onSelect={setDate} onPrev={() => setDate(addDays(date, -7))} onNext={() => setDate(addDays(date, 7))} />
@@ -201,7 +194,7 @@ function DayBlock({ date, today, meals, slots, onActions, onAdd, notGenerated, c
   const emptySlots = slots.filter((s) => !meals.some((m) => m.slot === s))
   return (
     <section aria-label={dayLabel(date, today)} className={compact ? 'border-b border-line py-3' : ''}>
-      <h3 className={compact ? 'label-caps mb-1' : 'mb-2 text-xl font-bold'}>{dayLabel(date, today)}</h3>
+      <h3 className={compact ? 'label-caps mb-1' : 'mb-2 text-title-3 font-bold'}>{dayLabel(date, today)}</h3>
       <ul className="flex flex-col">
         {meals.map((m) => (
           <div key={`${m.id}-${m.food_item_id}`} className="animate-[swap-in_240ms_var(--ease-out)_both]">
@@ -224,26 +217,5 @@ function DayBlock({ date, today, meals, slots, onActions, onAdd, notGenerated, c
           ))}
       </ul>
     </section>
-  )
-}
-
-function Legend() {
-  const items = [
-    ['bg-accent', 'Today'],
-    ['bg-ink', 'All done'],
-    ['bg-dot', 'Planned'],
-    ['bg-dot-soft', 'Nothing planned'],
-  ] as const
-  return (
-    <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted" aria-label="Legend">
-      {items.map(([c, l]) => (
-        <li key={l} className="flex items-center gap-1.5">
-          <span className={`h-2.5 w-2.5 rounded-full ${c}`} aria-hidden="true" /> {l}
-        </li>
-      ))}
-      <li>
-        <Link to="/grocery" className="font-semibold text-ink underline">Shopping list</Link>
-      </li>
-    </ul>
   )
 }

@@ -9,12 +9,12 @@ export function AuthLayout({ title, subtitle, children, back = '/welcome', foote
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-5 pb-8" style={{ paddingTop: 'calc(var(--safe-top) + 12px)' }}>
       <div className="flex h-12 items-center justify-between">
         {back ? <IconButton icon="left" label="Back" className="-ml-2.5" onClick={() => nav(back)} /> : <span />}
-        <Link to="/welcome" className="display text-xl" aria-label="DISH home">
+        <Link to="/welcome" className="display text-title-3" aria-label="DISH home">
           DISH<span className="text-accent-strong">.</span>
         </Link>
       </div>
       <main className="page-enter mt-8 flex flex-1 flex-col">
-        <h1 className="display text-[clamp(2.5rem,12vw,3.25rem)]">{title}</h1>
+        <h1 className="text-display">{title}</h1>
         {subtitle && <p className="mt-3 text-ink-2">{subtitle}</p>}
         <div className="mt-8 flex flex-1 flex-col">{children}</div>
       </main>

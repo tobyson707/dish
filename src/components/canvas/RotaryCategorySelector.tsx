@@ -133,7 +133,7 @@ export function RotaryCategorySelector({ value, onChange, onActivate, workspaceO
       <div
         data-rotary-pill
         aria-hidden="true"
-        className="pointer-events-none absolute left-1.5 right-1 z-[5] overflow-hidden rounded-[24px] bg-accent  ring-inset ring-accent-ink/45 group-has-[button:focus-visible]:ring-2"
+        className="pointer-events-none absolute left-1.5 right-1 z-[5] overflow-hidden rounded-[24px] bg-accent ring-inset ring-accent-ink/45 group-has-[button:focus-visible]:ring-2"
         style={{ top: PAD + ROTARY_ITEM, height: ROTARY_ITEM }}
       >
         {CATEGORIES.map((c) => (

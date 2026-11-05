@@ -15,7 +15,7 @@ export function AchievementBadge({ def, unlockedAt, size = 56 }: { def: Achievem
   const on = !!unlockedAt
   return (
     <span className="relative inline-flex shrink-0" aria-hidden="true">
-      <span className={cn('flex items-center justify-center rounded-full transition-colors', on ? 'bg-ink text-on-ink' : 'bg-dot-soft text-muted')} style={{ width: size, height: size }}>
+      <span className={cn('flex items-center justify-center rounded-full transition-colors', on ? 'bg-accent-tint text-accent-strong' : 'bg-dot-soft text-muted')} style={{ width: size, height: size }}>
         <Icon name={achievementIcon(def.icon)} size={Math.round(size * 0.42)} />
       </span>
       {on ? (

@@ -403,7 +403,7 @@ export const MEALS = [
   },
   {
     slug: 'zobo', name: 'Zobo drink', cuisine: 'Nigerian', description: 'Chilled hibiscus drink with ginger and pineapple.',
-    types: ['snack'], tags: ['vegetarian', 'vegan'], spice: 1, rich: 0, prep: 10, cook: 25, cook_ok: true, buy: true,
+    kind: 'beverage', types: ['drink'], tags: ['vegetarian', 'vegan'], spice: 1, rich: 0, prep: 10, cook: 25, cook_ok: true, buy: true,
     cost: [300, 800], serving: [1, 'glass', 330], n: [90, 0, 22, 0], complete: true, servings: 6,
     ing: [['zobo-leaves', 100, 'g'], ['ginger', 40, 'g'], ['pineapple', 300, 'g'], ['sugar', 6, 'tsp', true]],
     steps: ['Rinse the zobo leaves.', 'Boil with ginger and pineapple peel for 20 minutes.', 'Strain, sweeten lightly if you like, and chill.'],
@@ -627,7 +627,7 @@ export const MEALS = [
   {
     slug: 'smoothie', name: 'Banana and berry smoothie', cuisine: 'International',
     description: 'Thick blended banana, berries, yoghurt and oats.',
-    types: ['breakfast', 'snack'], tags: ['vegetarian'], spice: 0, rich: 0, prep: 5, cook: 0, cook_ok: true, buy: true,
+    kind: 'beverage', types: ['drink'], tags: ['vegetarian'], spice: 0, rich: 0, prep: 5, cook: 0, cook_ok: true, buy: true,
     cost: [900, 1800], serving: [1, 'glass', 400], n: [320, 12, 58, 5], complete: true, servings: 1,
     ing: [['banana', 1, 'piece'], ['berries', 100, 'g'], ['yoghurt', 100, 'g'], ['milk', 150, 'ml'], ['oats', 20, 'g', true]],
     steps: ['Blend everything until smooth.', 'Add a splash more milk if it is too thick.'],

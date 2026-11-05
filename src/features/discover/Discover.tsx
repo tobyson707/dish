@@ -96,7 +96,7 @@ export function Discover() {
         <div className="mt-3 flex items-center gap-1.5">
           <div role="tablist" aria-label="Meal category" className="-mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1">
             {CATEGORIES.map((c) => (
-              <button key={c.id} type="button" role="tab" aria-selected={category === c.id} onClick={() => setCategory(c.id)} className={cn('press h-9 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors', category === c.id ? 'bg-accent text-accent-ink' : 'bg-elevated text-ink-2 hover:text-ink')}>
+              <button key={c.id} type="button" role="tab" aria-selected={category === c.id} onClick={() => setCategory(c.id)} className={cn('press h-9 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors', category === c.id ? 'bg-accent-soft text-ink ring-1 ring-inset ring-accent-border' : 'bg-elevated text-ink-2 hover:text-ink')}>
                 {c.label}
               </button>
             ))}
@@ -168,7 +168,7 @@ function FeedItem({ food: f, category, favourite, onOpen }: { food: FoodItem; ca
       </div>
       <div className="mt-3 flex items-start gap-3">
         <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
-          <h3 className="font-serif text-title-3 leading-snug">{f.name}</h3>
+          <h3 className="text-title-3 leading-snug">{f.name}</h3>
           <p className="num mt-0.5 text-footnote text-muted">
             {mins != null ? `${mins} min` : 'Ready to buy'} · {SLOT_LABEL[slot]}
           </p>

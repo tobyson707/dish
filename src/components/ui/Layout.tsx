@@ -21,7 +21,7 @@ export function PageHeader({ title, eyebrow, back, actions, large }: { title: st
         <div className="flex items-center gap-1">{actions}</div>
       </div>
       {eyebrow && <p className="label-caps">{eyebrow}</p>}
-      <h1 className={cn('text-balance font-serif leading-[0.95] tracking-[-0.01em]', large ? 'text-display' : 'text-title-1')}>{title}</h1>
+      <h1 className={cn('text-balance', large ? 'text-display' : 'text-title-1')}>{title}</h1>
     </header>
   )
 }
@@ -30,7 +30,7 @@ export function Section({ title, action, children, className }: { title: string;
   return (
     <section className={cn('mt-8', className)} aria-label={title}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
-        <h2 className="label-caps">{title}</h2>
+        <h2 className="text-title-3">{title}</h2>
         {action}
       </div>
       {children}

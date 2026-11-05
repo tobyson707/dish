@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { ALLERGEN_LABEL, MEAL_SLOTS, SLOT_LABEL, type Allergen, type MealSlot } from '@domain/types.ts'
+import { ALLERGEN_LABEL, SLOT_LABEL, occasionsFor, type Allergen, type MealSlot } from '@domain/types.ts'
 import { checkAllergy } from '@domain/allergens.ts'
 import { formatQuantity } from '@domain/units.ts'
 import { midCost } from '@domain/budget.ts'
@@ -22,6 +22,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { Select, TextField } from '@/components/ui/Field'
 import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
+import { DateField } from '@/components/ui/DateField'
 
 export function RecipeDetail() {
   const { slug } = useParams()
@@ -91,14 +92,14 @@ export function RecipeDetail() {
       <Section title={`Nutrition · per ${food.serving_qty} ${food.serving_unit}`} action={<ProvenanceBadge source={food.nutrition_source} isEstimate={food.nutrition_is_estimate} />}>
         <dl className="grid grid-cols-4 gap-2 rounded-lg bg-elevated p-4 text-center">
           {[['Energy', food.calories == null ? '–' : formatKcal(food.calories).replace(' kcal', '')], ['Protein', food.protein_g == null ? '–' : `${food.protein_g}g`], ['Carbs', food.carbs_g == null ? '–' : `${food.carbs_g}g`], ['Fat', food.fat_g == null ? '–' : `${food.fat_g}g`]].map(([k, v]) => (
-            <div key={k}><dt className="text-micro font-semibold uppercase tracking-wider text-muted">{k}</dt><dd className="num mt-1 text-xl font-extrabold">{v}</dd></div>
+            <div key={k}><dt className="text-micro font-semibold uppercase tracking-wider text-muted">{k}</dt><dd className="num mt-1 text-title-3 font-extrabold">{v}</dd></div>
           ))}
         </dl>
         {food.nutrition_notes && <p className="mt-2 text-xs text-muted">{food.nutrition_notes}</p>}
       </Section>
 
       <Section title="Cost per serving" action={<button type="button" className="text-sm font-semibold underline" onClick={() => setPriceOpen(true)}>Edit my price</button>}>
-        <p className="num text-lg font-bold">{myPrice ? formatMoney(myPrice.amount, myPrice.currency) : formatCostRange(food.est_cost_min, food.est_cost_max, food.cost_currency)}</p>
+        <p className="num text-title-3 font-bold">{myPrice ? formatMoney(myPrice.amount, myPrice.currency) : formatCostRange(food.est_cost_min, food.est_cost_max, food.cost_currency)}</p>
         <p className="text-xs text-muted">{myPrice ? 'Your price, used in your plans and budget.' : 'Rough estimate only. Prices vary by city, vendor and season.'}</p>
       </Section>
 
@@ -143,7 +144,7 @@ function AddToPlanSheet({ open, onClose, foodId }: { open: boolean; onClose: () 
   const toast = useToast()
   const food = cat.data?.find((f) => f.id === foodId)
   const [date, setDate] = useState(today)
-  const [slot, setSlot] = useState<MealSlot>(food?.meal_types[0] ?? 'lunch')
+  const [slot, setSlot] = useState<MealSlot>(food?.meal_types[0] ?? (food?.food_type === 'beverage' ? 'drink' : 'lunch'))
   if (!food) return null
   return (
     <Sheet open={open} onClose={onClose} title="Add to your plan" footer={<Button block loading={create.isPending} onClick={async () => {
@@ -153,8 +154,8 @@ function AddToPlanSheet({ open, onClose, foodId }: { open: boolean; onClose: () 
       onClose()
     }}>Add</Button>}>
       <div className="grid grid-cols-2 gap-3">
-        <TextField label="Day" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={MEAL_SLOTS.map((x) => ({ value: x, label: SLOT_LABEL[x] }))} />
+        <DateField label="Day" value={date} onChange={(d) => d && setDate(d)} />
+        <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={occasionsFor(food?.food_type).map((x) => ({ value: x, label: SLOT_LABEL[x] }))} />
       </div>
     </Sheet>
   )

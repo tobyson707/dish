@@ -25,6 +25,7 @@ import { FoodImage } from '@/components/ui/FoodImage'
 import { EmptyState, ErrorState, LoadingBlock, Notice, Skeleton } from '@/components/ui/States'
 import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
+import { DateField } from '@/components/ui/DateField'
 
 export function KitchenPage() {
   const today = useToday()
@@ -148,7 +149,7 @@ function KitchenCard({ s }: { s: KitchenSuggestion }) {
       <div className="flex gap-3">
         <FoodImage path={s.image_path} name={s.name} shape="circle" className="h-16 w-16 shrink-0" width={140} />
         <div className="min-w-0">
-          <Link to={`/recipes/${s.slug}`} className="text-lg font-bold leading-snug">{s.name}</Link>
+          <Link to={`/recipes/${s.slug}`} className="text-title-3 font-bold leading-snug">{s.name}</Link>
           <p className={cn('text-sm font-semibold', s.can_make_now ? 'text-success' : 'text-ink-2')}>{s.can_make_now ? 'You have every listed ingredient' : `Missing ${s.missing.length} ingredient${s.missing.length > 1 ? 's' : ''}`}</p>
           {s.uses_soon.length > 0 && <p className="text-footnote text-warning">Uses up: {s.uses_soon.join(', ')}</p>}
         </div>
@@ -213,11 +214,11 @@ function ItemSheet({ value, onClose }: { value: KitchenItemRow | 'new' | 'leftov
         </div>
         {f.is_leftover ? (
           <>
-            <TextField label="Cooked on" type="date" max={today} value={f.leftover_cooked_on ?? ''} onChange={(e) => setF({ ...f, leftover_cooked_on: e.target.value || null })} />
+            <DateField label="Cooked on" optional max={today} value={f.leftover_cooked_on ?? null} onChange={(d) => setF({ ...f, leftover_cooked_on: d })} />
             <Notice icon="info">Leftovers are logged as you report them. Keep them chilled, reheat until piping hot, and if in doubt, throw it out.</Notice>
           </>
         ) : (
-          <TextField label="Best before (optional)" type="date" value={f.expires_on ?? ''} onChange={(e) => setF({ ...f, expires_on: e.target.value || null })} />
+          <DateField label="Best before (optional)" optional value={f.expires_on ?? null} onChange={(d) => setF({ ...f, expires_on: d })} />
         )}
         {!isEdit && <Toggle label="This is a leftover" checked={f.is_leftover} onChange={(v) => setF({ ...f, is_leftover: v, leftover_cooked_on: v ? today : null })} />}
       </div>

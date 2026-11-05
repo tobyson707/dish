@@ -1,6 +1,6 @@
 import { useCurrency } from '@/hooks/useToday'
 import { useState } from 'react'
-import { MEAL_SLOTS, SLOT_LABEL, type MealSlot } from '@domain/types.ts'
+import { MEAL_SLOTS, SLOT_LABEL, occasionFor, occasionsFor, type MealSlot } from '@domain/types.ts'
 import { checkAllergy } from '@domain/allergens.ts'
 import type { FoodItem } from '@/types/db'
 import { useCreatePlannedMeal } from '@/data/plans'
@@ -14,6 +14,7 @@ import { Segmented } from '@/components/ui/Inputs'
 import { Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { CataloguePicker } from './CataloguePicker'
+import { DateField } from '@/components/ui/DateField'
 
 const n = (v: string) => (v.trim() === '' || !Number.isFinite(Number(v)) ? null : Number(v))
 
@@ -58,8 +59,8 @@ export function AddMealSheet({ open, onClose, date, slot: initialSlot, planId }:
     <Sheet open={open} onClose={reset} title="Add a meal" size="lg" footer={<Button block onClick={() => void save()} disabled={mode === 'catalogue' && !picked} loading={create.isPending}>Add to plan</Button>}>
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
-          <TextField label="Day" type="date" value={day} onChange={(e) => setDay(e.target.value)} />
-          <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={MEAL_SLOTS.map((s) => ({ value: s, label: SLOT_LABEL[s] }))} />
+          <DateField label="Day" value={day} onChange={(d) => d && setDay(d)} />
+          <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={(picked ? occasionsFor(picked.food_type) : MEAL_SLOTS).map((s) => ({ value: s, label: SLOT_LABEL[s] }))} />
         </div>
         <Segmented label="Add from" hideLabel value={mode} onChange={setMode} options={[{ value: 'catalogue', label: 'Catalogue' }, { value: 'manual', label: 'My own meal' }]} />
         {mode === 'catalogue' ? (
@@ -73,7 +74,7 @@ export function AddMealSheet({ open, onClose, date, slot: initialSlot, planId }:
               {verdict?.status === 'unknown' && <Notice tone="warning">{verdict.reason}</Notice>}
             </div>
           ) : (
-            <CataloguePicker slot={slot} onPick={setPicked} />
+            <CataloguePicker slot={slot} onPick={(f) => { setPicked(f); setSlot(occasionFor(f, slot)) }} />
           )
         ) : (
           <div className="flex flex-col gap-3">

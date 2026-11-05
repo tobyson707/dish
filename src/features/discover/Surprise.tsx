@@ -126,7 +126,7 @@ function SuggestionCard({ s, slot, today }: { s: Suggestion; slot: MealSlot; tod
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <Link to={`/recipes/${s.slug}`} className="text-lg font-bold leading-snug">{s.name}</Link>
+            <Link to={`/recipes/${s.slug}`} className="text-title-3 font-bold leading-snug">{s.name}</Link>
             <IconButton icon="heart" label={isFav ? 'Remove from favourites' : 'Save to favourites'} size={40} className={isFav ? 'text-accent-strong' : undefined} onClick={() => fav.mutate({ foodItemId: s.food_item_id, on: !isFav })} />
           </div>
           <p className="num text-footnote text-muted">

@@ -2,7 +2,7 @@ export function SetupRequired() {
   return (
     <div className="mx-auto flex min-h-dvh max-w-lg flex-col justify-center px-6 py-16">
       <p className="label-caps">Configuration needed</p>
-      <h1 className="display mt-3 text-5xl">
+      <h1 className="mt-3 text-display">
         DISH<span className="text-accent-strong">.</span>
       </h1>
       <p className="mt-6 text-ink-2">

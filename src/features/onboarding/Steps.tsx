@@ -41,7 +41,7 @@ export function StepName({ d, set, errors }: StepProps) {
         placeholder="Your name"
         aria-invalid={!!errors?.display_name}
         aria-describedby={errors?.display_name ? `${id}-err` : `${id}-hint`}
-        className="w-full border-0 border-b-2 border-line bg-transparent px-0 pb-2 font-serif text-title-2 text-ink outline-none transition-colors placeholder:text-muted/60 focus:border-accent focus-visible:outline-none aria-[invalid=true]:border-error"
+        className="w-full border-0 border-b-2 border-line bg-transparent px-0 pb-2 text-title-2 text-ink outline-none transition-colors placeholder:text-muted/60 focus:border-accent focus-visible:outline-none aria-[invalid=true]:border-error"
       />
       {errors?.display_name ? (
         <p id={`${id}-err`} role="alert" className="text-footnote font-medium text-error">

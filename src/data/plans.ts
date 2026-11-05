@@ -8,7 +8,7 @@ import type { MealPlan, PlannedMeal, PlannedStatus } from '@/types/db'
 import { persistMeta, qk } from './keys'
 import { patchLists, patchRangeLists, upsertIn } from './optimistic'
 
-const PM_SELECT = '*, food_item:food_items(id, slug, image_path, image_alt, cuisine, prep_minutes, cook_minutes, allergens, ingredients_complete, description)'
+const PM_SELECT = '*, food_item:food_items(id, slug, food_type, image_path, image_alt, cuisine, prep_minutes, cook_minutes, allergens, ingredients_complete, description)'
 
 export function useActivePlan() {
   const uid = useUserId()
@@ -73,7 +73,7 @@ export function usePlannedMeal(id: string | undefined) {
   })
 }
 
-const SORT: Record<MealSlot, number> = { breakfast: 0, lunch: 1, dinner: 3, snack: 2 }
+const SORT: Record<MealSlot, number> = { breakfast: 0, lunch: 1, dinner: 3, snack: 2, drink: 4 }
 export const sortPlanned = (a: PlannedMeal, b: PlannedMeal) => (a.date === b.date ? SORT[a.slot] - SORT[b.slot] : a.date < b.date ? -1 : 1)
 
 /** Local-first edits to a planned meal (lock, portion, move, time). Queued for sync. */

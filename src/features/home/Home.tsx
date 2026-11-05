@@ -82,7 +82,7 @@ export function Home() {
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
             <p className="label-caps">{longDate(today)}</p>
-            <h2 className="mt-1 font-serif text-title-2 leading-tight">Today's menu</h2>
+            <h2 className="mt-1 text-title-2 leading-tight">Today's menu</h2>
           </div>
           <Link to="/plan" className="shrink-0 text-sm font-semibold underline-offset-2 hover:underline">Full plan →</Link>
         </div>
@@ -167,7 +167,7 @@ function HomeCanvas({ greeting, tip, meals, state, today, onRetry, category, onF
       <FloatingToolbar className="absolute inset-x-4 top-4 z-20 sm:inset-x-5 sm:top-5" />
 
       <div className="absolute left-5 right-[92px] top-[92px] z-10 sm:left-8 lg:right-[45%] lg:top-[120px]">
-        <h1 className="font-serif text-display leading-[0.95] tracking-[-0.01em] text-ink animate-[rise_520ms_var(--ease-out)_both]">{greeting}</h1>
+        <h1 className="text-display text-ink animate-[rise_520ms_var(--ease-out)_both]">{greeting}</h1>
         <p className="mt-4 max-w-[24ch] text-headline leading-snug text-ink-2 animate-[fade_500ms_ease-out_120ms_both]">Let's make today delicious.</p>
         {/* on small phones the invitation panel takes this space, so the tip steps aside */}
         <p className={cn('mt-3 flex max-w-[30ch] items-start gap-1.5 text-footnote text-muted animate-[fade_500ms_ease-out_240ms_both]', !loading && (!featured || state.kind === 'done' || state.kind === 'error') && 'max-sm:hidden')}>
@@ -232,7 +232,7 @@ const SECONDARY = 'press inline-flex h-11 items-center rounded-full px-4 text-sm
 function EmptyCanvasPanel({ title, body, primary, secondary, extra }: { title: string; body: string; primary: React.ReactNode; secondary?: React.ReactNode; extra?: React.ReactNode }) {
   return (
     <div role="region" aria-label={title} className="rounded-[26px] bg-[var(--c-glass)] p-5 shadow-[0_18px_40px_-20px_var(--c-shadow)] ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-xl animate-[info-in_380ms_var(--ease-out)_both]">
-      <h2 className="font-serif text-title-3 text-ink">{title}</h2>
+      <h2 className="text-title-3 text-ink">{title}</h2>
       <p className="mt-1 text-footnote text-ink-2">{body}</p>
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {primary}

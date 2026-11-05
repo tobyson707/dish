@@ -130,9 +130,9 @@ function Studio() {
               </p>
             </div>
             <dl className="num flex gap-5 text-center text-sm">
-              <div><dt className="text-micro text-on-glass-dark-muted">Queued</dt><dd className="text-xl font-semibold">{s.queued}</dd></div>
-              <div><dt className="text-micro text-on-glass-dark-muted">Running</dt><dd className="text-xl font-semibold">{s.running}</dd></div>
-              <div><dt className="text-micro text-on-glass-dark-muted">To review</dt><dd className="text-xl font-semibold">{s.awaiting_review}</dd></div>
+              <div><dt className="text-micro text-on-glass-dark-muted">Queued</dt><dd className="text-title-3 font-semibold">{s.queued}</dd></div>
+              <div><dt className="text-micro text-on-glass-dark-muted">Running</dt><dd className="text-title-3 font-semibold">{s.running}</dd></div>
+              <div><dt className="text-micro text-on-glass-dark-muted">To review</dt><dd className="text-title-3 font-semibold">{s.awaiting_review}</dd></div>
             </dl>
           </div>
         ) : null}

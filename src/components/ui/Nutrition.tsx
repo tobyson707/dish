@@ -49,7 +49,7 @@ export function NutritionSummary({ totals, targets, compact }: { totals: Nutriti
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="label-caps">Eaten today</p>
-          <p className="num mt-1 text-4xl font-extrabold tracking-tight">
+          <p className="num mt-1 text-display font-extrabold tracking-tight">
             {totals.calories.toLocaleString()}
             <span className="ml-1 text-base font-semibold text-muted">kcal{targets?.calories ? ` / ${targets.calories.toLocaleString()}` : ''}</span>
           </p>

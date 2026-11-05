@@ -72,9 +72,9 @@ export function FoodImage({ path, alt, name, slug, shape = 'rounded', className,
 
 // neutral tones only (monochrome identity); slight variation keeps lists readable
 const TONES = [
-  ['var(--g-cream)', 'var(--g-leaf)'],
-  ['var(--g-peach)', 'var(--g-sage)'],
-  ['var(--g-sage)', 'var(--g-leaf)'],
+  ['var(--c-tile-2)', 'var(--c-tile-4)'],
+  ['var(--c-tile-1)', 'var(--c-tile-3)'],
+  ['var(--c-tile-3)', 'var(--c-tile-4)'],
 ] as const
 
 function Fallback({ name }: { name: string }) {
@@ -82,7 +82,7 @@ function Fallback({ name }: { name: string }) {
   const [a, b] = TONES[toneIndex(name, TONES.length)]!
   return (
     <div role="img" aria-label={`${name} (no photo yet)`} className="absolute inset-0 flex items-center justify-center" style={{ background: `radial-gradient(120% 90% at 30% 20%, ${a}, ${b})`, containerType: 'size' }}>
-      <span className="select-none font-serif text-ink/65" style={{ fontSize: initials.length > 1 ? '36cqw' : '48cqw', lineHeight: 1 }} aria-hidden="true">
+      <span className="select-none text-ink/65" style={{ fontSize: initials.length > 1 ? '36cqw' : '48cqw', lineHeight: 1 }} aria-hidden="true">
         {initials || '•'}
       </span>
     </div>
@@ -118,7 +118,7 @@ export function HeroFood({ path, name, slug, className }: { path?: string | null
       <div className="absolute inset-[4%] rounded-full shadow-[0_40px_80px_-30px_var(--c-shadow)]" style={{ background: 'radial-gradient(closest-side, var(--c-elevated) 72%, var(--c-surface) 86%, var(--c-elevated) 100%)' }} />
       <div className="absolute inset-[16%] rounded-full" style={{ background: `radial-gradient(70% 70% at 35% 30%, ${a}, ${b})` }} />
       <div className="absolute inset-[16%] flex items-center justify-center rounded-full">
-        <span className="select-none font-serif italic text-ink/55" style={{ fontSize: '17cqw', lineHeight: 1 }} aria-hidden="true">
+        <span className="select-none font-extrabold tracking-[-0.04em] text-ink/40" style={{ fontSize: '17cqw', lineHeight: 1 }} aria-hidden="true">
           {initialsOf(name) || '•'}
         </span>
       </div>

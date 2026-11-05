@@ -121,3 +121,28 @@ export function buildExportModel(input: { meals: PlannedMeal[]; from: ISODate; t
     mealCount: days.reduce((s, d) => s + d.meals.length, 0),
   }
 }
+
+// ---------- Grid / Table layout: the same days and meals, arranged as tables ----------
+export interface GridWeek {
+  days: ExportDay[] // up to 7 consecutive days: the columns
+  rows: { slot: MealSlot; label: string; cells: ExportMeal[][] }[] // one row per occasion, a cell per day
+}
+
+/**
+ * One table per run of up to seven consecutive days (so long ranges never
+ * produce an unreadably wide table). Rows are the occasions that actually
+ * appear in the export, in the usual order; Breakfast, Lunch and Dinner always
+ * show so an empty slot reads as empty rather than missing.
+ */
+export function buildGrid(model: ExportModel): GridWeek[] {
+  const present = new Set(model.days.flatMap((d) => d.meals.map((m) => m.slot)))
+  const slots = MEAL_SLOTS.filter((s) => present.has(s) || s === 'breakfast' || s === 'lunch' || s === 'dinner')
+  const weeks: GridWeek[] = []
+  for (let i = 0; i < model.days.length; i += 7) {
+    const days = model.days.slice(i, i + 7)
+    weeks.push({ days, rows: slots.map((slot) => ({ slot, label: GRID_LABEL[slot], cells: days.map((d) => d.meals.filter((m) => m.slot === slot)) })) })
+  }
+  return weeks
+}
+
+const GRID_LABEL: Record<MealSlot, string> = { breakfast: 'Breakfast', lunch: 'Lunch', dinner: 'Dinner', snack: 'Snacks', drink: 'Drinks' }

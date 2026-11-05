@@ -99,3 +99,10 @@ The starter catalogue is **sample / reference data**:
 - `user_preferences.planning_goals text[]`, `allergy_status` ('listed' | 'none' | 'unsure' | 'undisclosed'), `spice_pref` 0..4.
 - `planned_meals.est_cost_currency` (existing rows backfilled to NGN, the catalogue's currency).
 - `user_achievements.celebrated_at` + RPC `mark_achievements_celebrated(p_ids)`; new achievements (two weeks, a month, full week planned, 10/50 logged, planner month).
+
+## Snacks and drinks (migration `20261108000100_snacks_and_drinks.sql`)
+- `drink` added to the allowed slots of `food_items.meal_types`, `user_preferences.meal_slots`, `planned_meals.slot`, `food_diary_entries.slot`.
+- `food_items.food_type` ('food' | 'beverage', default 'food') with `food_items_type_occasion_check`: a beverage's only occasion is drink; food never has drink.
+- Catalogue audit (by hand): Zobo and the banana and berry smoothie are beverages. The smoothie bowl, akara and pap, custard and the soups stay food. Nothing was ambiguous enough to need a review flag.
+- Existing planned meals and diary entries for those two move to the drink slot (same rows and IDs; the streak trigger is paused for this correction).
+- `enforce_meal_occasion()` trigger keeps every future write consistent, whatever the client.

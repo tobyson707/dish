@@ -1,3 +1,4 @@
+import { budgetMealsPerDay } from '@domain/budget.ts'
 import { DEFAULT_CURRENCY } from '@/lib/geo'
 import { useMemo } from 'react'
 import { rankCandidates, seededRng } from '@domain/planner.ts'
@@ -26,7 +27,7 @@ export function useRankedMeals(slot: MealSlot | 'all' | null) {
       rankCandidates(meals, {
         prefs: { ...p, budget_amount: p.budget_amount == null ? null : Number(p.budget_amount), currency: profile.data?.currency ?? DEFAULT_CURRENCY, goal: goal.data?.goal ?? null },
         slot: s,
-        mealsPerDay: p.meal_slots.length,
+        mealsPerDay: budgetMealsPerDay(p.meal_slots),
         date: today,
         history: [],
         rng: seededRng(`${s}:${today}`),

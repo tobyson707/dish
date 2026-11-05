@@ -186,4 +186,20 @@ Planning goals that change scoring: less time, substantial, balanced, budget (sa
 `src/gamification/Celebrations.tsx` queues server-recorded achievements (`celebrated_at` makes each show once on any device) and level-ups, one at a time, never over another open layer, and respects "Progress feedback". Share renders a 1080×1350 PNG with Canvas 2D (`shareCard.ts`) from real data only, shared via the Web Share API or downloaded.
 
 ## Typography
-One type scale in `src/styles/index.css` (`@theme`): `text-display`, `text-title-1..3`, `text-headline`, `text-callout`, `text-footnote`, `text-caption`, `text-micro`, plus Tailwind's `text-sm`/`text-base`. DM Serif Display for display and titles, Manrope for everything else. No em dashes in UI copy.
+Manrope only (no serif anywhere, including exports and share cards). One type scale in `src/styles/index.css` (`@theme`), each heading token carrying its own size, weight, line height and tracking:
+display 36-48px ExtraBold · title-1 (page) 28-36px Bold · title-2 (section) 22-28px Bold · title-3 (subsection) 18-22px Semibold · headline 17px Semibold · base 16px · callout 15px · sm 14px · footnote 13px · caption 12px · micro 11px. `label-caps` is now a sentence-case small label. No em dashes in UI copy.
+
+## Colour
+Black, white and neutral greys stay dominant. One orange tonal scale (`--o-50` … `--o-900`, Orange 400 #FF6B35 the brand accent) sits under semantic tokens: `accent` (fills, active nav), `accent-pressed`, `accent-soft` (selected background), `accent-tint` (subtle highlights, achievements), `accent-border` (selected border), `accent-strong` (orange text, Orange 700 on light / 300 on dark), `progress` / `progress-track`. Tailwind's own orange is replaced by the brand scale. Canvas renderers use the same values from `src/styles/palette.ts`.
+
+## Snacks and drinks
+Eating occasion (slot: breakfast, lunch, dinner, snack, drink) is separate from food type (`food_items.food_type`: food or beverage). A beverage is only ever a drink; food is never a drink. Enforced four ways: the catalogue constraint, a database trigger on planned meals and diary entries, the shared planner (`fitsOccasion` in `exclusionReason`), and the UI (only valid occasions offered when adding or moving). Drinks is its own category on the dial, in Discover, Surprise, the planner, the Diary and exports. A per-meal budget ignores drinks.
+
+## DISH calendar
+`src/components/ui/DishCalendar.tsx` is the only date picker: month heading, previous/next, Today, Monday-first grid, selected date or range in orange, today ringed, min/max, meal markers (planned, partly done, all done) and full keyboard support. `DateField` / `DateRangeField` wrap it in a sheet (a bottom sheet on phones). Used for plan start dates (with an overlap notice), the Plan month view, the Diary, export ranges, spending, kitchen dates and moving meals. No native date inputs remain.
+
+## Food budget
+One primary summary: remaining (or over by), out of the period's total, a spending bar and Spent / Total budget, with the period's real dates. Only recorded spending counts; planned meal estimates are shown separately and never counted as spent. Records in another currency are listed but not added (no conversion). Secondary detail sits behind disclosures.
+
+## Export layouts
+List (chronological, with photos; A4 portrait) and Grid / Table (one table per seven days: days across, occasions down, header repeated; A4 landscape). Both come from the same `ExportModel` (`buildGrid` reshapes it), render with Canvas 2D, and produce PDF and PNG; the preview switches layout without touching the plan. Table files end in `-table`.

@@ -63,6 +63,17 @@ export function longDate(d: ISODate): string {
   return parseISODate(d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
 }
 
+/** "2 Nov 2026"-style date for ranges (calendar date, no time-zone shift). */
+export function shortDate(d: ISODate, withYear = true): string {
+  return parseISODate(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}), timeZone: 'UTC' })
+}
+
+/** An inclusive date range: "2 – 8 Nov 2026", "28 Nov – 4 Dec 2026", or one date. */
+export function dateRange(from: ISODate, to: ISODate): string {
+  if (from === to) return shortDate(from)
+  return from.slice(0, 4) === to.slice(0, 4) ? `${shortDate(from, false)} – ${shortDate(to)}` : `${shortDate(from)} – ${shortDate(to)}`
+}
+
 export function monthName(d: ISODate): string {
   return parseISODate(d).toLocaleDateString(undefined, { month: 'long', timeZone: 'UTC' })
 }

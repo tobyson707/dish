@@ -35,9 +35,9 @@ function Editor({ initial }: { initial: Draft }) {
     <div>
       <PageHeader back="/profile" eyebrow="Profile" title="Goals & targets" />
       <Notice icon="info">DISH isn't a medical service and doesn't diagnose or prescribe. Targets are rough guides. If you have a medical condition or specific dietary needs, please talk to a qualified professional.</Notice>
-      <h2 className="mt-8 font-serif text-title-3">Meal-planning goals</h2>
+      <h2 className="mt-8 text-title-3">Meal-planning goals</h2>
       <div className="mt-3"><StepGoals d={d} set={(p) => setD((x) => ({ ...x, ...p }))} /></div>
-      <h2 className="mt-10 font-serif text-title-3">Nutrition target (optional)</h2>
+      <h2 className="mt-10 text-title-3">Nutrition target (optional)</h2>
       <p className="mt-1 text-sm text-muted">Only if you want one. Choose a goal for a rough daily calorie guide.</p>
       <div className="mt-4"><NutritionGoal d={d} set={(p) => setD((x) => ({ ...x, ...p }))} /></div>
       <Button size="lg" block className="mt-6" loading={saving} onClick={async () => {

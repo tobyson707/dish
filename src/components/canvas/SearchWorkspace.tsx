@@ -43,7 +43,7 @@ export function SearchWorkspace({ open, onClose }: { open: boolean; onClose: () 
 
   return (
     <Workspace open={open} onClose={onClose} label="Search">
-      <h2 className="font-serif text-title-2 leading-none text-on-glass-dark">Search</h2>
+      <h2 className="text-title-2 leading-none text-on-glass-dark">Search</h2>
       <label className="relative mt-6 flex items-center">
         <span className="sr-only">Search meals, recipes and ingredients</span>
         <Icon name="search" size={20} className="pointer-events-none absolute left-4 text-on-glass-dark-muted" />

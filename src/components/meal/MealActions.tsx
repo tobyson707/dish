@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
-import { MEAL_SLOTS, SLOT_LABEL, type MealSlot } from '@domain/types.ts'
+import { MEAL_SLOTS, SLOT_LABEL, occasionsFor, type MealSlot } from '@domain/types.ts'
 import type { PlannedMeal } from '@/types/db'
 import { useDeletePlannedMeal, useSetMealStatus, useUpdatePlannedMeal } from '@/data/plans'
 import { invokeFn, useReplaceMeal, type Suggestion } from '@/data/ai'
@@ -21,6 +21,7 @@ import { friendlyError } from '@/lib/errors'
 import { formatCostRange, formatKcal, formatMinutes } from '@/lib/format'
 import { tap } from '@/platform/haptics'
 import { cn } from '@/lib/cn'
+import { DateField } from '@/components/ui/DateField'
 
 type Panel = 'menu' | 'replace' | 'move' | 'portion' | null
 
@@ -203,8 +204,8 @@ function MovePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void }) 
   const [time, setTime] = useState(meal.scheduled_time?.slice(0, 5) ?? '')
   return (
     <div className="flex flex-col gap-4">
-      <TextField label="Day" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-      <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={MEAL_SLOTS.map((s) => ({ value: s, label: SLOT_LABEL[s] }))} />
+      <DateField label="Day" value={date} onChange={(d) => d && setDate(d)} />
+      <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={(meal.food_item ? occasionsFor(meal.food_item.food_type) : MEAL_SLOTS).map((s) => ({ value: s, label: SLOT_LABEL[s] }))} />
       <TextField label="Time (optional)" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
       <Button
         block

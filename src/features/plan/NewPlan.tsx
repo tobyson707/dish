@@ -1,8 +1,8 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { PLAN_DURATIONS, PLAN_DURATION_LABEL, type PlanDuration } from '@domain/types.ts'
 import { addDays, planEndDate } from '@domain/dates.ts'
-import { useActivePlan } from '@/data/plans'
+import { useActivePlan, usePlannedMeals } from '@/data/plans'
 import { useAIStatus, useGeneratePlan } from '@/data/ai'
 import type { MealPlan } from '@/types/db'
 import { daysSaved, isComplete, planDays, usePlanFill } from './usePlanFill'
@@ -12,6 +12,8 @@ import { friendlyError } from '@/lib/errors'
 import { Button } from '@/components/ui/Button'
 import { ChoiceCard } from '@/components/ui/Chip'
 import { TextField } from '@/components/ui/Field'
+import { DateField } from '@/components/ui/DateField'
+import { toDayStates } from '@/components/ui/Calendar'
 import { PageHeader } from '@/components/ui/Layout'
 import { Notice } from '@/components/ui/States'
 import { Toggle } from '@/components/ui/Inputs'
@@ -46,6 +48,11 @@ export function NewPlan() {
   const [created, setCreated] = useState<MealPlan | null>(null)
   const { fill, progress, running } = usePlanFill()
   const working = gen.isPending || running
+  // existing meals in the chosen period: shown on the calendar, and never silently overwritten
+  const end = planEndDate(start, duration)
+  const existing = usePlannedMeals(start, end > addDays(start, 92) ? addDays(start, 92) : end)
+  const markers = useMemo(() => toDayStates(existing.data ?? []), [existing.data])
+  const overlap = Object.keys(markers).length
 
   async function create() {
     setErr(null)
@@ -99,9 +106,14 @@ export function NewPlan() {
             ))}
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextField label="Start date" type="date" min={today} max={addDays(today, 60)} value={start} onChange={(e) => setStart(e.target.value)} hint={`Ends ${dayLabel(planEndDate(start, duration), today)}`} />
+            <DateField label="Start date" min={today} max={addDays(today, 60)} value={start} onChange={(d) => d && setStart(d)} markers={markers} hint={`Ends ${dayLabel(planEndDate(start, duration), today)}`} />
             <TextField label="Name (optional)" placeholder="My meal plan" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} />
           </div>
+          {overlap > 0 && (
+            <Notice icon="plan">
+              {overlap} day{overlap > 1 ? 's' : ''} in this period already {overlap > 1 ? 'have' : 'has'} meals. {replace && active.data ? 'Replacing your plan keeps eaten, skipped and locked meals and swaps the rest.' : 'New meals are added only where a slot is free; nothing you have is overwritten.'}
+            </Notice>
+          )}
           {active.data && <Toggle label="Replace my current plan" description={`“${active.data.title}” will be archived. Meals you've eaten stay in your diary.`} checked={replace} onChange={setReplace} />}
           <Notice icon="sparkle">
             Meals come from DISH's catalogue, filtered by your allergies, preferences, budget and cooking time.{' '}
@@ -134,7 +146,7 @@ function PlanProgress({ phase, done, total }: { phase: 'create' | 'fill'; done: 
           <span key={i} className="h-4 w-4 rounded-full bg-ink animate-[pop_500ms_var(--ease-out)_both]" style={{ animationDelay: `${i * 40}ms` }} />
         ))}
       </div>
-      <p className="mt-6 font-serif text-title-3">{label}</p>
+      <p className="mt-6 text-title-3">{label}</p>
       {phase === 'fill' && total > 0 ? (
         <div className="mt-4 w-full max-w-xs">
           <div className="h-1.5 overflow-hidden rounded-full bg-dot-soft" role="progressbar" aria-label="Days saved" aria-valuemin={0} aria-valuemax={total} aria-valuenow={done}>

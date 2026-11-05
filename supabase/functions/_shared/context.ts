@@ -6,7 +6,7 @@ import { addDays, todayInTimeZone } from './domain/dates.ts'
 import { HttpError } from './http.ts'
 
 const CATALOGUE_SELECT =
-  'id, slug, name, description, cuisine, meal_types, dietary_tags, allergens, ingredients_complete, spice_level, richness, prep_minutes, cook_minutes, can_cook, can_buy, est_cost_min, est_cost_max, cost_currency, calories, protein_g, carbs_g, fat_g, nutrition_source, image_path, recipe:recipes(servings, recipe_ingredients(quantity, unit, optional, ingredient:ingredients(id, name, category, allergens)))'
+  'id, slug, name, description, cuisine, meal_types, food_type, dietary_tags, allergens, ingredients_complete, spice_level, richness, prep_minutes, cook_minutes, can_cook, can_buy, est_cost_min, est_cost_max, cost_currency, calories, protein_g, carbs_g, fat_g, nutrition_source, image_path, recipe:recipes(servings, recipe_ingredients(quantity, unit, optional, ingredient:ingredients(id, name, category, allergens)))'
 
 // deno-lint-ignore no-explicit-any
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

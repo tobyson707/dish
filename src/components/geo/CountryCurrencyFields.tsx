@@ -53,7 +53,7 @@ export function CountryCurrencyFields({ value, onChange }: { value: CountryCurre
         {local.length > 1 && (
           <div role="group" aria-label={`Currencies used in ${country?.name}`} className="mt-3 flex flex-wrap gap-2">
             {local.map((c) => (
-              <button key={c.code} type="button" aria-pressed={value.currency === c.code} onClick={() => onChange({ ...value, currency: c.code, currency_source: c.code === suggestion ? 'suggested' : 'manual' })} className={cn('press h-9 rounded-full px-3.5 text-sm font-semibold ring-1 ring-inset transition-colors', value.currency === c.code ? 'bg-accent text-accent-ink ring-accent' : 'bg-elevated text-ink ring-line')}>
+              <button key={c.code} type="button" aria-pressed={value.currency === c.code} onClick={() => onChange({ ...value, currency: c.code, currency_source: c.code === suggestion ? 'suggested' : 'manual' })} className={cn('press h-9 rounded-full px-3.5 text-sm font-semibold ring-1 ring-inset transition-colors', value.currency === c.code ? 'bg-accent-soft text-ink ring-accent-border' : 'bg-elevated text-ink ring-line')}>
                 {c.code}
               </button>
             ))}

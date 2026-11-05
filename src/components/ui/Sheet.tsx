@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode, useId } from 'react'
 import { cn } from '@/lib/cn'
 import { IconButton } from './Button'
 import { useDragDismiss, usePresence } from './usePresence'
@@ -11,6 +11,7 @@ import { useDragDismiss, usePresence } from './usePresence'
  */
 export function Sheet({ open, onClose, title, children, footer, size = 'md', description, tone = 'default' }: { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode; size?: 'md' | 'lg'; description?: string; tone?: 'default' | 'glass' }) {
   const ref = useRef<HTMLDialogElement>(null)
+  const titleId = useId() // unique, so a sheet opened from another sheet keeps its own name
   const { mounted, closing } = usePresence(open, 260)
   const drag = useDragDismiss('y', onClose)
   useEffect(() => {
@@ -29,7 +30,7 @@ export function Sheet({ open, onClose, title, children, footer, size = 'md', des
       onClick={(e) => {
         if (e.target === ref.current) onClose()
       }}
-      aria-labelledby="sheet-title"
+      aria-labelledby={titleId}
       data-closing={closing || undefined}
       className={cn(
         'sheet-dialog m-0 mt-auto w-full max-w-none bg-transparent p-0',
@@ -50,7 +51,7 @@ export function Sheet({ open, onClose, title, children, footer, size = 'md', des
           </div>
           <div className="flex items-start justify-between gap-3 px-6 pb-2 pt-3 sm:pt-5">
             <div>
-              <h2 id="sheet-title" className={cn('font-serif text-title-2 leading-tight', tone === 'glass' && 'text-on-glass-dark')}>
+              <h2 id={titleId} className={cn('text-title-2 leading-tight', tone === 'glass' && 'text-on-glass-dark')}>
                 {title}
               </h2>
               {description && <p className={cn('mt-1 text-sm', tone === 'glass' ? 'text-on-glass-dark-muted' : 'text-muted')}>{description}</p>}

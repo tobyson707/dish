@@ -6,7 +6,7 @@ function Doc({ title, children }: { title: string; children: ReactNode }) {
     <div className="mx-auto max-w-2xl px-5 pb-16" style={{ paddingTop: 'calc(var(--safe-top) + 8px)' }}>
       <PageHeader back eyebrow="DISH" title={title} />
       <div className="mb-6 rounded-md bg-accent-soft px-4 py-3 text-sm">Draft for review. Have this reviewed by a qualified person before public release.</div>
-      <div className="flex flex-col gap-4 leading-relaxed text-ink-2 [&_h2]:mt-4 [&_h2]:text-lg [&_h2]:font-bold [&_h2]:text-ink">{children}</div>
+      <div className="flex flex-col gap-4 leading-relaxed text-ink-2 [&_h2]:mt-4 [&_h2]:text-title-3 [&_h2]:font-bold [&_h2]:text-ink">{children}</div>
     </div>
   )
 }

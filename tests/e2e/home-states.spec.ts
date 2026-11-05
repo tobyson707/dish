@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { API, SERVICE_KEY, collectConsoleErrors, completeOnboardingFor, createUser, expectNoHorizontalScroll, signIn, uniqueEmail } from './helpers'
+import { API, SERVICE_KEY, collectConsoleErrors, pickDate, completeOnboardingFor, createUser, expectNoHorizontalScroll, signIn, uniqueEmail } from './helpers'
 
 const h = { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}`, 'content-type': 'application/json' }
 const shots = (name: string) => `test-results/screens/${test.info().project.name}-${name}.png`
@@ -39,7 +39,7 @@ test('Home: personal introduction, one tip, and empty states that match the situ
     d.setDate(d.getDate() + 1)
     return d.toLocaleDateString('en-CA', { timeZone: 'Africa/Lagos' })
   })
-  await page.getByLabel('Start date').fill(tomorrow)
+  await pickDate(page, 'Start date', tomorrow)
   await page.getByRole('button', { name: 'Create my plan' }).click()
   await expect(page).toHaveURL(/\/plan\?date=/, { timeout: 60_000 })
   await page.goto('/')

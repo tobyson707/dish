@@ -67,3 +67,21 @@ export function midCost(min: number | null, max: number | null): number | null {
   if (max == null) return min
   return Math.round((min + max) / 2)
 }
+
+export interface BudgetPosition {
+  /** allowance minus actual spending; negative when over */
+  remaining: number
+  over: boolean
+  /** share of the budget spent, clamped to 0..1 for display (the real figures are never clamped) */
+  fraction: number
+}
+
+/** Where the person stands. Only real spending counts: planned meal estimates never do. */
+export function budgetPosition(allowance: number, actual: number): BudgetPosition {
+  const remaining = Math.round((allowance - actual) * 100) / 100
+  const fraction = allowance > 0 ? Math.min(1, Math.max(0, actual / allowance)) : actual > 0 ? 1 : 0
+  return { remaining, over: remaining < 0, fraction }
+}
+
+/** Meals that a per-meal budget applies to: drinks are not meals. */
+export const budgetMealsPerDay = (slots: string[]) => Math.max(1, slots.filter((s) => s !== 'drink').length)

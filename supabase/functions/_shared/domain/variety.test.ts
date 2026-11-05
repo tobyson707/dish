@@ -178,3 +178,34 @@ describe('preferences that shape scoring', () => {
     expect(usd).toEqual(none) // NGN estimates are never compared with a USD preference
   })
 })
+
+describe('snacks and drinks are different things', () => {
+  const beverages = CATALOGUE.filter((m) => m.food_type === 'beverage').map((m) => m.slug).sort()
+  it('the catalogue marks exactly the reviewed beverages, each only as a drink', () => {
+    expect(beverages).toEqual(['smoothie', 'zobo'])
+    for (const m of CATALOGUE) {
+      if (m.food_type === 'beverage') expect(m.meal_types).toEqual(['drink'])
+      else expect(m.meal_types).not.toContain('drink')
+    }
+    expect(meal('smoothie-bowl').food_type).toBe('food') // eaten with a spoon: food
+  })
+  it('a beverage never fills a meal or a snack, and a drink slot never gets food', () => {
+    for (const slot of ['breakfast', 'lunch', 'dinner', 'snack', 'drink'] as const) {
+      const ranked = rankCandidates(CATALOGUE, { prefs: basePrefs(), slot, mealsPerDay: 3, date: START, history: [], rng: seededRng(slot) })
+      expect(ranked.length).toBeGreaterThan(0)
+      for (const r of ranked) expect(r.meal.food_type === 'beverage').toBe(slot === 'drink')
+    }
+  })
+  it('even a mislabelled beverage is kept out of main meals', () => {
+    const bad = { ...meal('zobo'), id: 'bad-zobo', meal_types: ['lunch' as const] }
+    const ranked = rankCandidates([bad, ...CATALOGUE], { prefs: basePrefs(), slot: 'lunch', mealsPerDay: 3, date: START, history: [], rng: seededRng('x') })
+    expect(ranked.some((r) => r.meal.id === 'bad-zobo')).toBe(false)
+  })
+  it('plans with a drinks slot get drinks there and food everywhere else', () => {
+    const p = basePrefs()
+    const slots = slotsForRange(START, addDays(START, 2), ['breakfast', 'lunch', 'dinner', 'snack', 'drink'])
+    const { selections } = generateSelections({ slots, meals: CATALOGUE, prefs: p, mealsPerDay: 5, keep: [], history: [], seed: 'd' })
+    for (const s of selections) expect(lookup.get(s.food_item_id)!.food_type === 'beverage').toBe(s.slot === 'drink')
+    expect(selections.filter((s) => s.slot === 'drink')).toHaveLength(3)
+  })
+})

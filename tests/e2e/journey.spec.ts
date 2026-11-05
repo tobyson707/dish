@@ -304,7 +304,7 @@ test('discover, recipe detail, surprise, kitchen, budget, profile @responsive', 
   await page.screenshot({ path: shots('kitchen'), fullPage: true })
 
   await page.goto('/budget')
-  await page.getByRole('button', { name: 'Spend', exact: true }).click()
+  await page.getByRole('button', { name: 'Record spending' }).first().click()
   await page.getByLabel('Amount').fill('2500')
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByText(/(₦|\$|NGN\s?|USD\s?)2,500/).first()).toBeVisible() // in the account's currency

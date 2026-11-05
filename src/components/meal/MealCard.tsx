@@ -20,7 +20,7 @@ export function MealHeroCard({ meal, onActions, compact }: { meal: PlannedMeal; 
           {SLOT_LABEL[meal.slot]}
           {meal.scheduled_time && <span className="num normal-case tracking-normal">{meal.scheduled_time.slice(0, 5)}</span>}
         </p>
-        <h3 className={cn('mt-1 font-bold leading-snug tracking-tight', compact ? 'line-clamp-2 text-base' : 'text-lg')}>{meal.name}</h3>
+        <h3 className={cn('mt-1 font-bold leading-snug tracking-tight', compact ? 'line-clamp-2 text-base' : 'text-title-3')}>{meal.name}</h3>
         <div className={cn('mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-footnote text-ink-2', compact && 'hidden')}>
           {meal.calories != null && <span className="num">≈ {formatKcal(Math.round(meal.calories * meal.portion))}</span>}
           {meal.est_cost != null && <span className="num">~{formatMoney(meal.est_cost * meal.portion, meal.est_cost_currency ?? 'NGN')}</span>}

@@ -1,7 +1,5 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/manrope';
-@import '@fontsource/dm-serif-display/latin-400.css';
-@import '@fontsource/dm-serif-display/latin-400-italic.css';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DISH design tokens — the ONLY place literal colours live.
@@ -10,7 +8,10 @@
    progress, streaks, achievements and focus. No decorative gradients.
 
    Core palette: #111111 black · #FFFFFF white · #F4F4F4 secondary surface ·
-   #EAEAEA muted surface · #E5E5E5 border · #FF6B35 accent · #777777 grey.
+   #EAEAEA muted surface · #E5E5E5 border · #777777 grey, plus one orange
+   tonal scale (50-900) with Orange 400 #FF6B35 as the brand accent.
+   Components use the semantic tokens below, never the scale directly, so
+   black and white stay dominant and orange stays deliberate.
 
    Theming: <html data-theme="light|dark"> is set by a pre-paint script in
    index.html (no flash) and kept in sync by ThemeProvider. Dark redefines the
@@ -19,6 +20,18 @@
    pure #FF6B35 is for fills and for dark surfaces (6.8:1 on #111111).
    ───────────────────────────────────────────────────────────────────────────── */
 :root {
+  /* ── primitives: the orange tonal scale (theme-independent) ── */
+  --o-50: #fff0e8;
+  --o-100: #ffd9c5;
+  --o-200: #ffb895;
+  --o-300: #ff9366;
+  --o-400: #ff6b35; /* brand accent */
+  --o-500: #ed5526;
+  --o-600: #d9471e;
+  --o-700: #b93819;
+  --o-800: #8e2d18;
+  --o-900: #622316;
+
   /* surfaces */
   --c-bg: #ffffff; /* application background */
   --c-elevated: #f4f4f4; /* primary surface: cards and panels on white */
@@ -38,15 +51,18 @@
   --c-line: #e5e5e5; /* borders and dividers */
   --c-dot: #d4d4d4;
   --c-dot-soft: #eaeaea;
-  /* accent — electric orange */
-  --c-accent: #ff6b35; /* fills: selected, active, progress, streak */
-  --c-accent-ink: #111111; /* text on orange: 6.8:1 */
-  --c-accent-soft: #ffe8df; /* quiet selected background */
-  --c-accent-strong: #c4450f; /* orange text/icons on light surfaces: 5.0:1 */
-  --c-accent-on-ink: #ff6b35; /* orange on ink surfaces (black in light) */
+  /* accent — semantic roles on the orange scale */
+  --c-accent: var(--o-400); /* fills: primary accent, active nav, selected chips, streak */
+  --c-accent-ink: #111111; /* text on orange 400: 6.8:1 */
+  --c-accent-pressed: var(--o-600); /* pressed / hover on orange fills */
+  --c-accent-soft: var(--o-50); /* selected background, small notices */
+  --c-accent-tint: var(--o-100); /* subtle highlights, achievement backgrounds */
+  --c-accent-border: var(--o-300); /* selected border */
+  --c-accent-strong: var(--o-700); /* orange text/icons on light surfaces: 5.6:1 on white */
+  --c-accent-on-ink: var(--o-400); /* orange on ink surfaces (black in light) */
+  --c-progress: var(--o-400); /* progress fills */
+  --c-progress-track: var(--o-50);
   --c-selected: var(--c-accent);
-  --c-accent-2: var(--c-ink); /* legacy alias: no second accent colour */
-  --c-sage: #eaeaea; /* legacy alias: neutral */
   /* glass — neutral translucent surfaces */
   --c-glass: rgb(255 255 255 / 0.78);
   --c-glass-line: rgb(17 17 17 / 0.08);
@@ -54,13 +70,13 @@
   --c-on-glass-dark: #ffffff;
   --c-on-glass-dark-muted: #a3a3a3; /* 7.4:1 on #111 */
   --c-on-glass-dark-ink: #111111; /* text on white buttons inside dark glass */
-  /* canvas tones (legacy names) — neutral greys only */
-  --g-peach: #f4f4f4;
-  --g-cream: #fafafa;
-  --g-sage: #eeeeee;
-  --g-leaf: #e2e2e2;
+  /* neutral tones for image placeholders */
+  --c-tile-1: #f4f4f4;
+  --c-tile-2: #fafafa;
+  --c-tile-3: #eeeeee;
+  --c-tile-4: #e2e2e2;
   /* states */
-  --c-focus: #c4450f; /* orange focus ring, 5.0:1 on white */
+  --c-focus: var(--o-700); /* orange focus ring, 5.6:1 on white */
   --c-success: #1e7a46;
   --c-warning: #8a5a00;
   --c-error: #c62828;
@@ -108,22 +124,26 @@
   --c-line: #2e2e2e;
   --c-dot: #3d3d3d;
   --c-dot-soft: #262626;
-  --c-accent: #ff6b35;
+  --c-accent: var(--o-400);
   --c-accent-ink: #111111;
-  --c-accent-soft: #3a1d12;
-  --c-accent-strong: #ff6b35; /* 6.8:1 on #111 */
-  --c-accent-on-ink: #c4450f; /* ink is white in dark */
-  --c-sage: #262626;
+  --c-accent-pressed: var(--o-300); /* lighter on press: stays visible on near-black */
+  --c-accent-soft: #2a1610; /* orange 900 at low strength over #111: quiet selected background */
+  --c-accent-tint: var(--o-900); /* subtle highlights */
+  --c-accent-border: var(--o-700);
+  --c-accent-strong: var(--o-300); /* orange text on dark: 8.0:1 on #111 */
+  --c-accent-on-ink: var(--o-700); /* ink is white in dark */
+  --c-progress: var(--o-400);
+  --c-progress-track: #2a1610;
   --c-glass: rgb(38 38 38 / 0.7);
   --c-glass-line: rgb(255 255 255 / 0.08);
   --c-glass-dark: rgb(22 22 22 / 0.9);
   --c-on-glass-dark: #ffffff;
   --c-on-glass-dark-muted: #a3a3a3;
-  --g-peach: #1a1a1a;
-  --g-cream: #161616;
-  --g-sage: #1e1e1e;
-  --g-leaf: #242424;
-  --c-focus: #ff6b35;
+  --c-tile-1: #1a1a1a;
+  --c-tile-2: #161616;
+  --c-tile-3: #1e1e1e;
+  --c-tile-4: #242424;
+  --c-focus: var(--o-300);
   --c-success: #5cc98a;
   --c-warning: #f2b544;
   --c-error: #ff6b6b;
@@ -135,30 +155,47 @@
 
 @theme inline {
   --font-sans: 'Manrope Variable', 'Manrope', ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'DM Serif Display', 'Iowan Old Style', Georgia, serif;
-  /* Type scale: one source of truth for every size in the app. Serif for
-     display and titles, Manrope for everything else. */
-  --text-display: clamp(2.7rem, 12.5vw, 5.4rem);
-  --text-display--line-height: 0.95;
-  --text-display--letter-spacing: -0.01em;
-  --text-title-1: clamp(2.3rem, 10vw, 3.2rem);
-  --text-title-1--line-height: 0.95;
-  --text-title-1--letter-spacing: -0.01em;
-  --text-title-2: 2rem;
-  --text-title-2--line-height: 1.08;
-  --text-title-3: 1.3rem;
-  --text-title-3--line-height: 1.3;
+  /* Type scale: one family (Manrope), weight carries the hierarchy. Every size in
+     the app comes from here; each heading token sets its own weight and tracking,
+     so a heading needs only its size class.
+       display  36-48px  ExtraBold   hero greetings, wordmark moments
+       title-1  28-36px  Bold        page headings
+       title-2  22-28px  Bold        section headings
+       title-3  18-22px  Semibold    subsection and card headings
+       headline 17px     Semibold    emphasised body
+       base     16px     Regular     body
+       callout  15px     Regular     body (dense)
+       sm       14px     Regular     supporting
+       footnote 13px     Medium      supporting, metadata
+       caption  12px     Medium      labels, metadata
+       micro    11px     Semibold    tiny labels (nav, badges) */
+  --text-display: clamp(2.25rem, 1.6rem + 3vw, 3rem);
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.035em;
+  --text-display--font-weight: 800;
+  --text-title-1: clamp(1.75rem, 1.4rem + 1.6vw, 2.25rem);
+  --text-title-1--line-height: 1.08;
+  --text-title-1--letter-spacing: -0.03em;
+  --text-title-1--font-weight: 700;
+  --text-title-2: clamp(1.375rem, 1.2rem + 0.8vw, 1.75rem);
+  --text-title-2--line-height: 1.15;
+  --text-title-2--letter-spacing: -0.02em;
+  --text-title-2--font-weight: 700;
+  --text-title-3: clamp(1.125rem, 1.05rem + 0.4vw, 1.375rem);
+  --text-title-3--line-height: 1.25;
+  --text-title-3--letter-spacing: -0.012em;
+  --text-title-3--font-weight: 600;
   --text-headline: 1.0625rem;
   --text-headline--line-height: 1.4;
+  --text-headline--font-weight: 600;
   --text-callout: 0.9375rem;
-  --text-callout--line-height: 1.45;
+  --text-callout--line-height: 1.5;
   --text-footnote: 0.8125rem;
-  --text-footnote--line-height: 1.4;
+  --text-footnote--line-height: 1.45;
   --text-caption: 0.75rem;
   --text-caption--line-height: 1.35;
   --text-micro: 0.6875rem;
   --text-micro--line-height: 1.3;
-  --color-sage: var(--c-sage);
   --color-glass: var(--c-glass);
   --color-glass-dark: var(--c-glass-dark);
   --color-on-glass-dark: var(--c-on-glass-dark);
@@ -179,8 +216,23 @@
   --color-accent: var(--c-accent);
   --color-accent-ink: var(--c-accent-ink);
   --color-accent-soft: var(--c-accent-soft);
-  --color-accent-2: var(--c-accent-2);
   --color-accent-strong: var(--c-accent-strong);
+  --color-accent-pressed: var(--c-accent-pressed);
+  --color-accent-tint: var(--c-accent-tint);
+  --color-accent-border: var(--c-accent-border);
+  --color-progress: var(--c-progress);
+  --color-progress-track: var(--c-progress-track);
+  /* the brand scale (Tailwind's own orange is replaced, so there is only one orange) */
+  --color-orange-50: var(--o-50);
+  --color-orange-100: var(--o-100);
+  --color-orange-200: var(--o-200);
+  --color-orange-300: var(--o-300);
+  --color-orange-400: var(--o-400);
+  --color-orange-500: var(--o-500);
+  --color-orange-600: var(--o-600);
+  --color-orange-700: var(--o-700);
+  --color-orange-800: var(--o-800);
+  --color-orange-900: var(--o-900);
   --color-accent-on-ink: var(--c-accent-on-ink);
   --color-selected: var(--c-selected);
   --color-disabled: var(--c-disabled);
@@ -244,18 +296,19 @@
 }
 
 @layer components {
+  /* small label above a heading or value: sentence case, no shouting */
   .label-caps {
-    font-size: var(--text-micro);
-    line-height: 1.2;
+    font-size: var(--text-footnote);
+    line-height: 1.3;
     font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    letter-spacing: 0;
     color: var(--c-muted);
   }
+  /* wordmark and oversized numerals */
   .display {
     font-weight: 800;
-    letter-spacing: -0.045em;
-    line-height: 0.88;
+    letter-spacing: -0.04em;
+    line-height: 0.92;
   }
   .num {
     font-variant-numeric: tabular-nums;

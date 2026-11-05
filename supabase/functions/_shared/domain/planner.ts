@@ -3,7 +3,7 @@
 // hard filters below — allergy exclusions are applied here, before any AI call.
 import { checkAllergy } from './allergens.ts'
 import { addDays, diffDays, type ISODate } from './dates.ts'
-import { COOK_TIME_MAX, type CatalogueMeal, type MealSlot, type PreferenceSnapshot } from './types.ts'
+import { COOK_TIME_MAX, fitsOccasion, type CatalogueMeal, type MealSlot, type PreferenceSnapshot } from './types.ts'
 import { DEFAULT_SIMILARITY, mealProfile, mealSimilarity, type SimilarityThresholds } from './similarity.ts'
 
 export interface HistoryItem {
@@ -102,6 +102,8 @@ export function isSnackOnly(meal: CatalogueMeal): boolean {
 export function exclusionReason(meal: CatalogueMeal, ctx: FilterContext): Exclusion | null {
   const { prefs } = ctx
   if (!meal.meal_types.includes(ctx.slot)) return 'slot'
+  // a beverage never fills a meal or snack, and a drink slot never gets food, even if data disagreed
+  if (!fitsOccasion(meal.food_type, ctx.slot)) return 'slot'
   // HARD — never relaxed.
   const allergy = checkAllergy(meal, { allergies: prefs.allergies, custom_allergies: prefs.custom_allergies })
   if (allergy.status !== 'no_known_conflict') return 'allergy'
@@ -406,7 +408,7 @@ export interface GenerateInput {
   similarity?: SimilarityThresholds
 }
 
-const SLOT_ORDER: Record<MealSlot, number> = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 }
+const SLOT_ORDER: Record<MealSlot, number> = { breakfast: 0, lunch: 1, dinner: 2, snack: 3, drink: 4 }
 const bySlotTime = (a: PlanSlotRequest, b: PlanSlotRequest) => (a.date === b.date ? SLOT_ORDER[a.slot] - SLOT_ORDER[b.slot] : a.date < b.date ? -1 : 1)
 
 /**
