@@ -7,6 +7,7 @@ import type { MealSlot } from '@domain/types.ts'
 import type { PlanDuration } from '@domain/types.ts'
 import type { MealPlan, PlannedMeal } from '@/types/db'
 import { qk } from './keys'
+import { gamificationCheck } from '@/gamification/bus'
 
 /** Invoke an Edge Function and surface its JSON error message. */
 export async function invokeFn<T>(name: string, body: unknown): Promise<T> {
@@ -70,6 +71,7 @@ export function useGeneratePlan() {
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: qk.activePlan(uid) })
       void qc.invalidateQueries({ queryKey: qk.planned(uid) })
+      gamificationCheck('plan')
     },
   })
 }
@@ -98,6 +100,7 @@ export function useReplaceMeal() {
     onSuccess: (r) => {
       if (r.replaced) {
         void qc.invalidateQueries({ queryKey: qk.planned(uid) })
+        gamificationCheck('plan')
       }
     },
   })

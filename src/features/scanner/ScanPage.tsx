@@ -171,6 +171,7 @@ export function ScanPage() {
           <div className="relative overflow-hidden rounded-xl bg-surface">
             <img src={img.previewUrl} alt="Your food photo" className="aspect-square w-full object-cover" />
             {(stage === 'uploading' || stage === 'analysing') && (
+              // white on the (always dark) scrim over the user's photo — readable in both themes
               <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 bg-[var(--c-scrim)] text-white" role="status" aria-live="polite">
                 <span className="h-10 w-10 rounded-full border-4 border-white/30 border-t-white" style={{ animation: 'spin 0.9s linear infinite' }} aria-hidden="true" />
                 <p className="font-semibold">{stage === 'uploading' ? 'Uploading photo…' : "Let's see what's on your plate…"}</p>

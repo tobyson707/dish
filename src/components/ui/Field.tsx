@@ -3,7 +3,7 @@ import { cn } from '@/lib/cn'
 import { Icon } from './Icon'
 
 const inputCls =
-  'w-full h-12 rounded-md bg-elevated px-4 text-ink placeholder:text-muted ring-1 ring-inset ring-line focus:ring-2 focus:ring-ink outline-none transition-shadow disabled:opacity-50 aria-[invalid=true]:ring-error'
+  'w-full h-12 rounded-md bg-input px-4 text-ink placeholder:text-muted ring-1 ring-inset ring-input-border focus:ring-2 focus:ring-ink outline-none transition-shadow disabled:opacity-50 aria-[invalid=true]:ring-2 aria-[invalid=true]:ring-error'
 
 interface FieldWrapProps {
   label: string

@@ -7,7 +7,7 @@ import { PageHeader } from '@/components/ui/Layout'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
 import { InstallCard } from './InstallCard'
-import { ThemeSwitch } from './ThemeSwitch'
+import { MyProgress } from '@/components/gamification/MyProgress'
 
 export function ProfilePage() {
   const profile = useProfile()
@@ -25,7 +25,8 @@ export function ProfilePage() {
           <p className="font-bold">{goal.data ? GOAL_LABEL[goal.data.goal] : 'Not set'}{goal.data?.calorie_target ? ` · ~${goal.data.calorie_target.toLocaleString()} kcal` : ''}</p>
         </div>
       </div>
-      <nav aria-label="Profile settings" className="mt-6">
+      <MyProgress />
+      <nav aria-label="Profile settings" className="mt-8">
         <ul className="divide-y divide-line overflow-hidden rounded-lg bg-elevated">
           <Item to="/profile/preferences" icon="leaf" title="Food preferences" sub="Cuisines, allergies, dislikes, budget, planning" />
           <Item to="/profile/goals" icon="flame" title="Goals & targets" sub="Goal, optional calorie estimate" />
@@ -33,10 +34,10 @@ export function ProfilePage() {
           <Item to="/history" icon="history" title="History & favourites" sub="Eaten meals, favourites, leftovers" />
           <Item to="/profile/notifications" icon="bell" title="Reminders" sub="Meal, prep and shopping reminders" />
           <Item to="/profile/sync" icon="cloud" title="Offline & sync" sub={sync.pending + sync.failed + sync.conflicts ? `${sync.pending + sync.failed + sync.conflicts} change(s) need attention` : 'Everything is synced'} />
+          <Item to="/profile/settings" icon="settings" title="Settings" sub="Appearance and progress feedback" />
           <Item to="/profile/account" icon="shield" title="Account & privacy" sub="Password, export, delete account" />
         </ul>
       </nav>
-      <div className="mt-6"><ThemeSwitch /></div>
       <div className="mt-4"><InstallCard /></div>
       <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted">
         <Link to="/privacy" className="underline">Privacy</Link>

@@ -5,6 +5,7 @@ import { Icon, type IconName } from '@/components/ui/Icon'
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator'
 import { LoadingBlock } from '@/components/ui/States'
 import { ReminderScheduler } from '@/features/profile/ReminderScheduler'
+import { GamificationNotifier } from '@/gamification/GamificationNotifier'
 
 const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Home', icon: 'home' },
@@ -23,7 +24,7 @@ export function AppShell() {
       </a>
       <OfflineIndicator />
       {/* Desktop rail */}
-      <nav aria-label="Main" className="fixed inset-y-0 left-0 z-30 hidden w-24 flex-col items-center gap-2 border-r border-line bg-bg py-6 md:flex">
+      <nav aria-label="Main" className="fixed inset-y-0 left-0 z-30 hidden w-24 flex-col items-center gap-2 border-r border-line bg-nav py-6 md:flex">
         <span className="display mb-6 text-xl" aria-hidden="true">
           DISH<span className="text-accent">.</span>
         </span>
@@ -48,7 +49,7 @@ export function AppShell() {
       </main>
       {/* Mobile floating pill bar */}
       <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 px-3 md:hidden" style={{ paddingBottom: 'calc(var(--safe-bottom) + 10px)' }}>
-        <div className="mx-auto flex h-[var(--nav-h)] max-w-md items-center justify-between rounded-full bg-elevated px-2 shadow-[0_8px_30px_rgb(0_0_0/0.12)] ring-1 ring-line">
+        <div className="mx-auto flex h-[var(--nav-h)] max-w-md items-center justify-between rounded-full bg-nav px-2 shadow-[0_8px_30px_var(--c-shadow)] ring-1 ring-line">
           {NAV.map((n) => (
             <NavLink key={n.to} to={n.to} end={n.to === '/'} aria-label={n.label} className="press flex h-12 min-w-12 flex-1 flex-col items-center justify-center gap-0.5">
               {({ isActive }) => (
@@ -64,6 +65,7 @@ export function AppShell() {
         </div>
       </nav>
       <ReminderScheduler />
+      <GamificationNotifier />
     </div>
   )
 }

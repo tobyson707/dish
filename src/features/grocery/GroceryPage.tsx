@@ -163,8 +163,8 @@ function AddItem({ listId }: { listId: string }) {
   }
   return (
     <form onSubmit={add} className="mt-4 flex gap-2" aria-label="Add an item">
-      <input value={name} onChange={(e) => setName(e.target.value)} list="ingredient-names" placeholder="Add an item" aria-label="Item name" className="h-12 min-w-0 flex-1 rounded-full bg-elevated px-4 ring-1 ring-inset ring-line outline-none focus:ring-2 focus:ring-ink" />
-      <input value={qty} onChange={(e) => setQty(e.target.value)} placeholder="Qty" aria-label="Quantity (e.g. 2 kg)" className="h-12 w-20 rounded-full bg-elevated px-4 ring-1 ring-inset ring-line outline-none focus:ring-2 focus:ring-ink" />
+      <input value={name} onChange={(e) => setName(e.target.value)} list="ingredient-names" placeholder="Add an item" aria-label="Item name" className="h-12 min-w-0 flex-1 rounded-full bg-input px-4 ring-1 ring-inset ring-input-border outline-none placeholder:text-muted focus:ring-2 focus:ring-ink" />
+      <input value={qty} onChange={(e) => setQty(e.target.value)} placeholder="Qty" aria-label="Quantity (e.g. 2 kg)" className="h-12 w-20 rounded-full bg-input px-4 ring-1 ring-inset ring-input-border outline-none placeholder:text-muted focus:ring-2 focus:ring-ink" />
       <IconButton type="submit" icon="plus" label="Add item" tone="accent" size={48} disabled={!name.trim()} />
       <datalist id="ingredient-names">{ingredients.data?.map((i) => <option key={i.id} value={i.name} />)}</datalist>
     </form>
@@ -279,7 +279,7 @@ function ManageSheet({ open, onClose, currentId }: { open: boolean; onClose: () 
           <TextField label="Rename current list" defaultValue={current.name} key={current.id} onBlur={(e) => e.target.value.trim() && e.target.value !== current.name && update.mutate({ id: current.id, patch: { name: e.target.value.trim().slice(0, 60) } })} />
         )}
         <form className="flex gap-2" onSubmit={async (e) => { e.preventDefault(); if (!name.trim()) return; try { const l = await create.mutateAsync(name.trim()); setName(''); nav(`/grocery/${l.id}`); onClose() } catch (err) { toast.error(friendlyError(err)) } }}>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New list name" aria-label="New list name" className="h-12 min-w-0 flex-1 rounded-full bg-elevated px-4 ring-1 ring-inset ring-line" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="New list name" aria-label="New list name" className="h-12 min-w-0 flex-1 rounded-full bg-input px-4 ring-1 ring-inset ring-input-border placeholder:text-muted" />
           <Button type="submit" loading={create.isPending} disabled={!name.trim()}>Create</Button>
         </form>
       </div>

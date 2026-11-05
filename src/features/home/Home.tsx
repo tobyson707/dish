@@ -18,6 +18,7 @@ import { MealActionsSheet } from '@/components/meal/MealActions'
 import { DateStrip, type DayState } from '@/components/ui/Calendar'
 import { useNavigate } from 'react-router'
 import { friendlyError } from '@/lib/errors'
+import { ProgressWidget } from '@/components/gamification/ProgressWidget'
 
 export function Home() {
   const today = useToday()
@@ -105,7 +106,11 @@ export function Home() {
         <Quick to="/scan" icon="camera" title="Scan food" sub="Log with a photo" />
       </section>
 
-      <section aria-label="Today's nutrition" className="mt-8 rounded-xl bg-elevated p-5">
+      <div className="mt-6">
+        <ProgressWidget />
+      </div>
+
+      <section aria-label="Today's nutrition" className="mt-6 rounded-xl bg-elevated p-5">
         {diary.isPending ? <Skeleton className="h-28" /> : <NutritionSummary totals={totals} targets={goal.data ? { calories: goal.data.calorie_target, protein_g: goal.data.protein_target_g } : null} compact />}
         <div className="mt-4 flex justify-between gap-2">
           <Link to="/diary" className="text-sm font-semibold underline-offset-2 hover:underline">

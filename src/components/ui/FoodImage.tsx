@@ -24,6 +24,8 @@ export function FoodImage({ path, alt, name, shape = 'rounded', className, width
       ) : (
         <Fallback name={name} />
       )}
+      {/* hairline that separates photos from dark surfaces; transparent in light. No filters on photos. */}
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[inherit] ring-1 ring-inset ring-[var(--c-image-ring)]" />
     </div>
   )
 }

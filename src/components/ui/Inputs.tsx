@@ -42,7 +42,7 @@ export function TagInput({ label, hint, value, onChange, placeholder = 'Type and
           onChange={(e) => setText(e.target.value)}
           onKeyDown={onKey}
           placeholder={placeholder}
-          className="h-12 w-full rounded-md bg-elevated px-4 ring-1 ring-inset ring-line outline-none placeholder:text-muted focus:ring-2 focus:ring-ink"
+          className="h-12 w-full rounded-md bg-input px-4 ring-1 ring-inset ring-input-border outline-none placeholder:text-muted focus:ring-2 focus:ring-ink"
           autoComplete="off"
         />
         <button type="button" aria-label={`Add to ${label}`} onClick={() => add(text)} disabled={!text.trim()} className="press flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-ink text-on-ink disabled:opacity-30">
@@ -104,7 +104,7 @@ export function Toggle({ label, description, checked, onChange, disabled }: { la
         onClick={() => onChange(!checked)}
         className={cn('press relative h-8 w-14 shrink-0 rounded-full transition-colors duration-200 disabled:opacity-40', checked ? 'bg-ink' : 'bg-dot')}
       >
-        <span className={cn('absolute top-1 h-6 w-6 rounded-full bg-elevated shadow transition-transform duration-200', checked ? 'translate-x-7' : 'translate-x-1')} />
+        <span className={cn('absolute left-0 top-1 h-6 w-6 rounded-full shadow transition-transform duration-200', checked ? 'translate-x-7 bg-on-ink' : 'translate-x-1 bg-elevated')} />
       </button>
     </div>
   )

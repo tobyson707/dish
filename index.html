@@ -5,8 +5,24 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
-    <meta name="theme-color" content="#E6E3DF" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#151413" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#E6E3DF" />
+    <script>
+      // Pre-paint theme resolution (prevents a flash of the wrong theme).
+      // Keep in sync with src/theme/theme.ts.
+      ;(function () {
+        var pref = 'system'
+        try {
+          var v = localStorage.getItem('dish-theme')
+          if (v === 'light' || v === 'dark' || v === 'system') pref = v
+        } catch (e) {}
+        var dark = pref === 'dark' || (pref === 'system' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+        var root = document.documentElement
+        root.setAttribute('data-theme', dark ? 'dark' : 'light')
+        root.style.colorScheme = dark ? 'dark' : 'light'
+        var meta = document.querySelector('meta[name="theme-color"]')
+        if (meta) meta.setAttribute('content', dark ? '#141312' : '#E6E3DF')
+      })()
+    </script>
     <meta name="description" content="DISH — good food, less thinking. Plan meals, track what you eat, and decide what to cook." />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />

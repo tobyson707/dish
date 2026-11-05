@@ -47,7 +47,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             className={cn(
               'pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium shadow-lg',
               'animate-[rise_220ms_var(--ease-out)]',
-              t.tone === 'error' ? 'bg-error text-white' : 'bg-ink text-on-ink',
+              t.tone === 'error' ? 'bg-error text-on-error' : 'bg-ink text-on-ink',
             )}
           >
             {t.tone === 'success' && <Icon name="check" size={18} className="text-accent" />}

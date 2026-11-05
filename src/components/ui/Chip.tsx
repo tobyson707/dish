@@ -14,7 +14,7 @@ export function Chip({ selected, onClick, children, tone = 'default', disabled, 
         'press inline-flex min-h-10 items-center gap-1.5 rounded-full px-4 text-sm font-medium transition-[background-color,color,transform] duration-150',
         selected
           ? tone === 'danger'
-            ? 'bg-error text-white'
+            ? 'bg-error text-on-error'
             : 'bg-ink text-on-ink'
           : 'bg-elevated text-ink ring-1 ring-inset ring-line hover:ring-ink/30',
         selected && 'animate-[pop_160ms_var(--ease-out)]',

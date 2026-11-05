@@ -14,7 +14,7 @@ const variants: Record<Variant, string> = {
   accent: 'bg-accent text-accent-ink hover:brightness-105',
   secondary: 'bg-transparent text-ink ring-1 ring-inset ring-ink/25 hover:bg-ink/5',
   ghost: 'bg-transparent text-ink hover:bg-ink/6',
-  danger: 'bg-error text-white hover:opacity-90',
+  danger: 'bg-error text-on-error hover:opacity-90',
 }
 const sizes: Record<Size, string> = {
   sm: 'h-9 px-4 text-sm',
@@ -81,7 +81,7 @@ export const IconButton = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTM
         className={cn(
           'press inline-flex shrink-0 items-center justify-center rounded-full disabled:opacity-40',
           tone === 'plain' && 'text-ink hover:bg-ink/6',
-          tone === 'filled' && 'bg-elevated text-ink shadow-[0_1px_0_rgb(0_0_0/0.04)]',
+          tone === 'filled' && 'bg-elevated text-ink shadow-[0_1px_0_var(--c-shadow)]',
           tone === 'accent' && 'bg-accent text-accent-ink',
           className,
         )}

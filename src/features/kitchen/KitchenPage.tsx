@@ -9,6 +9,8 @@ import { useKitchen, useKitchenMutations, type KitchenInput } from '@/data/kitch
 import { useIngredients } from '@/data/catalogue'
 import { useKitchenSuggest, type KitchenSuggestion } from '@/data/ai'
 import { useAddIngredientsToList } from '@/data/grocery'
+import { useLogDiary } from '@/data/diary'
+import { useCatalogue } from '@/data/catalogue'
 import { useToday } from '@/hooks/useToday'
 import { useSyncState } from '@/offline/useSync'
 import { friendlyError } from '@/lib/errors'
@@ -113,10 +115,34 @@ export function KitchenPage() {
   )
 }
 
+function nowSlot(): MealSlot {
+  const h = new Date().getHours()
+  return h < 11 ? 'breakfast' : h < 16 ? 'lunch' : h < 22 ? 'dinner' : 'snack'
+}
+
 function KitchenCard({ s }: { s: KitchenSuggestion }) {
   const add = useAddIngredientsToList()
   const toast = useToast()
   const nav = useNavigate()
+  const today = useToday()
+  const catalogue = useCatalogue()
+  const log = useLogDiary()
+  const [cooked, setCooked] = useState(false)
+  async function cookedIt() {
+    const f = catalogue.data?.find((x) => x.id === s.food_item_id)
+    if (!f) return
+    await log.mutateAsync({
+      local_date: today,
+      slot: nowSlot(),
+      name: f.name,
+      servings: 1,
+      source: 'catalogue',
+      food_item_id: f.id,
+      nutrition: { calories: f.calories, protein_g: f.protein_g, carbs_g: f.carbs_g, fat_g: f.fat_g, source: f.nutrition_source, is_estimate: f.nutrition_is_estimate },
+    })
+    setCooked(true)
+    toast.show(`${f.name} added to your diary.`, { tone: 'success', action: { label: 'View', onClick: () => nav('/diary') } })
+  }
   return (
     <li className="rounded-xl bg-elevated p-4">
       <div className="flex gap-3">
@@ -140,6 +166,7 @@ function KitchenCard({ s }: { s: KitchenSuggestion }) {
         )}
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
+        <Button size="sm" icon="check" disabled={cooked || !catalogue.data} loading={log.isPending} onClick={() => void cookedIt()}>{cooked ? 'Logged' : 'I cooked this'}</Button>
         <Button size="sm" variant="secondary" onClick={() => nav(`/recipes/${s.slug}`)}>View recipe</Button>
         {s.missing.length > 0 && (
           <Button size="sm" icon="cart" loading={add.isPending} onClick={async () => {

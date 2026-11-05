@@ -9,17 +9,18 @@ import { AuthProvider } from '@/features/auth/AuthProvider'
 import { ToastProvider } from '@/components/ui/Toast'
 import { SetupRequired } from '@/app/SetupRequired'
 import { UpdatePrompt } from '@/app/UpdatePrompt'
-import { applyStoredTheme } from '@/features/profile/ThemeSwitch'
-
-applyStoredTheme()
+import { ThemeProvider } from '@/theme/ThemeProvider'
+import { ThemeSync } from '@/theme/ThemeSync'
 
 const queryClient = makeQueryClient()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
+    <ThemeProvider>
     {isSupabaseConfigured ? (
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
+          <ThemeSync />
           <ToastProvider>
             <App />
             <UpdatePrompt />
@@ -29,5 +30,6 @@ createRoot(document.getElementById('root')!).render(
     ) : (
       <SetupRequired />
     )}
+    </ThemeProvider>
   </StrictMode>,
 )

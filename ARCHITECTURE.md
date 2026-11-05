@@ -116,3 +116,21 @@ Device access is isolated in `src/platform/*` (camera, notifications, haptics). 
 3. Schedule `send-reminders` with pg_cron (see PWA_OFFLINE.md) and add VAPID keys.
 4. Add an admin tool for catalogue curation (images, prices by city, new recipes).
 5. Package with Capacitor and swap in native camera/push adapters.
+
+---
+
+## Gamification (light, digital-only)
+
+- **Server:** see DATABASE.md → Gamification. Existing actions are the event source (DB triggers); no feature code computes XP.
+- **Event mechanism (client):** `src/gamification/bus.ts` — `gamificationCheck()` is emitted after a *confirmed* write (successful outbox flush, plan generation, meal replacement). `GamificationNotifier` refetches `gamification_summary()` and diffs it against awards this user has already seen (per-user, in local storage), so feedback appears once, only after the server confirms, and never replays on reload or a new device.
+- **Levels:** `supabase/functions/_shared/domain/gamification.ts` (`levelFor`) — Beginner 0, Meal Planner 100, Food Explorer 300, Kitchen Pro 650, Culinary Enthusiast 1,100, DISH Master 1,800; completed state at the top.
+- **UI:** Home `ProgressWidget` (compact), Profile → My Progress (`MyProgress`, achievement grid + detail sheet), quiet notices (+XP pill, achievement card, level-up note). Feedback can be switched off in Profile → Settings. Kitchen suggestions have "I cooked this" so cooking-from-inventory can be logged.
+
+## Appearance (light / dark / system)
+
+- **Tokens:** `src/styles/index.css` — one semantic set for light and one for dark (`:root[data-theme='dark']`): background, surface, elevated, input + input border, nav, scrim (overlay), text (primary / secondary / muted / inverse), line, accent + secondary accent, focus, success / warning / error (+ on-error), shadow, image ring. Pairs checked for WCAG AA.
+- **Pre-paint:** an inline script in `index.html` resolves the cached preference (`localStorage['dish-theme']`) and sets `data-theme` before CSS/JS load — no flash.
+- **Provider:** `src/theme/ThemeProvider.tsx` exposes `preference`, `resolved`, `setPreference`, `syncPreference`; follows the OS live when set to System; switches with a single root View-Transition cross-fade (instant with reduced motion).
+- **Persistence:** `src/theme/ThemeSync.tsx` saves to `profiles.theme_preference` (retries on reconnect) and adopts the account value on sign-in, so the choice follows the user across devices and sign-outs.
+- **Settings:** Profile → Settings → Appearance (Light / Dark / System default).
+- Food photos are never filtered; in dark mode they get a faint hairline so they stay distinct from surfaces.

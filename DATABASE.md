@@ -69,3 +69,19 @@ The starter catalogue is **sample / reference data**:
 - Nutrition is `reference_estimate`, flagged as an estimate, with a note in `nutrition_notes` and confidence 0.5. The seed builder rejects any meal whose calories differ from 4/4/9 × macros by more than 20%.
 - Costs are rough NGN ranges (`cost_source = 'rough_estimate'`). Users can set their own prices.
 - Allergens are derived from the ingredient codes plus a keyword safety net. Meals whose recipes vary widely (e.g. suya, shawarma, buka plates) are marked `ingredients_complete = false`, so they're never recommended to users with allergies.
+
+## Gamification (migration `20261105000100_gamification.sql`)
+
+| Table | Purpose |
+| --- | --- |
+| `achievement_definitions` | Public catalogue of the 8 achievements (id, name, description, requirement, icon) |
+| `user_gamification` | One row per user: `total_xp` (never decreases — trigger-guarded), `current_streak`, `best_streak`, `last_qualifying_activity_date`, `timezone`, `feedback_enabled` |
+| `xp_transactions` | Every award, `UNIQUE (user_id, event_id)` → idempotent (replays, edits and retries can't double-award) |
+| `user_achievements` | `UNIQUE (user_id, achievement_id)`; permanent |
+| `gamification_activity_days` | One row per local calendar day with a qualifying action; streaks are computed from these (gaps-and-islands), so multiple actions per day or out-of-order offline syncs stay correct |
+
+**Trusted awarding.** XP is awarded only by `SECURITY DEFINER` triggers that run *after* the underlying write succeeds: diary inserts (meal +10, capped at 6/day; first time a recipe is cooked +20; cooked with kitchen inventory +15, max 3/day), planned-meal status changes (day plan completed +20 / every planned meal eaten +25 — at least 2 meals, skipped never counts as completed), new meal plans, and grocery lists ticked off completely (3+ items, +15). Each 7-day streak milestone gives +50 once per streak. Amounts are defined in SQL (`gamify_xp_for`); the client never sends XP. Clients can read their own rows (RLS) and may only update `feedback_enabled`. `gamification_summary()` returns everything the UI needs in one call.
+
+**Days and time zones.** Local dates use `profiles.timezone`. Offline action timestamps are trusted only within the last 3 days and never in the future, so replaying old events can't create streak days.
+
+**Appearance.** `profiles.theme_preference` (`light` / `dark` / `system`, default `system`).

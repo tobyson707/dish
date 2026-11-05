@@ -17,6 +17,7 @@ export interface Profile {
   onboarding_step: number
   onboarding_draft: Record<string, unknown>
   onboarding_completed_at: string | null
+  theme_preference: 'light' | 'dark' | 'system'
   created_at: string
   updated_at: string
 }

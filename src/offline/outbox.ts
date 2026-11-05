@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase'
 import { isConflictError, isNetworkError } from '@/lib/errors'
 import { uuid } from '@/lib/ids'
 import { db, type ConflictEntry, type OutboxEntry, type OutboxOp } from './db'
+import { gamificationCheck } from '@/gamification/bus'
 
 /**
  * Offline mutation queue.
@@ -158,6 +159,7 @@ export function flush(): Promise<void> {
   flushing = (async () => {
     emit({ syncing: true })
     const keys = new Set<string>()
+    let confirmed = 0
     try {
       const entries = await db.outbox.where({ userId: currentUser, status: 'pending' }).sortBy('createdAt')
       for (const e of entries) {
@@ -165,6 +167,7 @@ export function flush(): Promise<void> {
         try {
           await execute(e.op)
           await db.outbox.delete(e.id)
+          confirmed++
           e.invalidate.forEach((k) => keys.add(JSON.stringify(k)))
         } catch (err) {
           if (isNetworkError(err)) {
@@ -193,6 +196,7 @@ export function flush(): Promise<void> {
       await refreshCounts()
       emit({ syncing: false })
       for (const k of keys) void queryClient?.invalidateQueries({ queryKey: JSON.parse(k) })
+      if (confirmed > 0) gamificationCheck('sync')
       flushing = null
     }
   })()
