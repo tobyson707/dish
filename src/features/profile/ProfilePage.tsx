@@ -35,6 +35,7 @@ export function ProfilePage() {
       <MyProgress />
       <nav aria-label="Profile settings" className="mt-8">
         <ul className="divide-y divide-line overflow-hidden rounded-lg bg-elevated">
+          <Item to="/profile/settings" icon="settings" title="Settings" sub="Appearance, sounds and progress feedback" />
           <Item to="/profile/preferences" icon="leaf" title="Food preferences" sub="Cuisines, allergies, dislikes, budget, planning" />
           <Item to="/profile/goals" icon="flame" title="Goals & targets" sub="Goal, optional calorie estimate" />
           <Item to="/budget" icon="wallet" title="Food budget" sub="Estimated vs actual spending" />
@@ -51,7 +52,6 @@ export function ProfilePage() {
               <Icon name="right" size={18} className="text-muted" />
             </button>
           </li>
-          <Item to="/profile/settings" icon="settings" title="Settings" sub="Appearance and progress feedback" />
           <Item to="/profile/account" icon="shield" title="Account & privacy" sub="Password, export, delete account" />
           {isAdmin.data && <Item to="/admin/images" icon="image" title="Image studio" sub="DISH team · generate and review catalogue photos" />}
         </ul>

@@ -1,13 +1,15 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/cn'
 import { Icon } from '@/components/ui/Icon'
 import { playDetent, unlockUiSound } from '@/lib/uiSound'
 import { CATEGORIES, categoryLabel, type Category } from './categories'
-import { useRotary, type RotarySource } from './useRotary'
+import { loopOffset, useRotary, type RotarySource } from './useRotary'
 
-const ITEM = 76 // px per detent
-const VISIBLE = 3 // positions shown: previous · selected · next
+export const ROTARY_ITEM = 76 // px per detent
+const VISIBLE = 3 // previous · selected · next
 const PAD = 8
+const N = CATEGORIES.length
 
 export interface CategoryChange {
   category: Category
@@ -15,38 +17,69 @@ export interface CategoryChange {
   open: boolean
 }
 
+/** Keep the dial attached to the right edge of the canvas element, wherever it is laid out. */
+function useAnchorRight(anchor: HTMLElement | null) {
+  const [right, setRight] = useState(8)
+  useEffect(() => {
+    if (!anchor) return
+    const measure = () => {
+      // place the dial flush with the canvas edge; then correct by any residual
+      // difference (scrollbars, zoom), so it is exact on every browser
+      const target = anchor.getBoundingClientRect().right
+      const dial = document.querySelector<HTMLElement>('[data-rotary]')
+      const current = dial ? parseFloat(dial.style.right || '0') : 0
+      const r = dial ? Math.max(0, Math.round(current + (dial.getBoundingClientRect().right - target))) : Math.max(0, Math.round(window.innerWidth - target))
+      setRight(r)
+      document.documentElement.style.setProperty('--rotary-right', `${r}px`) // the workspace aligns to the dial
+    }
+    measure()
+    const raf = requestAnimationFrame(measure) // second pass once the dial is laid out
+    const ro = new ResizeObserver(measure)
+    ro.observe(anchor)
+    ro.observe(document.documentElement)
+    window.addEventListener('resize', measure)
+    return () => {
+      cancelAnimationFrame(raf)
+      ro.disconnect()
+      window.removeEventListener('resize', measure)
+    }
+  }, [anchor])
+  return right
+}
+
 /**
- * Rotary category selector (Home canvas, right edge). A compact vertical dial:
- * categories rotate through a fixed peach "tuning window" in the centre. Turn it
- * by dragging, mouse wheel or trackpad; tap a neighbour to turn to it; tap the
- * centre (or press Enter) to open its workspace. Arrow keys / Home / End turn it
- * from the keyboard.
+ * Infinite rotary category selector — DISH's signature control. A compact
+ * vertical dial floating over the Home canvas (portalled, `position: fixed`, so
+ * it never takes layout space or scrolls with the content). Categories rotate
+ * endlessly through a fixed peach "tuning window"; an ink copy of the faces is
+ * clipped inside the window so labels change colour exactly where they cross it.
+ *
+ * Turn by drag, mouse wheel or trackpad; tap a neighbour to turn to it; tap the
+ * centre (or Enter) to open its workspace. Arrow keys turn without opening.
  */
-export function RotaryCategorySelector({ value, onChange, onActivate, className }: { value: Category; onChange: (c: CategoryChange) => void; onActivate: () => void; className?: string }) {
+export function RotaryCategorySelector({ value, onChange, onActivate, anchor, workspaceOpen }: { value: Category; onChange: (c: CategoryChange) => void; onActivate: () => void; anchor: HTMLElement | null; workspaceOpen?: boolean }) {
   const index = Math.max(0, CATEGORIES.findIndex((c) => c.id === value))
   const [announce, setAnnounce] = useState('')
+  const right = useAnchorRight(anchor)
 
   const { attachWheel, pointer, step, goTo } = useRotary({
-    count: CATEGORIES.length,
+    count: N,
     index,
-    itemSize: ITEM,
+    itemSize: ROTARY_ITEM,
     apply(pos, reduced, root) {
-      // two identical tracks: the dial face, and its ink copy seen through the window
-      root.querySelectorAll<HTMLElement>('[data-track]').forEach((t) => (t.style.transform = `translate3d(0, ${(1 - pos) * ITEM}px, 0)`))
       root.querySelectorAll<HTMLElement>('[data-item]').forEach((el, n) => {
-        const d = (n % CATEGORIES.length) - pos
+        const d = loopOffset(n % N, pos, N) // nearest repeat of this category
         const ad = Math.min(Math.abs(d), 2)
-        // rotary depth: the centre sits closest; neighbours tilt away and recede
         const scale = 1 - (reduced ? 0.05 : 0.13) * ad
         const tilt = reduced ? 0 : Math.max(-38, Math.min(38, d * -26))
-        el.style.transform = `perspective(320px) rotateX(${tilt}deg) scale(${scale})`
-        el.style.opacity = String(Math.max(0.42, 1 - 0.3 * ad))
+        el.style.transform = `translate3d(0, ${d * ROTARY_ITEM}px, 0) perspective(320px) rotateX(${tilt}deg) scale(${scale})`
+        // items wrapping round the back of the dial are out of view (|d| > 2)
+        el.style.opacity = Math.abs(d) > 2.05 ? '0' : String(Math.max(0.42, 1 - 0.3 * ad))
       })
     },
     onDetent(_i, source: RotarySource) {
-      const pill = document.querySelector<HTMLElement>('[data-rotary-pill]')
       playDetent({ haptic: source === 'drag' })
-      if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) pill?.animate([{ transform: 'scale(0.94)' }, { transform: 'scale(1)' }], { duration: 200, easing: 'cubic-bezier(.2,1.5,.4,1)' })
+      if (!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) document.querySelector<HTMLElement>('[data-rotary-pill]')?.animate([{ transform: 'scale(0.94)' }, { transform: 'scale(1)' }], { duration: 200, easing: 'cubic-bezier(.2,1.5,.4,1)' })
     },
     onSettle(i, source) {
       if (source === 'external') return
@@ -66,17 +99,26 @@ export function RotaryCategorySelector({ value, onChange, onActivate, className 
     if (k === 'ArrowDown' || k === 'ArrowRight') step(1, 'key')
     else if (k === 'ArrowUp' || k === 'ArrowLeft') step(-1, 'key')
     else if (k === 'Home') goTo(0, 'key')
-    else if (k === 'End') goTo(CATEGORIES.length - 1, 'key')
+    else if (k === 'End') goTo(N - 1, 'key')
     else return
     e.preventDefault()
   }
 
-  return (
+  const face = (c: (typeof CATEGORIES)[number]) => (
+    <>
+      <Icon name={c.icon} size={24} />
+      {c.label}
+    </>
+  )
+
+  return createPortal(
     <div
       role="toolbar"
       aria-label="Meal categories"
       aria-orientation="vertical"
       aria-describedby="rotary-hint"
+      data-rotary
+      data-open={workspaceOpen || undefined}
       ref={attachWheel}
       {...pointer}
       onPointerUp={(e) => {
@@ -85,68 +127,57 @@ export function RotaryCategorySelector({ value, onChange, onActivate, className 
       }}
       onKeyDown={onKeyDown}
       className={cn(
-        'group w-[70px] touch-none select-none overflow-hidden rounded-l-[36px] bg-[var(--c-glass-dark)] shadow-[-12px_18px_40px_-18px_rgb(0_0_0/0.45)] ring-1 ring-white/10 backdrop-blur-xl min-[380px]:w-[78px]',
-        'cursor-grab active:cursor-grabbing',
-        className,
+        'group fixed z-[55] w-[70px] -translate-y-1/2 cursor-grab touch-none select-none overflow-hidden rounded-l-[36px] bg-[var(--c-glass-dark)] shadow-[-12px_18px_40px_-18px_rgb(0_0_0/0.45)] ring-1 ring-white/10 backdrop-blur-xl active:cursor-grabbing min-[380px]:w-[78px]',
       )}
-      style={{ height: ITEM * VISIBLE + PAD * 2 }}
+      style={{ right, top: 'var(--rotary-top)', height: ROTARY_ITEM * VISIBLE + PAD * 2 }}
     >
-      {/* soft inner highlight + edge fades suggest a drum turning under glass */}
-      <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-10 rounded-l-[36px] bg-[linear-gradient(to_bottom,rgb(20_20_17/0.55),transparent_28%,transparent_72%,rgb(20_20_17/0.55))]" />
+      {/* edge shading: the faces seem to turn away under glass */}
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 z-10 rounded-l-[36px] bg-[linear-gradient(to_bottom,rgb(20_20_17/0.6),transparent_30%,transparent_70%,rgb(20_20_17/0.6))]" />
       <span aria-hidden="true" className="pointer-events-none absolute inset-x-3 top-px z-10 h-px bg-white/15" />
-      <div data-track className="absolute inset-x-0 will-change-transform" style={{ top: PAD }}>
-        {CATEGORIES.map((c, i) => {
-          const on = c.id === value
-          return (
-            <button
-              key={c.id}
-              data-item
-              data-rotary-item
-              type="button"
-              tabIndex={on ? 0 : -1}
-              aria-pressed={on}
-              onClick={(e) => {
-                // pointer taps are handled by the dial (so a drag never "clicks");
-                // this path serves keyboard Enter/Space and assistive tech.
-                if (e.detail !== 0) return
-                if (on) onActivate()
-                else goTo(i, 'tap')
-              }}
-              className={cn(
-                'relative flex w-full flex-col items-center justify-center gap-1.5 rounded-[24px] text-[11px] font-semibold text-on-glass-dark-muted outline-none min-[380px]:text-[12px]',
-                'focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-on-glass-dark',
-              )}
-              style={{ height: ITEM }}
-            >
-              <Icon name={c.icon} size={24} />
-              {c.label}
-            </button>
-          )
-        })}
-      </div>
-      {/* the fixed tuning window: categories rotate through it and click into place.
-          Inside, an ink copy of the same track shows exactly the part under the window. */}
+      {CATEGORIES.map((c, i) => {
+        const on = c.id === value
+        return (
+          <button
+            key={c.id}
+            data-item
+            data-rotary-item
+            type="button"
+            tabIndex={on ? 0 : -1}
+            aria-pressed={on}
+            onClick={(e) => {
+              // pointer taps are handled by the dial (so a drag never "clicks");
+              // this path serves keyboard Enter/Space and assistive tech.
+              if (e.detail !== 0) return
+              if (on) onActivate()
+              else goTo(i, 'tap')
+            }}
+            className="absolute inset-x-0 flex flex-col items-center justify-center gap-1.5 rounded-[24px] text-[11px] font-semibold text-on-glass-dark-muted outline-none will-change-transform min-[380px]:text-[12px]"
+            style={{ top: PAD + ROTARY_ITEM, height: ROTARY_ITEM }}
+          >
+            {face(c)}
+          </button>
+        )
+      })}
+      {/* the fixed tuning window, with ink copies of the faces clipped inside it */}
       <div
         data-rotary-pill
         aria-hidden="true"
         className="pointer-events-none absolute left-1.5 right-1 z-[5] overflow-hidden rounded-[24px] bg-accent shadow-[0_10px_24px_-8px_rgb(242_155_98/0.55)] ring-inset ring-accent-ink/45 group-has-[button:focus-visible]:ring-2"
-        style={{ top: PAD + ITEM, height: ITEM }}
+        style={{ top: PAD + ROTARY_ITEM, height: ROTARY_ITEM }}
       >
-        <div data-track className="absolute will-change-transform" style={{ top: -ITEM, left: -6, right: -4 }}>
-          {CATEGORIES.map((c) => (
-            <div key={c.id} data-item className="flex w-full flex-col items-center justify-center gap-1.5 text-[11px] font-semibold text-accent-ink min-[380px]:text-[12px]" style={{ height: ITEM }}>
-              <Icon name={c.icon} size={24} />
-              {c.label}
-            </div>
-          ))}
-        </div>
+        {CATEGORIES.map((c) => (
+          <div key={c.id} data-item className="absolute flex flex-col items-center justify-center gap-1.5 text-[11px] font-semibold text-accent-ink will-change-transform min-[380px]:text-[12px]" style={{ top: 0, left: -6, right: -4, height: ROTARY_ITEM }}>
+            {face(c)}
+          </div>
+        ))}
       </div>
       <span id="rotary-hint" className="sr-only">
-        Turn with the arrow keys, then press Enter to open meal ideas for the selected category.
+        Turn with the arrow keys, then press Enter to open meal ideas for the selected category. The list repeats.
       </span>
       <span className="sr-only" aria-live="polite">
         {announce}
       </span>
-    </div>
+    </div>,
+    document.body,
   )
 }

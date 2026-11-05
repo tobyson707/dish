@@ -22,6 +22,7 @@ import { Icon } from '@/components/ui/Icon'
 import { MealRow } from '@/components/meal/MealCard'
 import { MealActionsSheet } from '@/components/meal/MealActions'
 import { AddMealSheet } from '@/components/meal/AddMealSheet'
+import { ExportSheet } from './export/ExportSheet'
 import { useAutoExtendPlan } from '@/features/home/Home'
 
 type View = 'day' | 'week' | 'month'
@@ -34,6 +35,7 @@ export function PlanPage() {
   const setView = (v: View) => setParams((p) => (p.set('view', v), p), { replace: true })
   const setDate = (d: ISODate) => setParams((p) => (p.set('date', d), p), { replace: true })
   const [addOpen, setAddOpen] = useState(params.get('add') === '1')
+  const [exportOpen, setExportOpen] = useState(false)
   const [addSlot, setAddSlot] = useState<MealSlot | undefined>()
   const [actionsFor, setActionsFor] = useState<PlannedMeal | null>(null)
   const [regen, setRegen] = useState<null | { from: ISODate; to: ISODate; label: string }>(null)
@@ -90,6 +92,7 @@ export function PlanPage() {
         title="Meal plan"
         actions={
           <>
+            <IconButton icon="download" label="Export meal plan" onClick={() => setExportOpen(true)} />
             <IconButton icon="cart" label="Shopping list" onClick={() => nav('/grocery')} />
             <ButtonLink to="/plan/new" size="sm" variant="secondary" icon="plus">
               New plan
@@ -166,6 +169,7 @@ export function PlanPage() {
           <FloatingButton icon="plus" label="Add meal" primary onClick={() => { setAddSlot(undefined); setAddOpen(true) }} />
         </FloatingActions>
       )}
+      <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} anchorDate={date} />
       <AddMealSheet key={`${date}-${addSlot}-${addOpen}`} open={addOpen} onClose={() => setAddOpen(false)} date={date} slot={addSlot} planId={p && date >= p.start_date && date <= p.end_date ? p.id : null} />
       <ConfirmDialog
         open={!!regen}

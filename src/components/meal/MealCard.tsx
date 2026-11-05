@@ -8,27 +8,27 @@ import { Icon } from '@/components/ui/Icon'
 import { Tag } from '@/components/ui/Badges'
 
 /** Large, image-led card for Home ("hero") — circular crop motif from the reference. */
-export function MealHeroCard({ meal, currency, onActions }: { meal: PlannedMeal; currency: string; onActions?: () => void }) {
+export function MealHeroCard({ meal, currency, onActions, compact }: { meal: PlannedMeal; currency: string; onActions?: () => void; compact?: boolean }) {
   const done = meal.status !== 'planned'
   return (
-    <article className={cn('relative flex items-center gap-4 rounded-xl bg-elevated p-3 pr-4 transition-opacity', done && 'opacity-70')} aria-label={`${SLOT_LABEL[meal.slot]}: ${meal.name}`}>
+    <article className={cn('relative flex items-center rounded-xl bg-elevated transition-opacity', compact ? 'gap-3 p-2.5 pr-2' : 'gap-4 p-3 pr-4', done && 'opacity-70')} aria-label={`${SLOT_LABEL[meal.slot]}: ${meal.name}`}>
       <Link to={`/meal/${meal.id}`} className="press shrink-0 rounded-full" aria-label={`Open ${meal.name}`}>
-        <FoodImage path={meal.food_item?.image_path} alt={meal.food_item?.image_alt} name={meal.name} shape="circle" className="h-24 w-24 sm:h-28 sm:w-28" width={240} />
+        <FoodImage path={meal.food_item?.image_path} alt={meal.food_item?.image_alt} name={meal.name} shape="circle" className={compact ? 'h-16 w-16' : 'h-24 w-24 sm:h-28 sm:w-28'} width={240} />
       </Link>
       <Link to={`/meal/${meal.id}`} className="min-w-0 flex-1">
         <p className="label-caps flex items-center gap-2">
           {SLOT_LABEL[meal.slot]}
           {meal.scheduled_time && <span className="num normal-case tracking-normal">{meal.scheduled_time.slice(0, 5)}</span>}
         </p>
-        <h3 className="mt-1 text-lg font-bold leading-snug tracking-tight">{meal.name}</h3>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-2">
+        <h3 className={cn('mt-1 font-bold leading-snug tracking-tight', compact ? 'line-clamp-2 text-[16px]' : 'text-lg')}>{meal.name}</h3>
+        <div className={cn('mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] text-ink-2', compact && 'hidden')}>
           {meal.calories != null && <span className="num">≈ {formatKcal(Math.round(meal.calories * meal.portion))}</span>}
           {meal.est_cost != null && <span className="num">~{formatMoney(meal.est_cost * meal.portion, currency)}</span>}
           <span className="inline-flex items-center gap-1">
             <Icon name={meal.method === 'cook' ? 'pot' : 'bag'} size={14} /> {meal.method === 'cook' ? 'Cook' : 'Buy'}
           </span>
         </div>
-        <div className="mt-2 flex gap-1.5">
+        <div className={cn('flex gap-1.5', compact ? 'mt-1 empty:hidden' : 'mt-2')}>
           {meal.status === 'eaten' && <Tag tone="accent"><Icon name="check" size={12} /> Eaten</Tag>}
           {meal.status === 'skipped' && <Tag>Skipped</Tag>}
           {meal.locked && <Tag><Icon name="lock" size={12} /> Locked</Tag>}

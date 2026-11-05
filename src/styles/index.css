@@ -269,14 +269,11 @@
   transform-origin: 0% 50%;
 }
 html[data-workspace] .recede-target {
-  transform: translateX(-7%) scale(0.93);
+  /* dims and softens in place — the Home canvas is never pushed or resized */
   filter: brightness(0.62) saturate(0.85) blur(1.5px);
-  border-radius: 34px;
-  overflow: hidden;
-  pointer-events: none;
 }
 @media (min-width: 1024px) {
-  html[data-workspace] .recede-target { transform: translateX(-4%) scale(0.97); filter: brightness(0.7) blur(1px); }
+  html[data-workspace] .recede-target { filter: brightness(0.7); }
 }
 
 /* Theme change: one root cross-fade via the View Transitions API (no per-component animation). */
@@ -304,9 +301,34 @@ html[data-workspace] .recede-target {
 @keyframes ws-in { from { transform: translateX(104%); opacity: 0.6; } to { transform: none; opacity: 1; } }
 @keyframes ws-out { to { transform: translateX(104%); opacity: 0.4; } }
 @keyframes hero-in { from { opacity: 0; transform: scale(1.03); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
-/* while a sheet or workspace is open the page behind must not scroll */
-html:has(dialog[open]) { overflow: hidden; }
-html { scrollbar-gutter: stable; }
+/* while a sheet or workspace is open the page behind must not scroll (position is kept) */
+html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
+
+/* ---- Rotary selector overlay geometry (fixed; never part of the layout) ---- */
+:root {
+  --rotary-w: 70px;
+  --rotary-right: 8px; /* measured at runtime from the Home canvas edge */
+  /* centred in the space between the top safe area and the mobile bottom nav */
+  --rotary-top: calc(var(--safe-top) + (100dvh - var(--safe-top) - var(--nav-h) - var(--safe-bottom) - 26px) / 2);
+  --cat-ws-w: 75vw;
+}
+@media (min-width: 380px) { :root { --rotary-w: 78px; } }
+@media (min-width: 640px) { :root { --cat-ws-w: 60vw; } }
+@media (min-width: 768px) { :root { --rotary-top: 50dvh; --cat-ws-w: min(46vw, 520px); } }
+
+/* Partial category workspace: sits flush beside the dial, slides in from the right */
+.cat-ws {
+  right: calc(var(--rotary-right) + var(--rotary-w) - 18px);
+  width: min(var(--cat-ws-w), calc(100vw - var(--rotary-right) - var(--rotary-w) + 6px));
+  top: calc(var(--safe-top) + 10px);
+  bottom: calc(var(--safe-bottom) + 10px);
+  animation: cat-in 520ms var(--ease-spring) both;
+}
+.cat-ws[data-closing] { animation: cat-out 320ms var(--ease-in-out) forwards; }
+.cat-scrim { animation: fade 260ms var(--ease-out) both; }
+.cat-scrim[data-closing] { animation: fade-out 300ms var(--ease-out) forwards; }
+@keyframes cat-in { from { transform: translateX(calc(100% + var(--rotary-right) + var(--rotary-w))); opacity: 0.5; } to { transform: none; opacity: 1; } }
+@keyframes cat-out { to { transform: translateX(calc(100% + var(--rotary-right) + var(--rotary-w))); opacity: 0.4; } }
 
 /* workspace content swap when the category dial turns (direction-aware) */
 .ws-swap { animation: ws-swap 340ms var(--ease-out) both; }

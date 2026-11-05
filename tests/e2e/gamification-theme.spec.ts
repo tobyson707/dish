@@ -11,6 +11,13 @@ async function logManualMeal(page: Page, name: string) {
   await expect(page).toHaveURL(/\/diary/)
 }
 
+/** Progress lives in Profile → My progress (Home shows only a compact streak). */
+async function myProgress(page: Page) {
+  await expect(page.getByRole('link', { name: /-day streak/ })).toBeVisible() // signed in, Home rendered
+  await page.goto('/profile')
+  return page.locator('#progress')
+}
+
 test.describe('gamification', () => {
   test('logging a meal awards confirmed XP once, unlocks First Serving, and progress persists @responsive', async ({ page }) => {
     const errors = collectConsoleErrors(page)
@@ -18,7 +25,9 @@ test.describe('gamification', () => {
     const uid = await createUser(email)
     await completeOnboardingFor(uid)
     await signIn(page, email)
-    const widget = page.getByRole('region', { name: 'Your progress' })
+    // Home header: compact streak from real data
+    await expect(page.getByRole('link', { name: /^0-day streak/ })).toBeVisible()
+    const widget = await myProgress(page)
     await expect(widget).toContainText('Beginner')
     await expect(widget).toContainText('0 / 100 XP')
     await expect(widget).toContainText('100 XP to Meal Planner')
@@ -31,16 +40,24 @@ test.describe('gamification', () => {
     await page.screenshot({ path: shots('xp-feedback') })
 
     await page.goto('/')
+    await expect(page.getByRole('link', { name: /^1-day streak/ })).toBeVisible() // header updates from the server-recorded streak
+    await myProgress(page)
     await expect(widget).toContainText('10 / 100 XP')
     await expect(widget).toContainText("You're on a 1-day streak.")
     await page.screenshot({ path: shots('home-progress'), fullPage: true })
     // reloading never replays feedback or re-awards XP
+    await page.goto('/')
     await page.reload()
-    await expect(widget).toContainText('10 / 100 XP')
+    await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+    await page.waitForTimeout(1500)
     await expect(page.getByText('+10 XP')).toHaveCount(0)
+    await myProgress(page)
+    await expect(widget).toContainText('10 / 100 XP')
 
-    // Profile → My Progress
-    await widget.getByRole('link', { name: 'View progress' }).click()
+    // Header streak → Profile → My progress
+    await page.goto('/')
+    await page.getByRole('link', { name: /^1-day streak/ }).click()
+    await expect(page).toHaveURL(/\/profile\?section=progress/)
     await expect(page.getByRole('heading', { name: 'My progress' })).toBeVisible()
     await expect(page.locator('#progress')).toContainText('Lifetime XP')
     const first = page.getByRole('button', { name: /First Serving, unlocked/ })
@@ -60,7 +77,7 @@ test.describe('gamification', () => {
     const uid = await createUser(email)
     await completeOnboardingFor(uid)
     await signIn(page, email)
-    await expect(page.getByRole('region', { name: 'Your progress' })).toContainText('0 / 100 XP')
+    await expect(await myProgress(page)).toContainText('0 / 100 XP')
     await page.goto('/diary/add')
     await page.waitForTimeout(800)
     await context.setOffline(true)
@@ -73,9 +90,8 @@ test.describe('gamification', () => {
     await context.setOffline(false)
     await expect(page.getByText('+10 XP')).toBeVisible({ timeout: 20_000 })
     // replaying the queue (another flush, reload) can't award again
-    await page.reload()
     await page.goto('/')
-    await expect(page.getByRole('region', { name: 'Your progress' })).toContainText('10 / 100 XP')
+    await expect(await myProgress(page)).toContainText('10 / 100 XP')
     const r = await fetch(`${API}/rest/v1/xp_transactions?user_id=eq.${uid}&select=event_type`, { headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` } })
     expect((await r.json()).filter((t: { event_type: string }) => t.event_type === 'meal_logged')).toHaveLength(1)
 
@@ -87,7 +103,7 @@ test.describe('gamification', () => {
     await page.waitForTimeout(2500)
     await expect(page.getByText('+10 XP')).toHaveCount(0)
     await page.goto('/')
-    await expect(page.getByRole('region', { name: 'Your progress' })).toContainText('20 / 100 XP')
+    await expect(await myProgress(page)).toContainText('20 / 100 XP')
   })
 
   test('top level shows a completed state', async ({ page }) => {
@@ -97,7 +113,8 @@ test.describe('gamification', () => {
     // trusted server-side adjustment (service role) — clients can't do this
     await fetch(`${API}/rest/v1/user_gamification?user_id=eq.${uid}`, { method: 'PATCH', headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ total_xp: 2000 }) })
     await signIn(page, email)
-    const widget = page.getByRole('region', { name: 'Your progress' })
+    await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+    const widget = await myProgress(page)
     await expect(widget).toContainText('DISH Master')
     await expect(widget).toContainText('Top level reached · 2,000 XP')
     await expect(widget.getByRole('progressbar')).toHaveAttribute('aria-valuetext', /top level reached/)

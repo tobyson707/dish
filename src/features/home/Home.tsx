@@ -1,24 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { addDays, startOfWeek } from '@domain/dates.ts'
-import { sumNutrition } from '@domain/nutrition.ts'
 import type { PlannedMeal } from '@/types/db'
 import { useActivePlan, usePlannedMeals, sortPlanned } from '@/data/plans'
-import { useDiary } from '@/data/diary'
-import { useActiveGoal, useProfile } from '@/data/profile'
+import { useProfile } from '@/data/profile'
 import { useGeneratePlan } from '@/data/ai'
 import { useToday } from '@/hooks/useToday'
 import { longDate } from '@/lib/format'
 import { ButtonLink } from '@/components/ui/Button'
-import { Icon, type IconName } from '@/components/ui/Icon'
+import { Icon } from '@/components/ui/Icon'
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
-import { NutritionSummary } from '@/components/ui/Nutrition'
 import { MealHeroCard } from '@/components/meal/MealCard'
 import { MealActionsSheet } from '@/components/meal/MealActions'
-import { DateStrip, type DayState } from '@/components/ui/Calendar'
-import { useNavigate } from 'react-router'
 import { friendlyError } from '@/lib/errors'
-import { ProgressWidget } from '@/components/gamification/ProgressWidget'
 import { SLOT_LABEL } from '@domain/types.ts'
 import { HeroFood } from '@/components/ui/FoodImage'
 import { cn } from '@/lib/cn'
@@ -27,42 +21,32 @@ import { FloatingToolbar } from '@/components/canvas/FloatingToolbar'
 import { RotaryCategorySelector, type CategoryChange } from '@/components/canvas/RotaryCategorySelector'
 import { NextMealPanel } from '@/components/canvas/NextMealPanel'
 import { UtilityDock } from '@/components/canvas/UtilityDock'
-import { AppearanceSheet } from '@/components/canvas/AppearanceSheet'
 import { CategoryWorkspace } from '@/components/canvas/CategoryWorkspace'
 import { SearchWorkspace } from '@/components/canvas/SearchWorkspace'
 import { categoryLabel, type Category } from '@/components/canvas/categories'
 
+/**
+ * Home: header controls → editorial headline → featured meal → next meal →
+ * search/add dock → today's menu. Nutrition lives in the Diary and meal
+ * details; progress lives in Profile (with a compact streak in the header).
+ */
 export function Home() {
   const today = useToday()
-  const nav = useNavigate()
   const profile = useProfile()
   const plan = useActivePlan()
   const weekStart = startOfWeek(today)
   const weekEnd = addDays(weekStart, 6)
   const meals = usePlannedMeals(weekStart, weekEnd)
-  const diary = useDiary(today, today)
-  const goal = useActiveGoal()
   const [actionsFor, setActionsFor] = useState<PlannedMeal | null>(null)
-  const [category, setCategory] = useState<Category>('all')
   // single source of truth: the dial, the canvas filter and the workspace all read `category`
+  const [category, setCategory] = useState<Category>('all')
   const [workspaceOpen, setWorkspaceOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
-  const [appearanceOpen, setAppearanceOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
+  const [canvasEl, setCanvasEl] = useState<HTMLElement | null>(null)
   useAutoExtendPlan()
 
   const todays = useMemo(() => (meals.data ?? []).filter((m) => m.date === today).sort(sortPlanned), [meals.data, today])
-  const totals = useMemo(() => sumNutrition((diary.data ?? []).map((e) => ({ ...(e.nutrition ?? { calories: null, protein_g: null, carbs_g: null, fat_g: null }), servings: e.servings, source: e.nutrition?.source, is_estimate: e.nutrition?.is_estimate }))), [diary.data])
-  const states = useMemo(() => {
-    const s: Record<string, DayState> = {}
-    for (const m of meals.data ?? []) {
-      const cur = s[m.date]
-      const done = m.status !== 'planned'
-      s[m.date] = !cur ? (done ? 'done' : 'planned') : cur === 'done' && done ? 'done' : cur === 'planned' && !done ? 'planned' : 'partial'
-    }
-    return s
-  }, [meals.data])
-
   const currency = profile.data?.currency ?? 'NGN'
   const noPlan = plan.isSuccess && !plan.data && todays.length === 0
 
@@ -71,16 +55,11 @@ export function Home() {
       <h1 className="sr-only">What's cooking today?</h1>
       <div className="recede-target -mx-2 sm:mx-0">
         <HomeCanvas
+          canvasRef={setCanvasEl}
           meals={todays}
           loading={meals.isPending}
           noPlan={noPlan}
           category={category}
-          onCategory={(c: CategoryChange) => {
-            setCategory(c.category)
-            if (c.open) setWorkspaceOpen(true)
-          }}
-          onOpenWorkspace={() => setWorkspaceOpen(true)}
-          onSettings={() => setAppearanceOpen(true)}
           onFind={(c) => {
             setCategory(c)
             setWorkspaceOpen(true)
@@ -89,58 +68,47 @@ export function Home() {
         <UtilityDock className="mt-3" onSearch={() => setSearchOpen(true)} onAdd={() => setAddOpen(true)} />
       </div>
 
-      <section aria-label="Today's meals" className="mt-10">
+      {/* right gutter = the floating dial, so it never covers a card's actions */}
+      <section aria-label="Today's meals" className="mt-10 pr-[calc(var(--rotary-w)+4px)]">
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
             <p className="label-caps">{longDate(today)}</p>
             <h2 className="mt-1 font-serif text-[2rem] leading-tight">Today's menu</h2>
           </div>
-          <Link to="/plan" className="text-sm font-semibold underline-offset-2 hover:underline">Full plan →</Link>
+          <Link to="/plan" className="shrink-0 text-sm font-semibold underline-offset-2 hover:underline">Full plan →</Link>
         </div>
-        <DateStrip selected={today} today={today} states={states} onSelect={(d) => nav(`/plan?date=${d}`)} />
-        <div className="mt-5">
-          {meals.isPending ? (
-            <div className="flex flex-col gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-32 rounded-xl" />)}</div>
-          ) : meals.isError && !meals.data ? (
-            <ErrorState message={friendlyError(meals.error)} onRetry={() => meals.refetch()} />
-          ) : noPlan ? (
-            <p className="text-ink-2">Your meals will appear here once you create a plan.</p>
-          ) : todays.length === 0 ? (
-            <EmptyState title="Nothing planned today" message="Add a meal, or let DISH suggest one." action={<div className="flex flex-wrap justify-center gap-2"><ButtonLink to="/surprise">Surprise me</ButtonLink><ButtonLink variant="secondary" to={`/plan?date=${today}&add=1`}>Add a meal</ButtonLink></div>} />
-          ) : (
-            <div className="flex flex-col gap-3">
-              {todays.map((m) => (
-                <div key={`${m.id}-${m.food_item_id}`} className="animate-[swap-in_260ms_var(--ease-out)_both]">
-                  <MealHeroCard meal={m} currency={currency} onActions={() => setActionsFor(m)} />
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </section>
-
-      <section aria-label="Quick actions" className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Quick to="/surprise" icon="sparkle" title="Surprise me" sub="Can't decide? Let's pick" accent />
-        <Quick to="/grocery" icon="cart" title="Shopping list" sub="What to buy" />
-        <Quick to="/kitchen" icon="fridge" title="My kitchen" sub="Cook with what you have" />
-        <Quick to="/scan" icon="camera" title="Scan food" sub="Log with a photo" />
-      </section>
-
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <ProgressWidget />
-        <section aria-label="Today's nutrition" className="rounded-xl bg-elevated p-5">
-          {diary.isPending ? <Skeleton className="h-28" /> : <NutritionSummary totals={totals} targets={goal.data ? { calories: goal.data.calorie_target, protein_g: goal.data.protein_target_g } : null} compact />}
-          <div className="mt-4 flex justify-between gap-2">
-            <Link to="/diary" className="text-sm font-semibold underline-offset-2 hover:underline">Open diary</Link>
-            <Link to="/plan" className="text-sm font-semibold underline-offset-2 hover:underline">Full meal plan →</Link>
+        {meals.isPending ? (
+          <div className="flex flex-col gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-xl" />)}</div>
+        ) : meals.isError && !meals.data ? (
+          <ErrorState message={friendlyError(meals.error)} onRetry={() => meals.refetch()} />
+        ) : noPlan ? (
+          <p className="text-ink-2">Your meals will appear here once you create a plan.</p>
+        ) : todays.length === 0 ? (
+          <EmptyState title="Nothing planned today" message="Add a meal, or let DISH suggest one." action={<div className="flex flex-wrap justify-center gap-2"><ButtonLink to="/surprise">Surprise me</ButtonLink><ButtonLink variant="secondary" to={`/plan?date=${today}&add=1`}>Add a meal</ButtonLink></div>} />
+        ) : (
+          <div className="flex flex-col gap-3">
+            {todays.map((m) => (
+              <div key={`${m.id}-${m.food_item_id}`} className="animate-[swap-in_260ms_var(--ease-out)_both]">
+                <MealHeroCard compact meal={m} currency={currency} onActions={() => setActionsFor(m)} />
+              </div>
+            ))}
           </div>
-        </section>
-      </div>
+        )}
+      </section>
 
+      <RotaryCategorySelector
+        value={category}
+        anchor={canvasEl}
+        workspaceOpen={workspaceOpen}
+        onChange={(c: CategoryChange) => {
+          setCategory(c.category)
+          if (c.open) setWorkspaceOpen(true)
+        }}
+        onActivate={() => setWorkspaceOpen(true)}
+      />
+      <CategoryWorkspace category={category} open={workspaceOpen} onClose={() => setWorkspaceOpen(false)} />
       <MealActionsSheet meal={actionsFor} onClose={() => setActionsFor(null)} />
-      <CategoryWorkspace category={category} open={workspaceOpen} onClose={() => setWorkspaceOpen(false)} onCategory={setCategory} />
       <SearchWorkspace open={searchOpen} onClose={() => setSearchOpen(false)} />
-      <AppearanceSheet open={appearanceOpen} onClose={() => setAppearanceOpen(false)} />
       <AddMealSheet key={`add-${addOpen}`} open={addOpen} onClose={() => setAddOpen(false)} date={today} slot={category === 'all' ? undefined : category} planId={plan.data && today >= plan.data.start_date && today <= plan.data.end_date ? plan.data.id : null} />
     </div>
   )
@@ -151,7 +119,7 @@ export function Home() {
  * toolbar, editorial headline, featured food, right-edge category rail,
  * overlapping next-meal panel and swipeable pagination.
  */
-function HomeCanvas({ meals, loading, noPlan, category, onCategory, onOpenWorkspace, onSettings, onFind }: { meals: PlannedMeal[]; loading: boolean; noPlan: boolean; category: Category; onCategory: (c: CategoryChange) => void; onOpenWorkspace: () => void; onSettings: () => void; onFind: (c: Category) => void }) {
+function HomeCanvas({ canvasRef, meals, loading, noPlan, category, onFind }: { canvasRef: (el: HTMLElement | null) => void; meals: PlannedMeal[]; loading: boolean; noPlan: boolean; category: Category; onFind: (c: Category) => void }) {
   const filtered = useMemo(() => (category === 'all' ? meals : meals.filter((m) => m.slot === category)), [meals, category])
   const nextIdx = Math.max(0, filtered.findIndex((m) => m.status === 'planned'))
   const [picked, setPicked] = useState<{ key: string; idx: number } | null>(null)
@@ -166,6 +134,7 @@ function HomeCanvas({ meals, loading, noPlan, category, onCategory, onOpenWorksp
 
   return (
     <section
+      ref={canvasRef}
       aria-label="Today's featured meal"
       className="relative isolate h-[clamp(580px,calc(100dvh-var(--safe-top)-var(--safe-bottom)-190px),860px)] overflow-hidden rounded-[34px] shadow-[0_30px_80px_-40px_var(--c-shadow)] md:h-[clamp(600px,calc(100dvh-200px),820px)]"
       style={{ background: 'radial-gradient(90% 55% at 0% 0%, var(--g-peach) 0%, transparent 62%), radial-gradient(70% 55% at 100% 4%, var(--g-sage) 0%, transparent 66%), radial-gradient(95% 70% at 80% 100%, var(--g-leaf) 0%, transparent 62%), var(--g-cream)' }}
@@ -174,7 +143,7 @@ function HomeCanvas({ meals, loading, noPlan, category, onCategory, onOpenWorksp
       <div aria-hidden="true" className="pointer-events-none absolute -right-16 -top-10 h-56 w-56 rounded-full bg-[var(--g-leaf)] opacity-50 blur-3xl" />
       <div aria-hidden="true" className="pointer-events-none absolute -left-20 top-1/3 h-64 w-64 rounded-full bg-[var(--g-peach)] opacity-60 blur-3xl" />
 
-      <FloatingToolbar onSettings={onSettings} className="absolute inset-x-4 top-4 z-20 sm:inset-x-5 sm:top-5" />
+      <FloatingToolbar className="absolute inset-x-4 top-4 z-20 sm:inset-x-5 sm:top-5" />
 
       <div className="absolute left-5 right-[92px] top-[92px] z-10 sm:left-8 lg:right-[45%] lg:top-[120px]">
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-ink-2 animate-[fade_500ms_ease-out_both]">Good food. Less thinking.</p>
@@ -204,7 +173,6 @@ function HomeCanvas({ meals, loading, noPlan, category, onCategory, onOpenWorksp
         </div>
       </div>
 
-      <RotaryCategorySelector value={category} onChange={onCategory} onActivate={onOpenWorkspace} className="absolute right-0 top-[30%] z-20 lg:top-[26%]" />
 
       <div className="absolute bottom-[42px] left-4 right-[24%] z-20 sm:left-6 sm:right-auto sm:w-[min(72%,420px)] lg:bottom-12 lg:left-8">
         {loading ? null : featured ? (
@@ -240,20 +208,6 @@ function EmptyCanvasPanel({ title, body, action }: { title: string; body: string
       <p className="mt-1 text-[13px] text-ink-2">{body}</p>
       <div className="mt-3">{action}</div>
     </div>
-  )
-}
-
-function Quick({ to, icon, title, sub, accent }: { to: string; icon: IconName; title: string; sub: string; accent?: boolean }) {
-  return (
-    <Link to={to} className={`press flex flex-col gap-3 rounded-lg p-4 ${accent ? 'bg-ink text-on-ink' : 'bg-elevated'}`}>
-      <span className={`flex h-10 w-10 items-center justify-center rounded-full ${accent ? 'bg-accent text-accent-ink' : 'bg-surface'}`}>
-        <Icon name={icon} size={20} />
-      </span>
-      <span>
-        <span className="block font-bold">{title}</span>
-        <span className={`block text-[13px] ${accent ? 'opacity-70' : 'text-muted'}`}>{sub}</span>
-      </span>
-    </Link>
   )
 }
 

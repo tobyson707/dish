@@ -38,7 +38,7 @@ test('home canvas: rail → workspace → add, search, appearance, featured pagi
   await expect(rail.getByRole('button', { name: 'Dinner' })).toHaveAttribute('aria-pressed', 'true')
   const ws = page.getByRole('dialog', { name: 'Dinner ideas' })
   await expect(ws.getByRole('heading', { name: 'Dinner' })).toBeVisible()
-  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.workspace)).toBe('open')
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.overlay)).toBe('category')
   await ws.getByRole('tab', { name: 'Quick' }).click()
   await expect(ws.getByRole('tab', { name: 'Quick' })).toHaveAttribute('aria-selected', 'true')
   await ws.getByRole('tab', { name: 'For You' }).click()
@@ -47,7 +47,7 @@ test('home canvas: rail → workspace → add, search, appearance, featured pagi
   await addBtn.click()
   await expect(page.getByText(`Added ${meal} to today's dinner.`)).toBeVisible()
   await expect(ws).toBeHidden()
-  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.workspace ?? null)).toBeNull()
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.overlay ?? null)).toBeNull()
   // …and the canvas now features the real planned meal
   await expect(page.getByRole('article', { name: `Dinner: ${meal}` })).toBeVisible()
   await expect(page.getByRole('link', { name: new RegExp(meal) }).first()).toBeVisible()
@@ -75,7 +75,9 @@ test('home canvas: rail → workspace → add, search, appearance, featured pagi
   // Appearance sheet from the toolbar: changes the theme for real
   const ok = page.getByRole('button', { name: 'OK', exact: true }) // "ready to work offline" toast may cover the toolbar
   if (await ok.isVisible()) await ok.click()
-  await page.getByRole('button', { name: 'Appearance and settings' }).click()
+  // Appearance moved off Home: Profile → Appearance
+  await page.goto('/profile')
+  await page.getByRole('button', { name: /^Appearance/ }).click()
   const sheet = page.getByRole('dialog', { name: 'Appearance' })
   await sheet.getByRole('radio', { name: /Dark/ }).click()
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark')
