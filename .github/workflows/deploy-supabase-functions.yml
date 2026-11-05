@@ -39,4 +39,14 @@ jobs:
         with:
           version: latest
       - name: Deploy all functions
-        run: supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF"
+        shell: bash
+        run: |
+          set +e
+          supabase functions deploy --project-ref "$SUPABASE_PROJECT_REF" 2>&1 | tee deploy.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            # surface the cause as an annotation (visible on the run summary)
+            msg=$(tail -n 20 deploy.log | sed 's/%/%25/g' | sed ':a;N;$!ba;s/\n/%0A/g')
+            echo "::error title=Supabase functions deploy failed::$msg"
+          fi
+          exit $status
