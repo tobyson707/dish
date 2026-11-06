@@ -29,11 +29,10 @@ export function useToggleFavourite() {
         if (error) throw error
       }
     },
-    onMutate: ({ foodItemId, on }) => {
-      const prev = qc.getQueryData<string[]>(qk.favourites(uid))
+    // not optimistic: the heart changes once the save is stored, so it never claims a save that failed
+    onSuccess: (_d, { foodItemId, on }) => {
       qc.setQueryData<string[]>(qk.favourites(uid), (old = []) => (on ? [foodItemId, ...old.filter((x) => x !== foodItemId)] : old.filter((x) => x !== foodItemId)))
-      return { prev }
+      void qc.invalidateQueries({ queryKey: qk.favourites(uid) })
     },
-    onError: (_e, _v, ctx) => ctx?.prev && qc.setQueryData(qk.favourites(uid), ctx.prev), // safe rollback
   })
 }

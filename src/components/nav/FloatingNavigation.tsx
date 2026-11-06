@@ -4,6 +4,8 @@ import { MOTION } from '@/styles/motion'
 import { cn } from '@/lib/cn'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { usePresence } from '@/components/ui/usePresence'
+import { useFavourites } from '@/data/favourites'
+import { useMySavedPlans } from '@/data/planbook'
 
 export const NAV: { to: string; label: string; icon: IconName }[] = [
   { to: '/', label: 'Home', icon: 'home' },
@@ -22,6 +24,29 @@ const SHORTCUTS: { to: string; label: string; icon: IconName }[] = [
 ]
 
 const isActive = (path: string, to: string) => (to === '/' ? path === '/' : path === to || path.startsWith(`${to}/`) || (to === '/plan' && path.startsWith('/plans')))
+const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
+
+/** Saved meals and saved plans, counted from what is actually stored (shown once known). */
+function SavedLink({ onPick, active, enabled }: { onPick: () => void; active: boolean; enabled: boolean }) {
+  const favs = useFavourites()
+  const plans = useMySavedPlans(enabled)
+  const parts = [favs.data ? plural(favs.data.length, 'meal') : null, plans.data ? plural(plans.data.length, 'plan') : null].filter(Boolean)
+  return (
+    <NavLink
+      to="/saved"
+      onClick={onPick}
+      aria-current={active ? 'page' : undefined}
+      className={cn('press flex h-14 items-center gap-3 rounded-[20px] px-3.5 outline-none focus-visible:ring-2 focus-visible:ring-accent', active ? 'bg-accent text-accent-ink' : 'text-on-glass-dark hover:bg-white/[0.07]')}
+    >
+      <Icon name="heart" size={20} filled={active} />
+      <span className="min-w-0 flex-1">
+        <span className="block text-callout font-semibold leading-tight">Saved</span>
+        {parts.length > 0 && <span className={cn('num block text-micro font-semibold', active ? 'text-accent-ink/80' : 'text-on-glass-dark-muted')}>{parts.join(' · ')}</span>}
+      </span>
+      <Icon name="right" size={16} className="opacity-60" />
+    </NavLink>
+  )
+}
 
 /**
  * The app's only navigation: one floating button at the bottom-left of every screen. It
@@ -91,6 +116,8 @@ export function FloatingNavigation() {
             </ul>
           </nav>
           <div className="mx-3 my-2 h-px bg-white/10" />
+          <SavedLink onPick={() => setOpen(false)} active={loc.pathname === '/saved'} enabled={mounted} />
+          <div className="mx-3 my-2 h-px bg-white/10" />
           <nav aria-label="Shortcuts" className="grid grid-cols-4 gap-1 px-1 pb-1">
             {SHORTCUTS.map((s) => (
               <NavLink key={s.to} to={s.to} onClick={() => setOpen(false)} className="press flex flex-col items-center gap-1 rounded-[16px] py-2 text-micro font-semibold text-on-glass-dark-muted outline-none hover:bg-white/[0.07] hover:text-on-glass-dark focus-visible:ring-2 focus-visible:ring-accent">
@@ -108,11 +135,15 @@ export function FloatingNavigation() {
         aria-expanded={open}
         aria-controls={id}
         onClick={() => setOpen((o) => !o)}
-        className="press fixed z-[46] flex items-center justify-center rounded-full bg-nav text-on-glass-dark shadow-[0_14px_34px_-12px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-xl outline-none transition-transform focus-visible:ring-2 focus-visible:ring-accent"
+        data-open={open || undefined}
+        className="nav-fab press fixed z-[46] flex items-center justify-center rounded-full bg-nav text-on-glass-dark outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--c-bg)]"
         style={{ width: 'var(--nav-btn)', height: 'var(--nav-btn)', left: 'calc(var(--canvas-m) + env(safe-area-inset-left, 0px) + 8px)', bottom: 'calc(var(--safe-bottom) + var(--canvas-m) + 8px)' }}
       >
-        <span key={open ? 'x' : 'menu'} className="icon-swap flex">
-          <Icon name={open ? 'x' : 'menu'} size={22} />
+        {/* three lines that fold into a close mark while the panel is open */}
+        <span className="nav-burger" aria-hidden="true">
+          <span />
+          <span />
+          <span />
         </span>
       </button>
     </>

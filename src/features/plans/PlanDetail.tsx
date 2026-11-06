@@ -34,14 +34,14 @@ import { Button, IconButton } from '@/components/ui/Button'
 import { PageHeader, Section } from '@/components/ui/Layout'
 import { Tag } from '@/components/ui/Badges'
 import { Segmented, Toggle } from '@/components/ui/Inputs'
-import { DateStrip, type DayState } from '@/components/ui/Calendar'
+import { DateStrip, toDayMarks } from '@/components/ui/Calendar'
 import { DishCalendar } from '@/components/ui/DishCalendar'
 import { DateRangeField } from '@/components/ui/DateField'
 import { Sheet } from '@/components/ui/Sheet'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
-import { MealActionsSheet } from '@/components/meal/MealActions'
+import { MealActionsSheet, useRemoveMeal } from '@/components/meal/MealActions'
 import { AddMealSheet } from '@/components/meal/AddMealSheet'
 import { PlanActions } from './PlanActions'
 import { ShareSheet } from './ShareSheet'
@@ -116,7 +116,7 @@ export function PlanDetail() {
         actions={
           <>
             {owner && <IconButton icon="users" label="Share" onClick={() => setParams((p) => (p.set('panel', 'share'), p))} />}
-            <IconButton icon="download" label="Export" onClick={() => setExportOpen(true)} />
+            {!owner && <IconButton icon="download" label="Export" onClick={() => setExportOpen(true)} />}
             <IconButton icon="cart" label="Shopping list for this plan" onClick={() => setGroceryOpen(true)} />
             <IconButton icon="dots" label="Plan actions" onClick={() => setMenu(true)} />
           </>
@@ -124,7 +124,7 @@ export function PlanDetail() {
       />
       {(plan.cover_path || plan.description) && (
         <div className="flex items-start gap-4">
-          {plan.cover_path && <div className="h-20 w-28 shrink-0 overflow-hidden rounded-[16px]"><PlanCover plan={plan} /></div>}
+          {plan.cover_path && <div className="w-32 shrink-0 overflow-hidden rounded-[16px] sm:w-40" style={{ aspectRatio: 16 / 10 }}><PlanCover plan={plan} /></div>}
           {plan.description && <p className="text-ink-2">{plan.description}</p>}
         </div>
       )}
@@ -173,7 +173,7 @@ export function PlanDetail() {
       <PlanActions plan={menu ? { ...plan, role } : null} onClose={() => setMenu(false)} from="detail" />
       <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} anchorDate={plan.start_date} plan={plan} />
       <PlanGrocerySheet plan={plan} open={groceryOpen} onClose={() => setGroceryOpen(false)} />
-      {owner && <ShareSheet plan={plan} open={panel === 'share'} onClose={closePanel} />}
+      {owner && <ShareSheet plan={plan} open={panel === 'share'} onClose={closePanel} onPublish={() => setParams((p) => (p.set('panel', 'publish'), p), { replace: true })} onExport={() => { closePanel(); setExportOpen(true) }} />}
       {owner && <PublishSheet plan={plan} open={panel === 'publish'} onClose={closePanel} />}
     </div>
   )
@@ -211,20 +211,18 @@ function PlanBoard({ plan, role, canEdit }: { plan: MealPlan; role: PlanRole; ca
     for (const k in m) m[k]!.sort(sortPlanned)
     return m
   }, [meals.data])
-  const states = useMemo(() => {
-    const s: Record<string, DayState> = {}
-    for (const [d, list] of Object.entries(byDate)) s[d] = list.every((x) => x.status !== 'planned') ? 'done' : 'planned'
-    return s
-  }, [byDate])
+
   const slots: MealSlot[] = plan.meal_slots?.length ? plan.meal_slots : role === 'owner' && prefs.data?.meal_slots?.length ? prefs.data.meal_slots : ['breakfast', 'lunch', 'dinner']
+  const states = useMemo(() => toDayMarks(meals.data ?? [], slots.length), [meals.data, slots.length])
   const scope = { planId: plan.id, role, ownerId: plan.user_id }
+  const remove = useRemoveMeal(scope)
   const days = (from: ISODate, to: ISODate) => {
     const out: ISODate[] = []
     for (let d = from; d <= to && out.length < 62; d = addDays(d, 1)) out.push(d)
     return out
   }
   const block = (d: ISODate, compact = false) => (
-    <DayBlock key={d} date={d} today={today} meals={byDate[d] ?? []} slots={slots} compact={compact} notGenerated={false} onActions={setActionsFor} onAdd={canEdit ? (s) => setAdding({ date: d, slot: s }) : undefined} />
+    <DayBlock key={d} date={d} today={today} meals={byDate[d] ?? []} slots={slots} compact={compact} notGenerated={false} onActions={setActionsFor} onRemove={canEdit ? remove : undefined} removable={(m) => m.status === 'planned'} onAdd={canEdit ? (s) => setAdding({ date: d, slot: s }) : undefined} />
   )
 
   async function doRegen() {
@@ -250,7 +248,7 @@ function PlanBoard({ plan, role, canEdit }: { plan: MealPlan; role: PlanRole; ca
         ) : view === 'custom' ? (
           <DateRangeField label="Dates" value={custom} min={plan.start_date} max={plan.end_date} onChange={(r) => setCustom(r)} hint="Any dates inside this plan, up to about two months." />
         ) : (
-          <DateStrip selected={date} today={today} states={states} onSelect={(d) => set('date', clamp(d, plan))} onPrev={() => set('date', clamp(addDays(date, -7), plan))} onNext={() => set('date', clamp(addDays(date, 7), plan))} />
+          <DateStrip selected={date} today={today} marks={states} onSelect={(d) => set('date', clamp(d, plan))} onPrev={() => set('date', clamp(addDays(date, -7), plan))} onNext={() => set('date', clamp(addDays(date, 7), plan))} />
         )}
       </div>
 

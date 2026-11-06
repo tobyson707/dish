@@ -159,3 +159,9 @@ No tables of its own. Disabled unless the function's environment has `DISH_DEV_T
 - **Realtime.** `meal_plans` and `plan_activity` are in the `supabase_realtime` publication, and RLS decides who receives each event. Every meal change bumps `meal_plans.version`, so one subscription per plan covers additions, edits and removals. Presence uses a private channel `plan:<id>`, guarded by policies on `realtime.messages` (`dish_realtime_policies()`).
 - **Locally**, `scripts/local-stack.sh` runs Supabase Realtime (IPv4 listener patch for sandboxes without IPv6), and the gateway proxies `/realtime/v1` WebSockets.
 - The brief's `meal_plan_entries`, `_members`, `_invitations`, `_activity` and `_versions` correspond to `planned_meals`, `plan_members`, `plan_invites`, `plan_activity` and `plan_revisions`. The role `contributor` is shown as "Editor".
+
+## Plan refinement (migration `20261111000100_plan_refinement.sql`)
+
+- `meal_plans.cover_crop jsonb`: the cover's framing, `{x, y, zoom}` (focal point 0..1, zoom 1..4), checked by a constraint. The image in `plan-covers` is kept whole; every view renders the same framing from this. Adjusting it is logged in the activity history ("Adjusted the cover image").
+- `community_plans()` now also returns `cover_path`, `cover_crop` and `diets` (dietary tags that every meal in the plan carries; none are inferred). The published cover is readable through the existing `plan cover read` storage policy.
+- `my_saved_plans()`: the caller's saves, newest first, with details only while the plan is still published (`available`); the count is the number of stored saves.

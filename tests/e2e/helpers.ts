@@ -102,3 +102,20 @@ export async function pickDate(page: Page, label: string, iso: string) {
   await calendarPick(sheet, iso)
   await expect(sheet).toBeHidden()
 }
+
+/**
+ * Turn the Home category wheel to a category with the keyboard (only nearby categories are
+ * on screen, as on a real wheel), then tap it to open its drawer unless `open` is false.
+ */
+export async function pickCategory(page: Page, name: string, { open = true }: { open?: boolean } = {}) {
+  const order = ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks', 'All']
+  const g = page.getByRole('radiogroup', { name: 'Meal category' })
+  await g.getByRole('radio', { checked: true }).focus()
+  for (let i = 0; i < order.length; i++) {
+    const cur = await g.getByRole('radio', { checked: true }).getAttribute('aria-label')
+    if (cur === name) break
+    await page.keyboard.press(order.indexOf(name) < order.indexOf(cur!) ? 'ArrowUp' : 'ArrowDown')
+  }
+  await expect(g.getByRole('radio', { name })).toHaveAttribute('aria-checked', 'true')
+  if (open) await g.getByRole('radio', { name }).click()
+}

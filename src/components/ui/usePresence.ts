@@ -39,10 +39,20 @@ export function rubberBand(d: number, limit = 48): number {
   return -(limit * x) / (x + limit * 1.8)
 }
 
-/** Vertical/horizontal drag-to-dismiss for sheets and side panels (pointer events, no library). */
-export function useDragDismiss(axis: 'y' | 'x', onDismiss: () => void, threshold = 110) {
+/**
+ * Vertical/horizontal drag-to-dismiss for sheets and side panels (pointer events, no library).
+ * On a dismiss the panel stays where the finger left it, so its exit animation (whose
+ * keyframes have no `from`) continues from there instead of jumping back first. The
+ * offset clears when the panel opens again.
+ */
+export function useDragDismiss(axis: 'y' | 'x', onDismiss: () => void, threshold = 110, open = true) {
   const [offset, setOffset] = useState(0)
   const [start, setStart] = useState<{ p: number; t: number } | null>(null)
+  const [wasOpen, setWasOpen] = useState(open)
+  if (wasOpen !== open) {
+    setWasOpen(open)
+    if (open) setOffset(0)
+  }
   const pos = (e: React.PointerEvent) => (axis === 'y' ? e.clientY : e.clientX)
   return {
     offset,
@@ -63,8 +73,8 @@ export function useDragDismiss(axis: 'y' | 'x', onDismiss: () => void, threshold
         const d = pos(e) - start.p
         const v = d / Math.max(1, performance.now() - start.t) // px/ms
         setStart(null)
-        setOffset(0)
         if (d > threshold || (d > 30 && v > 0.6)) onDismiss()
+        else setOffset(0) // springs back (the panel's transform transition)
       },
       onPointerCancel: () => {
         setStart(null)

@@ -172,7 +172,10 @@ test('planned vs eaten, locking, regenerate, grocery list, and offline sync', as
   const second = rows.nth(1)
   const lockedName = (await second.locator('span.truncate').first().textContent())!.trim()
   await second.getByRole('button', { name: /Actions for/ }).click()
-  await page.getByRole('button', { name: /^Lock meal/ }).click()
+  await page.getByRole('button', { name: /^Edit meal/ }).click()
+  await page.getByRole('switch', { name: /Keep when regenerating/ }).click()
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  await expect(page.getByText('Meal updated.')).toBeVisible()
   await page.getByRole('button', { name: 'Regenerate day' }).click()
   await page.getByRole('button', { name: 'Regenerate', exact: true }).click()
   await expect(page.getByText(/Fresh picks are in/)).toBeVisible({ timeout: 20_000 })
@@ -287,6 +290,7 @@ test('discover, recipe detail, surprise, kitchen, budget, profile @responsive', 
   await expect(page.getByRole('heading', { name: 'Method' })).toBeVisible()
   await expect(page.getByText(/Estimate/).first()).toBeVisible()
   await page.getByRole('button', { name: 'Save to favourites' }).click()
+  await expect(page.getByRole('button', { name: 'Remove from favourites' })).toHaveAttribute('aria-pressed', 'true') // shown once stored
   await page.screenshot({ path: shots('recipe'), fullPage: true })
   await expectNoHorizontalScroll(page)
 

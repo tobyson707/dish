@@ -210,9 +210,17 @@ export interface MealPlan {
   unpublished_reason?: string | null
   /** private cover image in the plan-covers bucket */
   cover_path?: string | null
+  /** how the cover is framed: focal point (0..1 of the image) and zoom (1 = just covers the frame) */
+  cover_crop?: CoverCrop | null
   /** this plan's meal times (null: the owner's usual meals) */
   meal_slots?: MealSlot[] | null
   updated_by?: string | null
+}
+
+export interface CoverCrop {
+  x: number
+  y: number
+  zoom: number
 }
 
 export type PlanStatus = 'draft' | 'active' | 'archived'

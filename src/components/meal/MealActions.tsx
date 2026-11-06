@@ -6,28 +6,29 @@ import type { PlanRole, PlannedMeal } from '@/types/db'
 import { PlanConflict, usePlanMealUpdate, useRemovePlanMeal, planKeys, type PlanMealPatch } from '@/data/planbook'
 import { useQueryClient } from '@tanstack/react-query'
 import { formatTime } from '@/lib/time'
-import { useDeletePlannedMeal, useSetMealStatus, useUpdatePlannedMeal } from '@/data/plans'
+import { useDeletePlannedMeal, useRestorePlannedMeal, useSetMealStatus, useUpdatePlannedMeal } from '@/data/plans'
 import { invokeFn, useReplaceMeal, type Suggestion } from '@/data/ai'
 import { useCatalogue, toCatalogueMeal } from '@/data/catalogue'
 import { useAddIngredientsToList } from '@/data/grocery'
 import { useFavourites, useToggleFavourite } from '@/data/favourites'
 import { Button } from '@/components/ui/Button'
 import { Sheet } from '@/components/ui/Sheet'
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { Select } from '@/components/ui/Field'
-import { Stepper } from '@/components/ui/Inputs'
+import { Stepper, Toggle } from '@/components/ui/Inputs'
 import { Notice, Skeleton } from '@/components/ui/States'
 import { FoodImage } from '@/components/ui/FoodImage'
+import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
-import { formatCostRange, formatKcal, formatMinutes } from '@/lib/format'
+import { dayLabel, formatCostRange, formatKcal, formatMinutes } from '@/lib/format'
+import { useToday } from '@/hooks/useToday'
 import { tap } from '@/platform/haptics'
 import { cn } from '@/lib/cn'
 import { DateField } from '@/components/ui/DateField'
 import { TimeField } from '@/components/ui/TimePicker'
 
-type Panel = 'menu' | 'replace' | 'move' | 'portion' | null
+type Panel = 'menu' | 'replace' | 'edit' | null
 
 /**
  * A meal opened from a plan's workspace. Edits are checked against the version the
@@ -51,12 +52,12 @@ const SLOT_DEFAULT_TIME: Record<MealSlot, string> = { breakfast: '08:00', lunch:
 
 export function MealActionsSheet({ meal, onClose, scope }: { meal: PlannedMeal | null; onClose: () => void; scope?: PlanScope }) {
   const [panel, setPanel] = useState<Panel>('menu')
-  const [confirmDelete, setConfirmDelete] = useState(false)
   const [forId, setForId] = useState<string | null>(null)
   const [conflict, setConflict] = useState<{ patch: PlanMealPatch; label: string; current: PlannedMeal | null } | null>(null)
   const calendarUpdate = useUpdatePlannedMeal()
   const planUpdate = usePlanMealUpdate(scope?.planId ?? '')
   const toast = useToast()
+  const today = useToday()
   if (meal && meal.id !== forId) {
     // reset to the main menu whenever a different meal is opened
     setForId(meal.id)
@@ -70,8 +71,13 @@ export function MealActionsSheet({ meal, onClose, scope }: { meal: PlannedMeal |
   // true when saved; false when someone else changed it first (the conflict prompt opens)
   const save = async (patch: PlanMealPatch, label: string): Promise<boolean> => {
     if (!scope) {
-      await calendarUpdate.mutateAsync({ id: meal.id, patch, label })
-      return true
+      try {
+        await calendarUpdate.mutateAsync({ id: meal.id, patch, label })
+        return true
+      } catch (e) {
+        toast.error(friendlyError(e))
+        return false
+      }
     }
     try {
       await planUpdate.mutateAsync({ meal, patch })
@@ -87,13 +93,11 @@ export function MealActionsSheet({ meal, onClose, scope }: { meal: PlannedMeal |
   }
   return (
     <WriterCtx.Provider value={{ save, scope: scope ?? null }}>
-      <Sheet open={!!meal && !confirmDelete} onClose={close} title={panel === 'replace' ? 'Not feeling it? Switch it up' : panel === 'move' ? 'Move meal' : panel === 'portion' ? 'Edit portion' : meal.name} description={panel === 'menu' ? `${SLOT_LABEL[meal.slot]} · ${meal.date}` : undefined}>
-        {panel === 'menu' && <Menu meal={meal} onPanel={setPanel} onClose={close} onDelete={() => setConfirmDelete(true)} />}
+      <Sheet open={!!meal} onClose={close} title={panel === 'replace' ? 'Not feeling it? Switch it up' : panel === 'edit' ? 'Edit meal' : meal.name} description={panel === 'menu' ? `${SLOT_LABEL[meal.slot]} · ${dayLabel(meal.date, today)}` : undefined}>
+        {panel === 'menu' && <Menu meal={meal} onPanel={setPanel} onClose={close} />}
         {panel === 'replace' && <ReplacePanel meal={meal} onDone={close} />}
-        {panel === 'move' && <MovePanel meal={meal} onDone={close} />}
-        {panel === 'portion' && <PortionPanel meal={meal} onDone={close} />}
+        {panel === 'edit' && <EditPanel meal={meal} onDone={close} />}
       </Sheet>
-      <DeleteConfirm meal={meal} open={confirmDelete} onDone={() => { setConfirmDelete(false); close() }} onCancel={() => setConfirmDelete(false)} />
       <Sheet open={!!conflict} onClose={() => { setConflict(null); close() }} title="Changed by someone else" description={conflict?.current ? 'While you were editing, this meal was changed. Nothing has been overwritten.' : 'While you were editing, this meal was removed from the plan.'}>
         {conflict?.current && (
           <div className="rounded-lg bg-elevated p-4 text-sm">
@@ -122,12 +126,12 @@ export function MealActionsSheet({ meal, onClose, scope }: { meal: PlannedMeal |
   )
 }
 
-function Action({ icon, label, hint, onClick, tone, disabled }: { icon: IconName; label: string; hint?: string; onClick: () => void; tone?: 'danger'; disabled?: boolean }) {
+function Action({ icon, label, hint, onClick, tone, disabled, filled }: { icon: IconName; label: string; hint?: string; onClick: () => void; tone?: 'danger'; disabled?: boolean; filled?: boolean }) {
   return (
     <li>
       <button type="button" disabled={disabled} onClick={onClick} className={cn('press flex w-full items-center gap-4 rounded-md px-2 py-3 text-left hover:bg-ink/5 disabled:opacity-40', tone === 'danger' && 'text-error')}>
         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface">
-          <Icon name={icon} size={20} />
+          <Icon name={icon} size={20} filled={filled} />
         </span>
         <span className="flex flex-col">
           <span className="font-semibold">{label}</span>
@@ -138,11 +142,50 @@ function Action({ icon, label, hint, onClick, tone, disabled }: { icon: IconName
   )
 }
 
-function Menu({ meal, onPanel, onClose, onDelete }: { meal: PlannedMeal; onPanel: (p: Panel) => void; onClose: () => void; onDelete: () => void }) {
+/**
+ * Removing a meal takes it off this plan (or the calendar) at once and offers Undo for a
+ * few seconds. Only the plan entry goes: the meal in the DISH catalogue is untouched.
+ */
+export function useRemoveMeal(scope?: PlanScope | null) {
+  const del = useDeletePlannedMeal()
+  const removeFromPlan = useRemovePlanMeal(scope?.planId ?? '')
+  const restore = useRestorePlannedMeal()
+  const toast = useToast()
+  return async (meal: PlannedMeal): Promise<boolean> => {
+    try {
+      if (scope) await removeFromPlan.mutateAsync(meal.id)
+      else await del.mutateAsync(meal)
+    } catch (e) {
+      toast.error(friendlyError(e))
+      return false
+    }
+    toast.show(`Removed ${meal.name}.`, {
+      duration: 6000,
+      action: {
+        label: 'Undo',
+        onClick: () =>
+          void restore.mutateAsync(meal).then(
+            () => toast.show(`${meal.name} is back.`, { tone: 'success', duration: 2000 }),
+            (e) => toast.error(friendlyError(e)),
+          ),
+      },
+    })
+    return true
+  }
+}
+
+/**
+ * Four things you usually want, in plain sight: view, edit, replace, remove. Everything
+ * else (eaten or skipped, the recipe, shopping, saving) waits under More.
+ */
+function Menu({ meal, onPanel, onClose }: { meal: PlannedMeal; onPanel: (p: Panel) => void; onClose: () => void }) {
   const nav = useNavigate()
   const toast = useToast()
   const status = useSetMealStatus()
-  const { save, scope } = useWriter()
+  const { scope } = useWriter()
+  const remove = useRemoveMeal(scope)
+  const [more, setMore] = useState(false)
+  const [removing, setRemoving] = useState(false)
   // eating and skipping are the plan owner's; viewers only look
   const canTick = !scope || scope.role === 'owner'
   const canEdit = !scope || scope.role !== 'viewer'
@@ -155,57 +198,99 @@ function Menu({ meal, onPanel, onClose, onDelete }: { meal: PlannedMeal; onPanel
 
   const setStatus = async (s: PlannedMeal['status']) => {
     tap()
-    await status.mutateAsync({ meal, status: s })
-    toast.show(s === 'eaten' ? `Nice. ${meal.name} added to your diary.` : s === 'skipped' ? 'No worries. Marked as skipped.' : 'Back on the plan.', { tone: s === 'eaten' ? 'success' : 'info' })
-    onClose()
+    try {
+      await status.mutateAsync({ meal, status: s })
+      toast.show(s === 'eaten' ? `Nice. ${meal.name} added to your diary.` : s === 'skipped' ? 'No worries. Marked as skipped.' : 'Back on the plan.', { tone: s === 'eaten' ? 'success' : 'info' })
+      onClose()
+    } catch (e) {
+      toast.error(friendlyError(e))
+    }
   }
 
+  const canRemove = canEdit && !(scope && meal.status !== 'planned')
   return (
-    <ul className="flex flex-col">
-      {canTick && meal.status !== 'eaten' && <Action icon="check" label="I ate this" hint="Adds it to your food diary" onClick={() => void setStatus('eaten')} />}
-      {canTick && meal.status === 'planned' && <Action icon="x" label="Skip this meal" onClick={() => void setStatus('skipped')} />}
-      {canTick && meal.status !== 'planned' && <Action icon="refresh" label="Mark as planned again" hint={meal.status === 'eaten' ? 'Removes the diary entry it created' : undefined} onClick={() => void setStatus('planned')} />}
-      {canEdit && (
-        <>
-          <Action icon="swap" label="Replace meal" hint={meal.locked ? 'Unlock first to replace' : 'Get a few suggestions that fit'} disabled={meal.locked || meal.status === 'eaten'} onClick={() => onPanel('replace')} />
-          <Action icon="move" label="Move or change the time" onClick={() => onPanel('move')} />
-          <Action icon="edit" label="Edit servings" hint={`Currently ×${meal.portion}`} onClick={() => onPanel('portion')} />
-          <Action
-            icon={meal.locked ? 'unlock' : 'lock'}
-            label={meal.locked ? 'Unlock meal' : 'Lock meal'}
-            hint={meal.locked ? undefined : 'Keeps it when you regenerate'}
+    <div>
+      <ul className="grid grid-cols-2 gap-2" aria-label="Meal actions">
+        <Primary icon="eye" label="View meal" onClick={() => { onClose(); nav(`/meal/${meal.id}`) }} />
+        {canEdit && <Primary icon="edit" label="Edit meal" onClick={() => onPanel('edit')} />}
+        {canEdit && <Primary icon="swap" label="Replace meal" hint={meal.locked ? 'Unlock first' : meal.status === 'eaten' ? 'Already eaten' : undefined} disabled={meal.locked || meal.status === 'eaten'} onClick={() => onPanel('replace')} />}
+        {canRemove && (
+          <Primary
+            icon="trash"
+            label="Remove from plan"
+            tone="danger"
+            busy={removing}
             onClick={async () => {
-              if (await save({ locked: !meal.locked }, `${meal.locked ? 'Unlock' : 'Lock'} ${meal.name}`)) {
-                toast.show(meal.locked ? 'Unlocked' : 'Locked. Regenerating will keep this meal.')
-                onClose()
-              }
+              setRemoving(true)
+              const ok = await remove(meal)
+              setRemoving(false)
+              if (ok) onClose()
             }}
           />
-        </>
+        )}
+      </ul>
+      <button type="button" aria-expanded={more} onClick={() => setMore(!more)} className="press mt-3 flex w-full items-center justify-between rounded-md px-2 py-3 text-left font-semibold text-ink-2 hover:text-ink">
+        More
+        <Icon name="down" size={18} className="chevron" />
+      </button>
+      {more && (
+        <ul className="stagger flex flex-col" aria-label="More actions">
+          {canTick && meal.status !== 'eaten' && <Action icon="check" label="I ate this" hint="Adds it to your food diary" onClick={() => void setStatus('eaten')} />}
+          {canTick && meal.status === 'planned' && <Action icon="x" label="Skip this meal" onClick={() => void setStatus('skipped')} />}
+          {canTick && meal.status !== 'planned' && <Action icon="refresh" label="Mark as planned again" hint={meal.status === 'eaten' ? 'Removes the diary entry it created' : undefined} onClick={() => void setStatus('planned')} />}
+          {food?.recipe && food.recipe.steps.length > 0 && <Action icon="diary" label="Open recipe" onClick={() => nav(`/recipes/${food.slug}`)} />}
+          {food?.recipe && meal.method === 'cook' && (
+            <Action
+              icon="cart"
+              label="Add ingredients to shopping list"
+              disabled={addToList.isPending}
+              onClick={async () => {
+                try {
+                  const scale = meal.portion / (food.recipe!.servings || 1)
+                  await addToList.mutateAsync({
+                    items: toCatalogueMeal(food).ingredients.filter((i) => !i.optional).map((i) => ({ name: i.name, ingredient_id: i.ingredient_id, category: i.category, quantity: i.quantity == null ? null : Math.round(i.quantity * scale * 100) / 100, unit: i.unit })),
+                  })
+                  toast.show('Added to your shopping list.', { tone: 'success', action: { label: 'View', onClick: () => nav('/grocery') } })
+                  onClose()
+                } catch (e) {
+                  toast.error(friendlyError(e))
+                }
+              }}
+            />
+          )}
+          {meal.food_item_id && (
+            <Action
+              icon="heart"
+              filled={isFav}
+              label={toggleFav.isPending ? 'Saving…' : isFav ? 'Remove from saved' : 'Save this meal'}
+              disabled={toggleFav.isPending}
+              onClick={async () => {
+                try {
+                  await toggleFav.mutateAsync({ foodItemId: meal.food_item_id!, on: !isFav })
+                  toast.show(isFav ? 'Removed from saved' : 'Saved', { tone: 'success', duration: 1800 })
+                } catch (e) {
+                  toast.error(friendlyError(e))
+                }
+              }}
+            />
+          )}
+        </ul>
       )}
-      {food?.recipe && food.recipe.steps.length > 0 && <Action icon="diary" label="Open recipe" onClick={() => nav(`/recipes/${food.slug}`)} />}
-      {food?.recipe && meal.method === 'cook' && (
-        <Action
-          icon="cart"
-          label="Add ingredients to shopping list"
-          disabled={addToList.isPending}
-          onClick={async () => {
-            try {
-              const scale = meal.portion / (food.recipe!.servings || 1)
-              await addToList.mutateAsync({
-                items: toCatalogueMeal(food).ingredients.filter((i) => !i.optional).map((i) => ({ name: i.name, ingredient_id: i.ingredient_id, category: i.category, quantity: i.quantity == null ? null : Math.round(i.quantity * scale * 100) / 100, unit: i.unit })),
-              })
-              toast.show('Added to your shopping list.', { tone: 'success', action: { label: 'View', onClick: () => nav('/grocery') } })
-              onClose()
-            } catch (e) {
-              toast.error(friendlyError(e))
-            }
-          }}
-        />
-      )}
-      {meal.food_item_id && <Action icon="heart" label={isFav ? 'Remove from favourites' : 'Add to favourites'} onClick={() => { toggleFav.mutate({ foodItemId: meal.food_item_id!, on: !isFav }); toast.show(isFav ? 'Removed from favourites' : 'Saved to favourites'); onClose() }} />}
-      {canEdit && <Action icon="trash" label="Remove from plan" tone="danger" onClick={onDelete} />}
-    </ul>
+    </div>
+  )
+}
+
+function Primary({ icon, label, hint, onClick, tone, disabled, busy }: { icon: IconName; label: string; hint?: string; onClick: () => void; tone?: 'danger'; disabled?: boolean; busy?: boolean }) {
+  return (
+    <li>
+      <button type="button" disabled={disabled || busy} aria-busy={busy || undefined} onClick={onClick} className={cn('press flex h-full min-h-[88px] w-full flex-col items-start justify-between gap-2 rounded-[20px] bg-elevated p-3.5 text-left ring-1 ring-inset ring-line hover:ring-ink/30 disabled:opacity-45', tone === 'danger' && 'text-error')}>
+        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-surface">{busy ? <span className="state-in inline-flex"><Spinner size={18} /></span> : <Icon name={icon} size={19} />}</span>
+        <span>
+          <span className="block font-semibold leading-tight">{label}</span>
+          {hint && <span className="block text-micro text-muted">{hint}</span>}
+        </span>
+      </button>
+    </li>
   )
 }
 
@@ -277,70 +362,47 @@ function ReplacePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void 
   )
 }
 
-function MovePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void }) {
+/** Everything about this meal you can change, in one place: when, how much, and whether regenerating keeps it. */
+function EditPanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void }) {
   const { save } = useWriter()
   const toast = useToast()
   const [date, setDate] = useState(meal.date)
   const [slot, setSlot] = useState<MealSlot>(meal.slot)
   const [time, setTime] = useState(meal.scheduled_time?.slice(0, 5) ?? '')
+  const [portion, setPortion] = useState(meal.portion)
+  const [locked, setLocked] = useState(meal.locked)
+  const [saving, setSaving] = useState(false)
+  const patch: PlanMealPatch = {}
+  if (date !== meal.date) patch.date = date
+  if (slot !== meal.slot) patch.slot = slot
+  if ((time || null) !== (meal.scheduled_time?.slice(0, 5) ?? null)) patch.scheduled_time = time || null
+  if (portion !== meal.portion) patch.portion = portion
+  if (locked !== meal.locked) patch.locked = locked
+  const dirty = Object.keys(patch).length > 0
   return (
     <div className="flex flex-col gap-4">
       <DateField label="Day" value={date} onChange={(d) => d && setDate(d)} />
       <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={(meal.food_item ? occasionsFor(meal.food_item.food_type) : MEAL_SLOTS).map((s) => ({ value: s, label: SLOT_LABEL[s] }))} />
       <TimeField label="Time (optional)" optional value={time || null} fallback={SLOT_DEFAULT_TIME[slot]} onChange={(v) => setTime(v ?? '')} />
+      <Stepper label="Servings" value={portion} onChange={setPortion} min={0.25} max={10} step={0.25} format={(v) => `×${v}`} />
+      {meal.calories != null && <p className="num -mt-2 text-sm text-muted">≈ {formatKcal(Math.round(meal.calories * portion))} (estimate)</p>}
+      <Toggle label="Keep when regenerating" description="Locked meals stay put when you ask for fresh picks." checked={locked} onChange={setLocked} />
       <Button
         block
-        disabled={!date}
+        loading={saving}
+        disabled={!dirty || !date}
         onClick={async () => {
-          if (await save({ date, slot, scheduled_time: time || null }, `Move ${meal.name}`)) {
-            toast.success('Saved.')
+          setSaving(true)
+          const ok = await save(patch, `Edit ${meal.name}`)
+          setSaving(false)
+          if (ok) {
+            toast.success('Meal updated.')
             onDone()
           }
         }}
       >
-        Move meal
+        {dirty ? 'Save changes' : 'No changes yet'}
       </Button>
     </div>
-  )
-}
-
-function PortionPanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void }) {
-  const { save } = useWriter()
-  const [portion, setPortion] = useState(meal.portion)
-  return (
-    <div className="flex flex-col gap-5">
-      <Stepper label="Servings" value={portion} onChange={setPortion} min={0.25} max={10} step={0.25} format={(v) => `×${v}`} />
-      {meal.calories != null && <p className="num text-sm text-muted">≈ {formatKcal(Math.round(meal.calories * portion))} (estimate)</p>}
-      <Button block onClick={async () => { if (await save({ portion }, `Servings for ${meal.name}`)) onDone() }}>
-        Save servings
-      </Button>
-    </div>
-  )
-}
-
-function DeleteConfirm({ meal, open, onDone, onCancel }: { meal: PlannedMeal; open: boolean; onDone: () => void; onCancel: () => void }) {
-  const del = useDeletePlannedMeal()
-  const { scope } = useWriter()
-  const removeFromPlan = useRemovePlanMeal(scope?.planId ?? '')
-  const toast = useToast()
-  return (
-    <ConfirmDialog
-      open={open}
-      title="Remove this meal?"
-      message={`${meal.name} will be removed from your plan.${meal.status === 'eaten' ? ' Its diary entry stays in your diary.' : ''} Items already on a shopping list aren't removed automatically.`}
-      confirmLabel="Remove"
-      danger
-      onCancel={onCancel}
-      onConfirm={async () => {
-        try {
-          if (scope) await removeFromPlan.mutateAsync(meal.id)
-          else await del.mutateAsync(meal)
-          toast.show('Removed from the plan.')
-        } catch (e) {
-          toast.error(friendlyError(e))
-        }
-        onDone()
-      }}
-    />
   )
 }

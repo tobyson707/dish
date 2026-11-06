@@ -1,4 +1,4 @@
-import type { SVGProps } from 'react'
+import { useState, type SVGProps } from 'react'
 
 // Simple 1.75px line icons on a 24px grid. Decorative by default (aria-hidden);
 // pair with visible text or an aria-label on the parent control.
@@ -73,22 +73,38 @@ export const ICON_PATHS: Record<string, string> = {
 
 export type IconName = keyof typeof ICON_PATHS
 
-export function Icon({ name, size = 22, filled = false, ...rest }: { name: IconName; size?: number; filled?: boolean } & SVGProps<SVGSVGElement>) {
+/**
+ * Icons change state visibly but briefly: a new glyph cross-fades in with a slight turn,
+ * and becoming filled (a saved heart) fills through opacity with one small pop. Nothing
+ * animates on first render, only on a change.
+ */
+export function Icon({ name, size = 22, filled = false, className, ...rest }: { name: IconName; size?: number; filled?: boolean } & SVGProps<SVGSVGElement>) {
+  const [seen, setSeen] = useState<{ name: IconName; filled: boolean; kind?: 'swap' | 'pop'; n: number }>({ name, filled, n: 0 })
+  if (seen.name !== name || seen.filled !== filled) {
+    const change = seen.name !== name ? 'swap' : filled ? 'pop' : undefined // un-filling just fades
+    setSeen({ name, filled, kind: change ?? seen.kind, n: change ? seen.n + 1 : seen.n })
+  }
+  const phase = seen.n % 2 ? 'a' : 'b'
+  const swap = seen.kind === 'swap' ? phase : undefined
+  const pop = seen.kind === 'pop' ? phase : undefined
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 24 24"
-      fill={filled ? 'currentColor' : 'none'}
+      fill="currentColor"
       stroke="currentColor"
       strokeWidth={name === 'dots' ? 3 : 1.75}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"
       focusable="false"
+      className={className ? `icon ${className}` : 'icon'}
+      data-swap={swap}
+      data-pop={pop}
       {...rest}
     >
-      <path d={ICON_PATHS[name]} />
+      <path d={ICON_PATHS[name]} fillOpacity={filled ? 1 : 0} />
     </svg>
   )
 }

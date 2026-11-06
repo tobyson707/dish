@@ -15,6 +15,9 @@ import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/St
 import { useToast } from '@/components/ui/Toast'
 import type { PlannedMeal } from '@/types/db'
 import { CopyPlan } from './PlanActions'
+import { PlanCover } from './PlanCover'
+import { COVER_ASPECT } from './CoverEditor'
+import { SaveToggle } from '@/components/ui/ActionButton'
 
 const PREVIEW_DAYS = 7
 
@@ -42,18 +45,21 @@ export function CommunityPlanPage() {
 
   if (q.isPending) return <div className="pt-16"><LoadingBlock /></div>
   if (q.isError) return <div className="pt-16"><ErrorState message={friendlyError(q.error)} onRetry={() => q.refetch()} /></div>
-  if (!plan || (plan.visibility !== 'published' && !q.data?.role)) return <EmptyState className="mt-16" icon="community" title="This plan isn’t shared any more" message="Its creator may have removed it from the community." action={<ButtonLink to="/community">Browse plans</ButtonLink>} />
+  if (!plan || (plan.visibility !== 'published' && !q.data?.role)) return <EmptyState className="mt-16" icon="community" title="This plan isn’t shared any more" message="Its creator may have removed it from the community." action={<ButtonLink to="/discover?tab=plans">Browse meal plans</ButtonLink>} />
   const mine = q.data?.role === 'owner'
   const isSaved = !!saved.data?.has(plan.id)
   const creator = people.data?.find((p) => p.role === 'owner')?.display_name.split(' ')[0] ?? 'A DISH cook'
 
   return (
     <div>
-      <PageHeader back="/community" eyebrow={`${PLAN_DURATION_LABEL[plan.duration]} · by ${creator}`} title={plan.title} />
+      <PageHeader back="/discover?tab=plans" eyebrow={`${PLAN_DURATION_LABEL[plan.duration]} · by ${creator}`} title={plan.title} />
+      <div className="mb-4 w-full overflow-hidden rounded-[24px] bg-surface" style={{ aspectRatio: COVER_ASPECT }}>
+        <PlanCover plan={plan} />
+      </div>
       {plan.remix_attribution && <p className="text-footnote text-muted">{plan.remix_attribution}</p>}
       {plan.description && <p className="mt-2 text-ink-2">{plan.description}</p>}
       <p className="num mt-2 text-footnote text-muted">{meals.data?.length ?? 0} meals · originally planned for {shortRange(plan.start_date, plan.end_date)}</p>
-      {plan.visibility !== 'published' && <div className="mt-3"><Notice tone="warning">Not in the community right now.</Notice></div>}
+      {plan.visibility !== 'published' && <div className="mt-3"><Notice tone="warning">Not published right now.</Notice></div>}
 
       <div className="mt-4 flex flex-wrap gap-2">
         {mine ? (
@@ -61,7 +67,7 @@ export function CommunityPlanPage() {
         ) : (
           <>
             {plan.allow_remix && <Button icon="copy" onClick={() => setRemixing(true)}>Remix</Button>}
-            <Button variant="secondary" icon="heart" loading={save.isPending} onClick={() => save.mutate({ planId: plan.id, on: !isSaved }, { onSuccess: () => void saved.refetch(), onError: (e) => toast.error(friendlyError(e)) })}>{isSaved ? 'Saved' : 'Save'}</Button>
+            <SaveToggle withText size={48} on={isSaved} onToggle={(on) => save.mutateAsync({ planId: plan.id, on })} label={{ save: 'Save', remove: 'Saved' }} className="bg-transparent ring-1 ring-inset ring-ink/25" savedMessage="Saved. Find it any time in Saved." />
             <Button variant="ghost" icon="flag" onClick={() => setReporting(true)}>Report</Button>
           </>
         )}

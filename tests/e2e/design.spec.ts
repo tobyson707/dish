@@ -90,7 +90,7 @@ test('the DISH calendar: plan month view shows real meal markers and navigates m
   await page.goto('/plan')
   await page.getByRole('radio', { name: 'Month' }).click()
   const grid = page.getByRole('grid')
-  await expect(grid.getByRole('button', { name: /meals planned/ }).first()).toBeVisible()
+  await expect(grid.getByRole('button', { name: /meals? of \d+ planned/ }).first()).toBeVisible()
   const heading = page.getByRole('heading', { level: 3 }).first()
   const before = await heading.textContent()
   await page.getByRole('button', { name: 'Next month' }).click()

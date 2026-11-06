@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { addDays, startOfWeek } from '@domain/dates.ts'
 import { usePlannedMeals } from '@/data/plans'
-import { logPlanExport, usePlanMeals, usePlanPeople } from '@/data/planbook'
+import { logPlanExport, useCoverUrl, usePlanMeals, usePlanPeople } from '@/data/planbook'
 import type { MealPlan } from '@/types/db'
 import { useProfile } from '@/data/profile'
 import { useToday } from '@/hooks/useToday'
@@ -74,6 +74,7 @@ export function ExportSheet({ open, onClose, anchorDate, plan }: { open: boolean
   const [output, setOutput] = useState<Output | null>(null)
   const [error, setError] = useState<string | null>(null)
   const assetsRef = useRef<{ key: string; assets: ExportAssets } | null>(null)
+  const coverUrl = useCoverUrl(open ? plan?.cover_path : null)
 
   const week = plan ? { from: plan.start_date, to: addDays(plan.start_date, 6) } : { from: startOfWeek(anchorDate), to: addDays(startOfWeek(anchorDate), 6) }
   const range = period === 'today' ? { from: today, to: today } : period === 'week' ? week : period === 'plan' && plan ? { from: plan.start_date, to: plan.end_date } : custom
@@ -110,9 +111,10 @@ export function ExportSheet({ open, onClose, anchorDate, plan }: { open: boolean
   }
 
   async function assetsFor(m: ExportModel) {
-    const key = `${m.from}|${m.to}|${m.days.flatMap((d) => d.meals.map((x) => x.id + x.image.path)).join(',')}`
+    const cover = plan?.cover_path && coverUrl.data ? { url: coverUrl.data, crop: plan.cover_crop ?? null } : null
+    const key = `${m.from}|${m.to}|${m.days.flatMap((d) => d.meals.map((x) => x.id + x.image.path)).join(',')}|${plan?.cover_path ?? ''}|${JSON.stringify(plan?.cover_crop ?? null)}`
     if (assetsRef.current?.key === key) return assetsRef.current.assets
-    const assets = await loadExportAssets(m)
+    const assets = await loadExportAssets(m, cover)
     assetsRef.current = { key, assets }
     return assets
   }

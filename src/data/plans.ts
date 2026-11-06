@@ -195,3 +195,53 @@ export function useArchivePlan() {
     },
   })
 }
+
+/** The stored columns of a planned meal (no joined or server-maintained fields). */
+export function plannedRow(m: PlannedMeal) {
+  return {
+    id: m.id,
+    user_id: m.user_id,
+    plan_id: m.plan_id,
+    date: m.date,
+    slot: m.slot,
+    scheduled_time: m.scheduled_time,
+    name: m.name,
+    food_item_id: m.food_item_id,
+    portion: m.portion,
+    calories: m.calories,
+    protein_g: m.protein_g,
+    carbs_g: m.carbs_g,
+    fat_g: m.fat_g,
+    nutrition_source: m.nutrition_source,
+    est_cost: m.est_cost,
+    est_cost_currency: m.est_cost_currency ?? null,
+    method: m.method,
+    status: m.status,
+    locked: m.locked,
+    rationale: m.rationale,
+  }
+}
+
+/**
+ * Undo a removal: the same meal (same id and details) goes back into its plan or calendar.
+ * Only ever the plan entry: the catalogue meal itself is never touched by removing or restoring.
+ */
+export function useRestorePlannedMeal() {
+  const uid = useUserId()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (meal: PlannedMeal) => {
+      const invalidate: string[][] = [[...qk.planned(uid)] as string[]]
+      if (meal.plan_id) invalidate.push(['plan-detail', meal.plan_id], ['plans', uid])
+      patchLists<PlannedMeal>(qc, qk.planned(uid), (rows) => (rows.some((r) => r.id === meal.id) ? rows : [...rows, meal]))
+      await enqueue({ kind: 'upsert', table: 'planned_meals', row: plannedRow(meal) }, { label: `Put back ${meal.name}`, invalidate })
+    },
+    onSuccess: (_d, meal) => {
+      void qc.invalidateQueries({ queryKey: qk.planned(uid) })
+      if (meal.plan_id) {
+        void qc.invalidateQueries({ queryKey: ['plan-detail', meal.plan_id] })
+        void qc.invalidateQueries({ queryKey: ['plans', uid] })
+      }
+    },
+  })
+}

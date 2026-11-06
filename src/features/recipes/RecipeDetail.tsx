@@ -7,13 +7,14 @@ import { midCost } from '@domain/budget.ts'
 import { useCatalogue, toCatalogueMeal } from '@/data/catalogue'
 import { usePreferences } from '@/data/profile'
 import { useFavourites, useToggleFavourite } from '@/data/favourites'
+import { SaveToggle } from '@/components/ui/ActionButton'
 import { useCreatePlannedMeal, useActivePlan } from '@/data/plans'
 import { useAddIngredientsToList } from '@/data/grocery'
 import { useSetUserPrice, useUserPrices } from '@/data/budget'
 import { useCurrency, useToday } from '@/hooks/useToday'
 import { formatCostRange, formatKcal, formatMinutes, formatMoney } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
-import { Button, IconButton } from '@/components/ui/Button'
+import { Button } from '@/components/ui/Button'
 import { PageHeader, Section } from '@/components/ui/Layout'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { ProvenanceBadge, Tag } from '@/components/ui/Badges'
@@ -67,7 +68,7 @@ export function RecipeDetail() {
 
   return (
     <div>
-      <PageHeader back eyebrow={`${food.cuisine}${food.is_sample ? ' · sample recipe' : ''}`} title={food.name} actions={<IconButton icon="heart" label={isFav ? 'Remove from favourites' : 'Save to favourites'} className={isFav ? 'text-accent-strong' : undefined} onClick={() => fav.mutate({ foodItemId: food.id, on: !isFav })} />} />
+      <PageHeader back eyebrow={`${food.cuisine}${food.is_sample ? ' · sample recipe' : ''}`} title={food.name} actions={<SaveToggle size={44} on={isFav} onToggle={(on) => fav.mutateAsync({ foodItemId: food.id, on })} label={{ save: 'Save to favourites', remove: 'Remove from favourites' }} className="hover:bg-ink/6" />} />
       <FoodImage path={food.image_path} alt={food.image_alt} name={food.name} className="aspect-[4/5] max-h-[62dvh] w-full rounded-xl sm:aspect-[16/10] sm:max-h-none" width={960} priority />
       {food.image_credit && <p className="mt-1 text-micro text-muted">Photo: {food.image_credit}</p>}
       <p className="mt-4 text-ink-2">{food.description}</p>

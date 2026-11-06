@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test'
-import { collectConsoleErrors, completeOnboardingFor, createUser, expectNoHorizontalScroll, signIn, uniqueEmail } from './helpers'
+import { collectConsoleErrors, completeOnboardingFor, createUser, expectNoHorizontalScroll, signIn, uniqueEmail, pickCategory } from './helpers'
 
 /**
  * The redesigned surfaces are real controls, not decoration: every one is
@@ -23,7 +23,7 @@ test('home canvas: selector → drawer → add, featured meal, keyboard, search,
 
   // the selector opens the category drawer; adding a meal plans it for today
   const sel = page.getByRole('radiogroup', { name: 'Meal category' })
-  await sel.getByRole('radio', { name: 'Dinner' }).click()
+  await pickCategory(page, 'Dinner')
   const ws = page.getByRole('dialog', { name: 'Dinner ideas' })
   await expect(ws.getByRole('heading', { name: 'Dinner' })).toBeVisible()
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.overlay)).toBe('category')
@@ -45,6 +45,7 @@ test('home canvas: selector → drawer → add, featured meal, keyboard, search,
   await page.keyboard.press('ArrowUp')
   await page.keyboard.press('ArrowUp')
   await expect(sel.getByRole('radio', { name: 'Breakfast' })).toHaveAttribute('aria-checked', 'true')
+  await expect(sel.getByRole('radio', { name: 'Breakfast' })).toBeFocused()
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await page.keyboard.press('Enter')
   await expect(page.getByRole('dialog', { name: 'Breakfast ideas' })).toBeVisible()

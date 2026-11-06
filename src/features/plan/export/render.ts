@@ -9,6 +9,8 @@ import { buildGrid, type ExportDay, type ExportMeal, type ExportModel, type Grid
 export const PAGE_W = 1240
 export const PAGE_H = 1754
 import { ORANGE } from '@/styles/palette'
+import type { CoverCrop } from '@/types/db'
+import { DEFAULT_CROP, sourceRect } from '@/features/plans/coverCrop'
 const M = 84 // outer margin
 const HEADER_H = 540
 const SMALL_HEADER_H = 128
@@ -84,6 +86,8 @@ export function groupForPng(heights: number[], maxDays = PNG_MAX_DAYS, maxH = PN
 export interface ExportAssets {
   thumbs: Map<string, HTMLImageElement | null>
   hero: HTMLImageElement[]
+  /** the plan's own cover and its framing (the same one every screen shows) */
+  cover?: { img: HTMLImageElement; crop: CoverCrop } | null
 }
 const keyOf = (m: ExportMeal) => `${m.image.path ?? ''}|${m.image.slug ?? ''}|${m.name}`
 
@@ -115,7 +119,7 @@ async function loadMealImage(m: ExportMeal, width: number): Promise<HTMLImageEle
 }
 
 /** Load fonts and every image before drawing, so nothing renders half-blank. */
-export async function loadExportAssets(model: ExportModel): Promise<ExportAssets> {
+export async function loadExportAssets(model: ExportModel, cover?: { url: string; crop: CoverCrop | null } | null): Promise<ExportAssets> {
   await Promise.all(
     ['400 20px "Manrope Variable"', '500 20px "Manrope Variable"', '600 20px "Manrope Variable"', '700 20px "Manrope Variable"', '800 20px "Manrope Variable"'].map((f) => document.fonts?.load(f).catch(() => null)),
   )
@@ -136,7 +140,8 @@ export async function loadExportAssets(model: ExportModel): Promise<ExportAssets
     const big = await loadMealImage(m, 720)
     if (big) hero.push(big)
   }
-  return { thumbs, hero }
+  const coverImg = cover ? await loadImage(cover.url) : null
+  return { thumbs, hero, cover: coverImg ? { img: coverImg, crop: cover!.crop ?? DEFAULT_CROP } : null }
 }
 
 // ---------- drawing helpers ----------
@@ -257,13 +262,27 @@ function drawHeader(ctx: Ctx, model: ExportModel, assets: ExportAssets) {
   ctx.fillStyle = C.accent
   ctx.fillRect(M + 20, 150, 64, 5)
 
-  // photographs: one strong plate, two smaller companions (or designed plates)
-  const names = model.days.flatMap((d) => d.meals.map((m) => m.name))
-  const unique = [...new Set(names)]
-  const hx = w - M - 210
-  plate(ctx, hx, 262, 330, assets.hero[0] ?? null, unique[0] ?? 'Good food')
-  if (unique.length > 1 || assets.hero[1]) plate(ctx, hx - 190, 400, 150, assets.hero[1] ?? null, unique[1] ?? 'Less thinking')
-  if (unique.length > 2 || assets.hero[2]) plate(ctx, hx + 150, 440, 118, assets.hero[2] ?? null, unique[2] ?? 'Dish')
+  if (assets.cover) {
+    // the plan's own cover, framed exactly as on screen (16:10)
+    const fw = 470
+    const fh = Math.round(fw / 1.6)
+    const fx = w - M - fw + 10
+    const fy = 28 + (HEADER_H - 40 - fh) / 2
+    const r = sourceRect({ w: assets.cover.img.naturalWidth, h: assets.cover.img.naturalHeight }, { w: fw, h: fh }, assets.cover.crop)
+    ctx.save()
+    rr(ctx, fx, fy, fw, fh, 30)
+    ctx.clip()
+    ctx.drawImage(assets.cover.img, r.sx, r.sy, r.sw, r.sh, fx, fy, fw, fh)
+    ctx.restore()
+  } else {
+    // photographs: one strong plate, two smaller companions (or designed plates)
+    const names = model.days.flatMap((d) => d.meals.map((m) => m.name))
+    const unique = [...new Set(names)]
+    const hx = w - M - 210
+    plate(ctx, hx, 262, 330, assets.hero[0] ?? null, unique[0] ?? 'Good food')
+    if (unique.length > 1 || assets.hero[1]) plate(ctx, hx - 190, 400, 150, assets.hero[1] ?? null, unique[1] ?? 'Less thinking')
+    if (unique.length > 2 || assets.hero[2]) plate(ctx, hx + 150, 440, 118, assets.hero[2] ?? null, unique[2] ?? 'Dish')
+  }
 
   // identity (personal first)
   const tx = M + 20

@@ -1,7 +1,7 @@
 // Home redesign: floating navigation, compact curved category selector, featured meal
 // carousel and the category drawer. Numbers refer to the brief's acceptance list.
 import { expect, test, type Page } from '@playwright/test'
-import { collectConsoleErrors, completeOnboardingFor, createUser, expectNoHorizontalScroll, signIn, uniqueEmail } from './helpers'
+import { collectConsoleErrors, completeOnboardingFor, createUser, expectNoHorizontalScroll, pickCategory, signIn, uniqueEmail } from './helpers'
 
 const shot = (page: Page, name: string) => page.screenshot({ path: `test-results/screens/${test.info().project.name}-${name}.png` })
 const overlap = (a: { x: number; y: number; width: number; height: number }, b: { x: number; y: number; width: number; height: number }) =>
@@ -35,7 +35,8 @@ test('floating navigation replaces the bottom bar and reaches every destination 
   const b = (await btn.boundingBox())!
   expect(b.x).toBeLessThan(40)
   expect(vp.height - (b.y + b.height)).toBeLessThan(48)
-  expect(b.width).toBeLessThanOrEqual(56)
+  expect(b.width).toBeGreaterThanOrEqual(56) // a substantial control
+  expect(b.width).toBeLessThanOrEqual(64)
   // 3. it opens a compact panel with the five destinations, Home marked as current
   await btn.click()
   const nav = page.getByRole('navigation', { name: 'Main' })
@@ -49,7 +50,7 @@ test('floating navigation replaces the bottom bar and reaches every destination 
   await expect(nav).toHaveCount(0)
   await expect(btn).toBeFocused()
   await btn.click()
-  await page.mouse.click(vp.width / 2, vp.height * 0.3) // an empty part of the screen
+  await page.mouse.click(vp.width - 12, vp.height * 0.15) // outside the panel (it is taller on short phones)
   await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0)
   // 4. each destination navigates
   for (const [name, path] of [['Plan', '/plan'], ['Diary', '/diary'], ['Discover', '/discover'], ['Profile', '/profile'], ['Home', '/']] as const) {
@@ -83,15 +84,34 @@ test('compact curved category selector, lower greeting, featured meals with prev
   expect(sel.height).toBeLessThan(vp.height * 0.7)
   expect(sel.width).toBeLessThanOrEqual(56)
   expect(vp.width - (sel.x + sel.width)).toBeLessThan(40)
-  // 6-7. only the active category shows its name; the default is All
+  // 6-7. a short wheel of icons; only the active category shows its name; the default is All
   const all = selector(page).getByRole('radio', { name: 'All' })
   await expect(all).toHaveAttribute('aria-checked', 'true')
+  await expect(page.locator('.sel-tag[data-on] .sel-tag-text')).toHaveText('All')
+  await expect(page.locator('.sel-tag-text')).toHaveCount(1)
   for (const name of ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks']) {
     const r = selector(page).getByRole('radio', { name })
     await expect(r).toHaveAttribute('aria-checked', 'false')
     expect((await r.boundingBox())!.height).toBeLessThan(50) // icon only
   }
-  expect((await all.boundingBox())!.height).toBeGreaterThan(60) // icon and name
+  // turning the wheel (a slow drag down by two categories) settles on Snacks: Home follows, no drawer opens
+  const g = (await selector(page).boundingBox())!
+  const cx = g.x + g.width / 2
+  const cy = g.y + g.height / 2
+  await page.mouse.move(cx, cy)
+  await page.mouse.down()
+  for (let i = 1; i <= 20; i++) {
+    await page.mouse.move(cx, cy + i * 5)
+    await page.waitForTimeout(16)
+  }
+  await page.waitForTimeout(150) // hold still: no flick
+  await page.mouse.up()
+  await expect(selector(page).getByRole('radio', { name: 'Snacks' })).toHaveAttribute('aria-checked', 'true')
+  await expect(page.locator('.sel-tag[data-on] .sel-tag-text')).toHaveText('Snacks')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(page.locator('.feat-info p').first()).toHaveText(/snack/i)
+  // back to All with the keyboard
+  await pickCategory(page, 'All', { open: false })
   await shot(page, 'home')
 
   // 9. previous / next move between real suggestions (no plan yet: the recommender)
@@ -128,7 +148,7 @@ test('the category drawer slides over Home from the right, swaps in place, and c
   const before = (await canvas(page).boundingBox())!
 
   // 10-11. Breakfast opens the Breakfast drawer, sliding in from the right
-  await selector(page).getByRole('radio', { name: 'Breakfast' }).click()
+  await pickCategory(page, 'Breakfast')
   const d = drawer(page)
   await expect(d).toBeVisible()
   const mid = await d.evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m41)
@@ -152,7 +172,7 @@ test('the category drawer slides over Home from the right, swaps in place, and c
 
   // 15. switching category while open swaps the content without closing
   const handle = await d.elementHandle()
-  await selector(page).getByRole('radio', { name: 'Lunch' }).click()
+  await pickCategory(page, 'Lunch')
   await expect(d.getByRole('heading', { name: 'Lunch' })).toBeVisible()
   expect(await handle!.evaluate((el) => el.isConnected)).toBe(true)
 
@@ -160,18 +180,18 @@ test('the category drawer slides over Home from the right, swaps in place, and c
   await d.getByRole('button', { name: 'Close' }).click()
   await expect(drawer(page)).toHaveCount(0)
   expect(await canvas(page).boundingBox()).toEqual(before)
-  await selector(page).getByRole('radio', { name: 'Dinner' }).click()
+  await pickCategory(page, 'Dinner')
   await expect(drawer(page)).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(drawer(page)).toHaveCount(0)
-  await selector(page).getByRole('radio', { name: 'Snacks' }).click()
+  await pickCategory(page, 'Snacks')
   await expect(drawer(page)).toBeVisible()
   await page.goBack() // the phone's back gesture closes the drawer, not the app
   await expect(drawer(page)).toHaveCount(0)
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   // tapping the dimmed Home closes it too
-  await selector(page).getByRole('radio', { name: 'Drinks' }).click()
+  await pickCategory(page, 'Drinks')
   await expect(drawer(page)).toBeVisible()
   await page.mouse.click(12, vp.height / 2)
   await expect(drawer(page)).toHaveCount(0)
@@ -185,7 +205,7 @@ test('dark theme and reduced motion @responsive', async ({ page }) => {
   await page.reload()
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
   await shot(page, 'home-dark')
-  await selector(page).getByRole('radio', { name: 'Dinner' }).click()
+  await pickCategory(page, 'Dinner')
   const d = drawer(page)
   await expect(d).toBeVisible()
   // 19. reduced motion: the drawer arrives at once

@@ -2,6 +2,10 @@ import { useState } from 'react'
 import type { MealPlan } from '@/types/db'
 import { usePlanMeals, usePlanPeople, usePublishIssues, usePublishPlan } from '@/data/planbook'
 import { shortRange } from '@/features/plan/export/model'
+import { PLAN_DURATION_LABEL } from '@domain/types.ts'
+import { Icon } from '@/components/ui/Icon'
+import { PlanCover } from './PlanCover'
+import { COVER_ASPECT } from './CoverEditor'
 import { friendlyError } from '@/lib/errors'
 import { Sheet } from '@/components/ui/Sheet'
 import { Button } from '@/components/ui/Button'
@@ -32,7 +36,7 @@ export function PublishSheet({ plan, open, onClose }: { plan: MealPlan; open: bo
         void issues.refetch()
         return toast.error('Fix the issues listed first.')
       }
-      toast.show(on ? 'Published to the DISH community.' : 'Removed from the community.', { tone: 'success' })
+      toast.show(on ? 'Published. People on DISH can now find it in Discover.' : 'Unpublished. Only you and the people you invited can see it.', { tone: 'success' })
       onClose()
     } catch (e) {
       toast.error(friendlyError(e))
@@ -40,15 +44,21 @@ export function PublishSheet({ plan, open, onClose }: { plan: MealPlan; open: bo
   }
 
   return (
-    <Sheet open={open} onClose={onClose} title={published ? 'In the community' : 'Publish to the community'} description={published ? 'Anyone signed in to DISH can see, save and (if you allow it) remix this plan.' : 'Others can find your plan, save it and make their own copy. Nothing is published until you confirm.'}>
+    <Sheet open={open} onClose={onClose} title={published ? 'Published' : 'Publish'} description={published ? 'Anyone on DISH can find this plan in Discover, save it and (if you allow it) remix it.' : 'Publishing makes this plan discoverable by everyone on DISH. Nothing changes until you confirm.'}>
       <div className="flex flex-col gap-4">
-        <section aria-label="Preview" className="rounded-lg bg-elevated p-4">
+        <section aria-label="Preview" className="overflow-hidden rounded-[22px] bg-elevated ring-1 ring-inset ring-line">
+          <div className="w-full overflow-hidden" style={{ aspectRatio: COVER_ASPECT }}>
+            <PlanCover plan={plan} />
+          </div>
+          <div className="p-4">
           <p className="label-caps text-muted">What others will see</p>
           <h3 className="mt-1 text-title-3 font-bold">{plan.title}</h3>
-          {plan.description && <p className="mt-1 text-sm text-ink-2">{plan.description}</p>}
-          <p className="num mt-1 text-footnote text-muted">By {owner} · {shortRange(plan.start_date, plan.end_date)} · {meals.data?.length ?? 0} meals</p>
+          {plan.description ? <p className="mt-1 text-sm text-ink-2">{plan.description}</p> : !published && <p className="mt-1 text-footnote text-muted">No description yet. You can add one from the plan menu.</p>}
+          <p className="num mt-1 text-footnote text-muted">By {owner} · {PLAN_DURATION_LABEL[plan.duration]} · {shortRange(plan.start_date, plan.end_date)} · {meals.data?.length ?? 0} meals</p>
+          {!plan.cover_path && !published && <p className="mt-1 inline-flex items-center gap-1 text-micro text-muted"><Icon name="image" size={12} /> No cover image: a collage of its meals is shown.</p>}
           {sample.length > 0 && <p className="mt-2 text-footnote text-ink-2">{sample.join(', ')}{(meals.data?.length ?? 0) > sample.length ? '…' : ''}</p>}
-          <p className="mt-3 text-micro text-muted">Shown: the plan’s name, description, meals and your first name. Not shown: your diary, budget, contributors, email or anything else in your account.</p>
+          <p className="mt-3 text-micro text-muted">Shown: the plan’s name, description, cover, meals and your first name. Not shown: your diary, budget, contributors, email or anything else in your account.</p>
+          </div>
         </section>
         {!published && (
           <>
@@ -65,10 +75,10 @@ export function PublishSheet({ plan, open, onClose }: { plan: MealPlan; open: bo
             <div className="rounded-[18px] bg-elevated px-4">
               <Toggle label="Let people remix it" description="They get their own copy to change. Your plan is never changed, and you’re credited." checked={remix} onChange={setRemix} />
             </div>
-            <Button block icon="community" disabled={blocked || issues.isPending} loading={publish.isPending} onClick={() => void go(true)}>Publish</Button>
+            <Button block icon="community" disabled={blocked || issues.isPending} loading={publish.isPending} onClick={() => void go(true)}>{publish.isPending ? 'Publishing…' : 'Publish'}</Button>
           </>
         )}
-        {published && <Button block variant="secondary" loading={publish.isPending} onClick={() => void go(false)}>Remove from the community</Button>}
+        {published && <Button block variant="secondary" loading={publish.isPending} onClick={() => void go(false)}>{publish.isPending ? 'Unpublishing…' : 'Unpublish'}</Button>}
       </div>
     </Sheet>
   )

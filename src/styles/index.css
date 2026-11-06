@@ -117,7 +117,7 @@
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --nav-h: 60px; /* clearance kept free above the floating navigation button (bottom-left) */
+  --nav-h: 72px; /* clearance kept free above the floating navigation button (bottom-left) */
 
   color-scheme: light;
 }
@@ -329,14 +329,6 @@
   .num {
     font-variant-numeric: tabular-nums;
   }
-  /* press: a firm 0.97 dip on press, released smoothly (no elastic rebound) */
-  .press {
-    transition: transform var(--dur-standard) var(--ease-enter), background-color var(--dur-micro) var(--ease-move), color var(--dur-micro) var(--ease-move), opacity var(--dur-micro);
-  }
-  .press:active:not(:disabled) {
-    transform: scale(var(--press-scale));
-    transition-duration: var(--dur-micro);
-  }
   .page-enter {
     animation: rise var(--dur-standard) var(--ease-enter) both;
   }
@@ -455,7 +447,7 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
   --sel-w: 48px; /* the category selector's width */
   --notch-depth: 62px; /* how far the selector's notch curves into the canvas */
   --notch-fillet: 18px; /* the rounded shoulder where the canvas edge turns into the notch */
-  --nav-btn: 52px; /* floating navigation button */
+  --nav-btn: 60px; /* floating navigation button */
   --drawer-w: 92vw; /* phones: nearly full width, a sliver of Home stays visible */
 }
 @media (min-width: 640px) { :root { --canvas-m: 12px; --drawer-w: min(70vw, 480px); } }
@@ -499,16 +491,39 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
 /* over the open drawer the notch steps back: only the selector itself remains */
 .sel-notch[data-over-drawer] { background-color: transparent; }
 .sel-notch[data-over-drawer]::before, .sel-notch[data-over-drawer]::after { opacity: 0; }
-/* the active item's name opens out beside its icon (vertical, read bottom to top) */
-.sel-label { writing-mode: vertical-rl; transform: rotate(180deg); }
-.sel-reveal { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-standard) var(--ease-move), opacity var(--dur-fast) var(--ease-move); opacity: 0; }
-.sel-reveal[data-on] { grid-template-rows: 1fr; opacity: 1; }
-.sel-reveal > * { min-height: 0; overflow: hidden; }
+/* the category wheel: items fade towards its ends; the active name opens out to the
+   left of the selection slot once the wheel is at rest (one name at a time) */
+.sel-wheel {
+  mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
+}
+.sel-tag { display: grid; grid-template-columns: 0fr; opacity: 0; transition: grid-template-columns var(--dur-fast-exit) var(--ease-exit), opacity var(--dur-micro) var(--ease-exit); }
+.sel-tag[data-on] { grid-template-columns: 1fr; opacity: 1; transition: grid-template-columns var(--dur-standard) var(--ease-enter), opacity var(--dur-fast) var(--ease-enter) 40ms; }
+.sel-tag > * { min-width: 0; overflow: hidden; }
+.sel-tag-text { animation: fade var(--dur-fast) var(--ease-enter) both; }
+
+/* Floating navigation button: a solid, raised control with a soft top light; its three
+   lines fold into a close mark while the panel is open */
+.nav-fab {
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 0 0 1px rgb(255 255 255 / 0.08), 0 18px 36px -14px var(--c-shadow), 0 4px 10px -4px rgb(0 0 0 / 0.25);
+}
+.nav-fab[data-open] { background: var(--c-ink); color: var(--c-on-ink); }
+.nav-burger { position: relative; display: block; width: 22px; height: 16px; }
+.nav-burger > span {
+  position: absolute; left: 0; height: 2px; width: 22px; border-radius: 2px; background: currentColor;
+  transition: translate var(--dur-standard) var(--ease-move), rotate var(--dur-standard) var(--ease-move), opacity var(--dur-fast) var(--ease-move), width var(--dur-standard) var(--ease-move);
+}
+.nav-burger > span:nth-child(1) { top: 0; }
+.nav-burger > span:nth-child(2) { top: 7px; }
+.nav-burger > span:nth-child(3) { top: 14px; width: 14px; }
+.nav-fab[data-open] .nav-burger > span:nth-child(1) { translate: 0 7px; rotate: 45deg; }
+.nav-fab[data-open] .nav-burger > span:nth-child(2) { opacity: 0; }
+.nav-fab[data-open] .nav-burger > span:nth-child(3) { translate: 0 -7px; rotate: -45deg; width: 22px; }
 
 /* Floating navigation panel: grows out of its button (bottom-left) */
 .nav-pop { transform-origin: bottom left; animation: nav-pop var(--dur-standard) var(--ease-enter) both; }
 .nav-pop[data-closing] { animation: nav-pop-out var(--dur-fast) var(--ease-exit) forwards; }
-@keyframes nav-pop { from { opacity: 0; transform: translateY(8px) scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes nav-pop { from { opacity: 0; transform: translateY(6px) scale(0.95); } to { opacity: 1; transform: none; } }
 @keyframes nav-pop-out { to { opacity: 0; transform: translateY(6px) scale(0.95); } }
 
 /* Home canvas: the whole screen, inset, rounded; controls float on and around it */
@@ -621,3 +636,45 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
     transition: none;
   }
 }
+
+/* ── Press feedback ──
+   Unlayered on purpose: Tailwind's transition-* utilities live in a cascade layer and
+   used to replace this transition outright, so the 0.97 dip snapped back instead of
+   releasing smoothly. `scale` (not `transform`) composes with translate utilities. */
+.press {
+  transition-property: scale, transform, translate, color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow, padding, gap;
+  transition-duration: var(--dur-standard);
+  transition-timing-function: var(--ease-enter);
+}
+.press:active:not(:disabled, [aria-disabled='true']) {
+  scale: var(--press-scale);
+  transition-duration: var(--dur-micro);
+}
+
+/* ── Icons ──
+   Every <Icon> fills through opacity (never an abrupt fill swap), and replays a short
+   cross-fade when its glyph changes or a brief pop when it becomes filled. The data
+   attributes alternate between two identical keyframes so each change restarts them. */
+.icon path { transition: fill-opacity var(--dur-fast) var(--ease-enter); }
+.icon[data-swap='a'] { animation: icon-swap-a var(--dur-fast) var(--ease-enter); }
+.icon[data-swap='b'] { animation: icon-swap-b var(--dur-fast) var(--ease-enter); }
+.icon[data-pop='a'] { animation: icon-pop-a var(--dur-standard) var(--ease-enter); }
+.icon[data-pop='b'] { animation: icon-pop-b var(--dur-standard) var(--ease-enter); }
+@keyframes icon-swap-a { from { opacity: 0; scale: 0.7; rotate: -12deg; } to { opacity: 1; scale: 1; rotate: 0deg; } }
+@keyframes icon-swap-b { from { opacity: 0; scale: 0.7; rotate: -12deg; } to { opacity: 1; scale: 1; rotate: 0deg; } }
+@keyframes icon-pop-a { 0% { scale: 0.7; } 55% { scale: 1.16; } 100% { scale: 1; } }
+@keyframes icon-pop-b { 0% { scale: 0.7; } 55% { scale: 1.16; } 100% { scale: 1; } }
+/* a chevron that opens a section turns rather than swapping */
+.chevron { transition: rotate var(--dur-standard) var(--ease-move); }
+[aria-expanded='true'] > .chevron, [open] > summary .chevron, .chevron[data-open] { rotate: 180deg; }
+
+/* a control's state content (spinner, tick, "Saved") arriving */
+.state-in { animation: state-in var(--dur-fast) var(--ease-enter) both; }
+@keyframes state-in { from { opacity: 0; scale: 0.8; } to { opacity: 1; scale: 1; } }
+
+/* ticked items: the line draws across the name rather than snapping on */
+.strike {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 1.5px;
+  transition: background-size var(--dur-standard) var(--ease-move);
+}
+.strike[data-on] { background-size: 100% 1.5px; }

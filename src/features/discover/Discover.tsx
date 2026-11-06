@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { SLOT_LABEL } from '@domain/types.ts'
 import type { FoodItem } from '@/types/db'
 import { useFavourites, useToggleFavourite } from '@/data/favourites'
@@ -14,11 +14,12 @@ import { SearchInput } from '@/components/ui/Field'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
-import { useToast } from '@/components/ui/Toast'
 import { RecipePreviewWorkspace } from '@/components/canvas/RecipePreviewWorkspace'
 import { CATEGORIES, type Category } from '@/components/canvas/categories'
 import { useAddToToday } from '@/components/canvas/useAddToToday'
 import { slotFor, useRankedMeals } from '@/components/canvas/useRankedMeals'
+import { SaveToggle } from '@/components/ui/ActionButton'
+import { CommunityPlans } from '@/features/plans/CommunityPage'
 
 const PAGE = 8
 
@@ -32,13 +33,51 @@ function shuffled<T extends { id: string }>(items: T[], seed: number): T[] {
   return [...items].sort((a, b) => score(a.id) - score(b.id))
 }
 
+type Tab = 'foryou' | 'plans' | 'recipes'
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'foryou', label: 'For You' },
+  { id: 'plans', label: 'Meal Plans' },
+  { id: 'recipes', label: 'Recipes' },
+]
+
 /**
- * Discover: an endless-feeling feed of food inspiration. Photo first, minimal
+ * Discover has three parts: For You (food picked for you), Meal Plans (plans people
+ * published, to save or remix) and Recipes (every recipe that fits you, A to Z).
+ */
+export function Discover() {
+  const [params, setParams] = useSearchParams()
+  const tab: Tab = params.get('tab') === 'plans' ? 'plans' : params.get('tab') === 'recipes' ? 'recipes' : 'foryou'
+  return (
+    <div>
+      <PageHeader title="Discover" large />
+      <div role="tablist" aria-label="Discover" className="mb-4 grid grid-cols-3 gap-1 rounded-full bg-elevated p-1 ring-1 ring-inset ring-line">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => setParams((p) => (t.id === 'foryou' ? p.delete('tab') : p.set('tab', t.id), p), { replace: true })}
+            className={cn('press h-10 rounded-full text-sm font-bold', tab === t.id ? 'bg-ink text-on-ink shadow-[0_6px_16px_-10px_var(--c-shadow)]' : 'text-ink-2 hover:text-ink')}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <div key={tab} className="animate-[fade_var(--dur-standard)_var(--ease-enter)_both]">
+        {tab === 'plans' ? <CommunityPlans /> : <FoodFeed mode={tab} />}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * The food feeds: an endless-feeling feed of food inspiration. Photo first, minimal
  * text, personalised by the shared planner (allergies, diet and exclusions are
  * hard filters). Loads incrementally as you scroll; each meal appears once per
  * session. Detail lives in the meal preview, not in the feed.
  */
-export function Discover() {
+function FoodFeed({ mode }: { mode: 'foryou' | 'recipes' }) {
   const [category, setCategory] = useState<Category>('all')
   const [q, setQ] = useState('')
   const [onlyFavs, setOnlyFavs] = useState(false)
@@ -53,7 +92,8 @@ export function Discover() {
 
   const feed = useMemo(() => {
     const t = q.trim().toLowerCase()
-    let list = ranked.items
+    // Recipes: only meals with a recorded method, A to Z; For You: ranked for this person
+    let list = mode === 'recipes' ? ranked.items.filter((f) => f.can_cook && !isIncomplete(f)).sort((a, b) => a.name.localeCompare(b.name)) : ranked.items
     if (t) {
       // search reaches the whole catalogue (any country, and dishes whose recipe isn't recorded yet),
       // but never past a known allergy
@@ -62,12 +102,13 @@ export function Discover() {
       list = [...list, ...extra].filter((f) => searchText(f).includes(t))
     }
     if (onlyFavs) list = list.filter((f) => favs.data?.includes(f.id))
+    if (mode === 'recipes') return list
     // keep the best matches near the top, but vary the order between sessions
     const head = list.slice(0, 6)
     const unique = new Map<string, FoodItem>()
     for (const f of [...shuffled(head, seed), ...shuffled(list.slice(6), seed)]) unique.set(f.id, f)
     return [...unique.values()]
-  }, [ranked.items, q, onlyFavs, favs.data, seed, cat.data, prefs.data])
+  }, [ranked.items, q, onlyFavs, favs.data, seed, cat.data, prefs.data, mode])
 
   // reset paging when the feed's inputs change
   const key = `${category}|${q}|${onlyFavs}|${seed}`
@@ -92,17 +133,18 @@ export function Discover() {
 
   return (
     <div>
-      <PageHeader title="Discover" large />
-      <nav aria-label="More ideas" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-        <Shortcut to="/surprise" icon="sparkle" label="Surprise me" />
-        <Shortcut to="/kitchen" icon="fridge" label="My kitchen" />
-        <Shortcut to="/community" icon="community" label="Shared plans" />
-        <Shortcut to="/budget" icon="wallet" label="Budget" />
-        <Shortcut to="/history" icon="history" label="History" />
-      </nav>
+      {mode === 'foryou' && (
+        <nav aria-label="More ideas" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          <Shortcut to="/surprise" icon="sparkle" label="Surprise me" />
+          <Shortcut to="/kitchen" icon="fridge" label="My kitchen" />
+          <Shortcut to="/saved" icon="heart" label="Saved" />
+          <Shortcut to="/budget" icon="wallet" label="Budget" />
+          <Shortcut to="/history" icon="history" label="History" />
+        </nav>
+      )}
 
       <div className="sticky top-0 z-20 -mx-4 mt-4 bg-bg/95 px-4 pb-3 pt-2 backdrop-blur" style={{ top: 'var(--safe-top)' }}>
-        <SearchInput value={q} onChange={setQ} placeholder="Search meals" label="Search meals" />
+        <SearchInput value={q} onChange={setQ} placeholder={mode === 'recipes' ? 'Search recipes' : 'Search meals'} label={mode === 'recipes' ? 'Search recipes' : 'Search meals'} />
         <div className="mt-3 flex items-center gap-1.5">
           <div role="tablist" aria-label="Meal category" className="-mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1">
             {CATEGORIES.map((c) => (
@@ -111,7 +153,7 @@ export function Discover() {
               </button>
             ))}
           </div>
-          <button type="button" aria-pressed={onlyFavs} aria-label="Favourites only" title="Favourites only" onClick={() => setOnlyFavs(!onlyFavs)} className={cn('press flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors', onlyFavs ? 'bg-accent text-accent-ink' : 'bg-elevated text-ink-2')}>
+          <button type="button" aria-pressed={onlyFavs} aria-label="Saved only" title="Saved only" onClick={() => setOnlyFavs(!onlyFavs)} className={cn('press flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors', onlyFavs ? 'bg-accent text-accent-ink' : 'bg-elevated text-ink-2')}>
             <Icon name="heart" size={17} filled={onlyFavs} />
           </button>
         </div>
@@ -123,7 +165,7 @@ export function Discover() {
         ) : cat.isError && !cat.data ? (
           <ErrorState message={friendlyError(cat.error)} onRetry={() => cat.refetch()} />
         ) : feed.length === 0 ? (
-          <EmptyState title={onlyFavs ? 'No favourites here yet' : 'Nothing matches'} message={onlyFavs ? 'Tap the heart on any meal to save it.' : q ? 'Try another word.' : 'Try another category.'} />
+           <EmptyState title={onlyFavs ? 'Nothing saved here yet' : 'Nothing matches'} message={onlyFavs ? 'Tap the heart on any meal to save it.' : q ? 'Try another word.' : 'Try another category.'} />
         ) : (
           <>
             <ul className="grid gap-x-5 gap-y-7 sm:grid-cols-2" aria-label="Meal ideas">
@@ -134,10 +176,10 @@ export function Discover() {
             <div ref={sentinel} aria-hidden="true" className="h-4" />
             {done ? (
               <div className="py-10 text-center">
-                <p className="text-sm text-muted">That's every idea that fits you right now.</p>
-                <button type="button" onClick={() => { setSeed((s) => s + 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }} className="press mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-elevated px-4 text-sm font-semibold ring-1 ring-inset ring-line">
+                <p className="text-sm text-muted">{mode === 'recipes' ? 'That’s every recipe that fits you.' : 'That’s every idea that fits you right now.'}</p>
+                {mode === 'foryou' && <button type="button" onClick={() => { setSeed((s) => s + 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }} className="press mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-elevated px-4 text-sm font-semibold ring-1 ring-inset ring-line">
                   <Icon name="refresh" size={16} /> Shuffle
-                </button>
+                </button>}
               </div>
             ) : (
               <div className="grid gap-6 pt-2 sm:grid-cols-2" aria-hidden="true">
@@ -155,7 +197,6 @@ export function Discover() {
 function FeedItem({ food: f, index, category, favourite, onOpen }: { food: FoodItem; index: number; category: Category; favourite: boolean; onOpen: () => void }) {
   const toggle = useToggleFavourite()
   const prefs = usePreferences()
-  const toast = useToast()
   const { add, busy } = useAddToToday()
   const [added, setAdded] = useState(false)
   const mins = f.can_cook ? f.prep_minutes + f.cook_minutes : null
@@ -166,15 +207,12 @@ function FeedItem({ food: f, index, category, favourite, onOpen }: { food: FoodI
         <button type="button" onClick={onOpen} className="press block w-full" aria-label={`Open ${f.name}`}>
           <FoodImage path={f.image_path} alt={f.image_alt} name={f.name} slug={f.slug} className="aspect-[4/3] w-full rounded-[28px]" width={720} />
         </button>
-        <button
-          type="button"
-          aria-pressed={favourite}
-          aria-label={favourite ? `Remove ${f.name} from favourites` : `Save ${f.name} to favourites`}
-          onClick={() => toggle.mutate({ foodItemId: f.id, on: !favourite }, { onError: (e) => toast.error(friendlyError(e)) })}
-          className={cn('press absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-glass ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-md', favourite ? 'text-accent-strong' : 'text-ink')}
-        >
-          <Icon name="heart" size={18} filled={favourite} />
-        </button>
+        <SaveToggle
+          on={favourite}
+          onToggle={(on) => toggle.mutateAsync({ foodItemId: f.id, on })}
+          label={{ save: `Save ${f.name}`, remove: `Remove ${f.name} from saved` }}
+          className="absolute right-3 top-3 bg-glass ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-md"
+        />
       </div>
       <div className="mt-3 flex items-start gap-3">
         <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">

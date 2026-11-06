@@ -27,7 +27,8 @@ test('use what you have: recipes, use-up ideas, food safety first, and the missi
   await expect(section.getByRole('heading', { name: 'Recipes you can make' })).toBeVisible()
   await expect(section.getByText('Recognised recipe').first()).toBeVisible()
   // food safety: the six-day-old leftover is left out, with the reason
-  await expect(section.getByText(/Jollof rice was cooked 6 days ago/)).toBeVisible()
+  // (6 days by UTC; 7 in the person's own time zone in the hour before UTC midnight)
+  await expect(section.getByText(/Jollof rice was cooked [67] days ago/)).toBeVisible()
   // use-up ideas are labelled and never named as dishes
   await expect(section.getByRole('heading', { name: 'Simple use-up ideas' })).toBeVisible()
   await expect(section.getByText(/Reheat Fried rice until piping hot/)).toBeVisible()

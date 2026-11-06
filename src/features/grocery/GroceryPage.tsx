@@ -1,5 +1,5 @@
 import { createPortal } from 'react-dom'
-import { useMemo, useState, type FormEvent } from 'react'
+import { useCallback, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { addDays, startOfWeek } from '@domain/dates.ts'
 import { GROCERY_CATEGORIES, GROCERY_CATEGORY_LABEL, type GroceryCategory } from '@domain/types.ts'
@@ -22,6 +22,7 @@ import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/St
 import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
 import { tap } from '@/platform/haptics'
+import { ShoppingExportSheet } from './export/ShoppingExportSheet'
 
 export function GroceryPage() {
   const { listId: routeList } = useParams()
@@ -33,7 +34,11 @@ export function GroceryPage() {
   const [genOpen, setGenOpen] = useState(false)
   const [manageOpen, setManageOpen] = useState(false)
   const [editing, setEditing] = useState<GroceryItem | null>(null)
+  const [exportOpen, setExportOpen] = useState(false)
   const today = useToday()
+  const refetchItems = items.refetch
+  // exports always read the list as stored now, never a stale copy
+  const latestItems = useCallback(async () => (await refetchItems()).data, [refetchItems])
 
   const groups = useMemo(() => {
     const open: Record<string, GroceryItem[]> = {}
@@ -91,6 +96,11 @@ export function GroceryPage() {
             <Button size="sm" variant="secondary" icon="refresh" onClick={() => setGenOpen(true)}>
               {total ? 'Refresh from plan' : 'Build from plan'}
             </Button>
+            {total > 0 && list && (
+              <Button size="sm" variant="secondary" icon="download" onClick={() => setExportOpen(true)}>
+                Export
+              </Button>
+            )}
           </div>
           {items.isPending ? (
             <div className="mt-6">
@@ -126,6 +136,7 @@ export function GroceryPage() {
       <GenerateSheet open={genOpen} onClose={() => setGenOpen(false)} listId={listId} onDone={(id) => nav(`/grocery/${id}`, { replace: true })} />
       {listId && <EditSheet item={editing} listId={listId} onClose={() => setEditing(null)} />}
       <ManageSheet open={manageOpen} onClose={() => setManageOpen(false)} currentId={listId} />
+      {list && <ShoppingExportSheet open={exportOpen} onClose={() => setExportOpen(false)} list={list} refresh={latestItems} />}
     </div>
   )
 }
@@ -148,8 +159,8 @@ function Row({ item, listId, onEdit }: { item: GroceryItem; listId: string; onEd
         {item.purchased && <span className="icon-swap flex"><Icon name="check" size={16} /></span>}
       </button>
       <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left">
-        <span className={cn('block font-semibold transition-colors', item.purchased && 'text-muted line-through')}>
-          {item.name}
+        <span className={cn('block font-semibold transition-colors duration-[var(--dur-standard)]', item.purchased && 'text-muted')}>
+          <span className="strike" data-on={item.purchased || undefined}>{item.name}</span>
           {item.quantity != null && <span className="num ml-2 font-normal text-muted">{formatQuantity(item.quantity, item.unit)}</span>}
         </span>
         <span className="block truncate text-caption text-muted">

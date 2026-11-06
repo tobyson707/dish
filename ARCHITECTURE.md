@@ -145,9 +145,14 @@ Device access is isolated in `src/platform/*` (camera, notifications, haptics). 
 
 ## Floating navigation (`src/components/nav/FloatingNavigation.tsx`)
 
-- There is no bottom bar or side rail. One floating button sits at the bottom-left of every screen (inset by `--canvas-m` and the safe areas). It opens a compact panel that grows from the button: Home, Plan, Diary, Discover and Profile (the current one in accent), plus four shortcuts (Shopping, Kitchen, Scan, Surprise) that used to crowd Home.
+- There is no bottom bar or side rail. One floating button (60px, `--nav-btn`, a raised ink surface whose three lines fold into a close mark) sits at the bottom-left of every screen (inset by `--canvas-m` and the safe areas). It opens a compact panel that grows from the button: Home, Plan, Diary, Discover and Profile (the current one in accent), a **Saved** row with real per-kind counts ("3 meals · 1 plan", from `favourite_meals` and `my_saved_plans()`), plus four shortcuts (Shopping, Kitchen, Scan, Surprise).
+- `/saved` (`src/features/saved/SavedPage.tsx`) lists saved meals (the one existing favourites list; a meal and its recipe are the same catalogue record) and saved community plans, each tab with its stored count. A saved plan whose owner made it private again still counts, shown as "no longer shared" with no details.
 - The panel closes on a choice, a tap outside, or Escape (focus returns to the button). Routes are unchanged.
 - `--nav-h` is now the clearance kept above the button. Toasts, floating action buttons, the shopping-list bar and the Developer Mode launcher already sit above it, and pages end with padding so their last content can scroll clear.
+
+## Category wheel (`src/components/canvas/FloatingCategorySelector.tsx`, `wheel.ts`)
+
+A compact vertical wheel in the right-edge notch: five icon slots visible, a fixed accent selection slot in the middle, and only the active category's name, which opens out to the left of the slot once the wheel is at rest. Drag or flick (touch or mouse), mouse wheel (one notch = one category) and trackpad turn it; it eases to the nearest category with a frame-rate-independent exponential ease-out (`follow`), carries a flick at most three categories (`restingIndex`) and gives a little past either end (`resist`). A turn that settles changes the category (Home's featured meals follow) without opening the drawer; a tap (or Enter) on a category turns to it and opens its drawer; arrows, Home and End move it from the keyboard. Detent ticks and haptics as each category passes. Reduced motion: it jumps straight to the target.
 
 ## Home (`src/features/home/Home.tsx`)
 
@@ -216,6 +221,8 @@ One primary summary: remaining (or over by), out of the period's total, a spendi
 List (chronological, with photos; A4 portrait) and Grid / Table (one table per seven days: days across, occasions down, header repeated; A4 landscape). Both come from the same `ExportModel` (`buildGrid` reshapes it), render with Canvas 2D, and produce PDF and PNG; the preview switches layout without touching the plan. Table files end in `-table`.
 
 ## Motion
+**Root causes fixed in the refinement pass.** (1) `.press` lived in a cascade layer, and Tailwind `transition-*` utilities on 42 controls replaced its transition, so the 0.97 press snapped back; it is now unlayered and uses the `scale` property (composes with translate utilities). (2) Drag-to-dismiss reset its offset before the exit animation, so a swiped sheet jumped back up first; it now exits from where the finger left it. (3) Icons swapped glyphs and fills abruptly unless each caller wrapped them; `<Icon>` now cross-fades any glyph change, fills through opacity and gives one small pop when becoming filled, only on a change (never on first render). Save buttons keep the icon mounted under the spinner so the fill animation actually plays.
+
 One token set in `src/styles/index.css` (mirrored in `src/styles/motion.ts` for JS timers): durations micro 120ms, fast 180ms (popovers), standard 240ms, panel 380ms (drawers, sheets), celebrate 520ms; exits are ~20% shorter (`--dur-*-exit`). Easings: `--ease-enter` (ease-out, no overshoot), `--ease-move` (in-out), `--ease-exit` (accelerates away). `--stagger` 30ms, `--press-scale` 0.97. Presets: `.press`, `.enter-item` (staggered, capped at ten), `.motion-pop` (popovers from their trigger), `.pulse-once` (success), `.reveal-mask` (featured photos), `.icon-swap` (blurred icon cross-fade). Category and filter switches in the drawer cross-fade old and new content with `crossfade()` in `src/lib/motion.ts` (a clipped, inert copy fades out while the live content rises in; never blocks input, nothing remounts). Drag-to-dismiss has rubber-band resistance; the dial snap is critically damped with a subtle speed stretch of its fill. `prefers-reduced-motion` reduces everything to instant changes.
 
 ## Developer Mode (internal QA console)
@@ -224,6 +231,26 @@ Hidden. Revealed by pressing F9 twice within 600ms (desktop; ignored while typin
 - **Simulated time**: an app-level clock (`appToday`) used by `useToday`, with day jumps, a custom date, time zone, leap-year and year-end shortcuts and a persistent "Simulated date" pill. Ignored in production.
 - **Previews** (never saved): the real celebration overlay for every achievement and level (labelled "Preview"), toasts, confirmation dialog, empty, loading and plan-progress states.
 - **Simulation** (`supabase/functions/dev-tools`): off unless the deployment sets `DISH_DEV_TOOLS=enabled` (the local stack does; hosted projects must not). It creates dedicated test accounts (`app_metadata.dish_test`) and only ever changes those: streaks are replayed through `gamify_record_day` (milestone XP and achievements follow), XP totals drive the real level-up notifier, unlocks write the real row (duplicates prevented by the constraint), and scenarios reset the test account to known states (the weekly plan uses the real planner).
+
+## Plan workspace refinements
+
+- **Meal menu** (`MealActions.tsx`): four primary actions as cards (View meal, Edit meal, Replace meal, Remove from plan); eaten/skip, recipe, shopping and saving under **More**. Edit is one form (day, meal, time, servings, keep when regenerating). Remove takes the plan entry off at once with **Undo** (the same row, same id, goes back through the offline outbox); the catalogue meal is never touched. On touch screens a row swipes left to reveal Remove (`SwipeToRemove.tsx`; pan-y stays with the browser, so scrolling never becomes a swipe).
+- **Plan menu** (`PlanActions.tsx`): Rename, Share, Export, Archive/Restore first; Duplicate, description, cover, activity, leave and Delete (destructive, confirmed) under More.
+- **Share** is one sheet with three separate kinds: invite people (private), Publish (public, with a preview of exactly what others see) and Export (a file).
+- **Calendar**: the week view names its exact seven days (`Intl.DateTimeFormat.formatRange`, locale-aware), draws them as one band with the selected day solid and today ringed, and shows one mark per expected meal. The month view fills planned days softly (neutral), marks partly planned days, keeps the accent for the selected day and dots days where everything was eaten. Day marks (`toDayMarks`) come from saved meals and the plan's meal times.
+- **Covers** (`CoverEditor.tsx`, `coverCrop.ts`): after choosing an image, a framing editor (drag, zoom, reset, confirm, cancel). The upload is kept whole; only the framing (`cover_crop`: focal point and zoom) is saved, and every view draws it with the same maths (CSS `object-position` + scale on screen, `sourceRect` on canvas for exports), so library cards, the plan, Publish, Discover, Saved and exported PDFs show the same composition.
+
+## Discover
+
+Three tabs: **For You** (the personalised feed), **Meal Plans** (published plans: cover-led cards with creator, length, meal count, cuisines, diet facts that hold for every meal, Save and Remix) and **Recipes** (every recipe that fits you, A to Z). `/community` redirects to Meal Plans.
+
+## Shopping-list export (`src/features/grocery/export/`)
+
+PDF (A4, multi-page, headings never stranded at a page end), PNG (one 2480px-wide image per page) and CSV (Category, Item, Quantity, Unit, Checked; UTF-8 with BOM; formula-safe). A dedicated canvas layout, never a screenshot. Grouped by the categories stored on each ingredient, with exactly the quantities and units on the list (blank when there are none). The list is fetched again before every export so it is never stale. Native share where files can be shared, download otherwise.
+
+## Action feedback (`src/components/ui/ActionButton.tsx`)
+
+`useAction` gives every async action an honest sequence: idle → busy (spinner over the icon) → done (tick or filled icon, short confirmation) only after the server confirms, or error (previous state kept, the reason shown, Retry offered). `SaveToggle` is the one save/favourite control (no optimistic fill: a failed save never looks saved); `ActionButton` covers copy link, export and the like.
 
 ## Named plans, collaboration and community (`src/features/plans/`, `src/data/planbook.ts`)
 - `/plans` (My plans: current, drafts, shared with me, archived), `/plans/:id` (meals, people, activity, versions; share and publish panels), `/invite/:token`, `/community`, `/community/:id`.
