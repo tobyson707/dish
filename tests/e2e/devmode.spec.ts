@@ -63,8 +63,11 @@ test('mobile: five taps on the Profile avatar within three seconds reveal Develo
   for (let i = 0; i < 4; i++) await avatar.click()
   await expect(page.getByText('Developer Mode on. Tap the wand to open it.')).toBeVisible()
   await launcher(page).click()
+  await page.waitForTimeout(500) // let the slide-in finish
   const box = (await consoleOf(page).boundingBox())!
-  expect(Math.round(box.width)).toBe(page.viewportSize()!.width) // full screen on phones
+  const vw = page.viewportSize()!.width
+  if (vw < 640) expect(Math.round(box.width)).toBe(vw) // full screen on phones
+  else expect(Math.round(box.x + box.width)).toBe(vw) // tablets: the right-hand panel, flush to the edge
   await page.screenshot({ path: shots('dev-console-mobile') })
   await consoleOf(page).getByRole('button', { name: 'Close Developer Mode' }).click()
   await expect(consoleOf(page)).toHaveCount(0)
