@@ -671,3 +671,10 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
 /* a control's state content (spinner, tick, "Saved") arriving */
 .state-in { animation: state-in var(--dur-fast) var(--ease-enter) both; }
 @keyframes state-in { from { opacity: 0; scale: 0.8; } to { opacity: 1; scale: 1; } }
+
+/* ticked items: the line draws across the name rather than snapping on */
+.strike {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 58% / 0% 1.5px;
+  transition: background-size var(--dur-standard) var(--ease-move);
+}
+.strike[data-on] { background-size: 100% 1.5px; }

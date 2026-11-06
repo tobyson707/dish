@@ -21,7 +21,8 @@ import { FoodImage } from '@/components/ui/FoodImage'
 import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
-import { formatCostRange, formatKcal, formatMinutes } from '@/lib/format'
+import { dayLabel, formatCostRange, formatKcal, formatMinutes } from '@/lib/format'
+import { useToday } from '@/hooks/useToday'
 import { tap } from '@/platform/haptics'
 import { cn } from '@/lib/cn'
 import { DateField } from '@/components/ui/DateField'
@@ -56,6 +57,7 @@ export function MealActionsSheet({ meal, onClose, scope }: { meal: PlannedMeal |
   const calendarUpdate = useUpdatePlannedMeal()
   const planUpdate = usePlanMealUpdate(scope?.planId ?? '')
   const toast = useToast()
+  const today = useToday()
   if (meal && meal.id !== forId) {
     // reset to the main menu whenever a different meal is opened
     setForId(meal.id)
@@ -91,7 +93,7 @@ export function MealActionsSheet({ meal, onClose, scope }: { meal: PlannedMeal |
   }
   return (
     <WriterCtx.Provider value={{ save, scope: scope ?? null }}>
-      <Sheet open={!!meal} onClose={close} title={panel === 'replace' ? 'Not feeling it? Switch it up' : panel === 'edit' ? 'Edit meal' : meal.name} description={panel === 'menu' ? `${SLOT_LABEL[meal.slot]} · ${meal.date}` : undefined}>
+      <Sheet open={!!meal} onClose={close} title={panel === 'replace' ? 'Not feeling it? Switch it up' : panel === 'edit' ? 'Edit meal' : meal.name} description={panel === 'menu' ? `${SLOT_LABEL[meal.slot]} · ${dayLabel(meal.date, today)}` : undefined}>
         {panel === 'menu' && <Menu meal={meal} onPanel={setPanel} onClose={close} />}
         {panel === 'replace' && <ReplacePanel meal={meal} onDone={close} />}
         {panel === 'edit' && <EditPanel meal={meal} onDone={close} />}

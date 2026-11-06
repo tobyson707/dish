@@ -65,6 +65,7 @@ export const SCREENS: ScreenEntry[] = [
   { id: 'diary-add', name: 'Add food to diary', category: 'Food and meal management', path: '/diary/add' },
   { id: 'diary-edit', name: 'Edit a diary entry', category: 'Food and meal management', path: '/diary/edit/:entryId', needs: 'diary_entry' },
   { id: 'history', name: 'History and favourites', category: 'Food and meal management', path: '/history' },
+  { id: 'saved', name: 'Saved meals and meal plans', category: 'Food and meal management', path: '/saved', keywords: 'favourites saved plans counts' },
 
   // E. Meal planning
   { id: 'plan-day', name: 'Daily plan', category: 'Meal planning', path: '/plan?view=day' },
@@ -74,7 +75,7 @@ export const SCREENS: ScreenEntry[] = [
   { id: 'plans', name: 'My plans (manage, share, publish)', category: 'Meal planning', path: '/plans', keywords: 'rename duplicate archive delete drafts current shared' },
   { id: 'plan-detail', name: 'A saved plan (meals, people, activity, versions)', category: 'Meal planning', path: '/plans/:id', needs: 'meal_plan', keywords: 'collaboration contributors restore version history invite' },
   { id: 'invite', name: 'Plan invitation link', category: 'Meal planning', path: '/invite/:token', note: 'Opens with a placeholder token, so it shows the “link doesn’t work” state. Real links come from Share on a plan.', keywords: 'invite accept join' },
-  { id: 'community', name: 'Community: shared plans', category: 'Meal planning', path: '/community', keywords: 'publish remix save browse' },
+  { id: 'community', name: 'Published meal plans (old address, opens Discover)', category: 'Meal planning', path: '/community', keywords: 'publish remix save browse community' },
   { id: 'community-plan', name: 'A shared plan preview (save, remix, report)', category: 'Meal planning', path: '/community/:id', needs: 'published_plan', keywords: 'remix report moderation' },
   { id: 'plan-export', name: 'Export plan (list or table)', category: 'Meal planning', path: '/plan?export=1', keywords: 'pdf png share grid table' },
   { id: 'plan-tour', name: 'Plan walkthrough', category: 'Meal planning', path: '/plan?welcome=1', note: 'Shows only if the tour has not been dismissed on this device.' },

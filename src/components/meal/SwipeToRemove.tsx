@@ -45,7 +45,11 @@ export function SwipeToRemove({ children, onRemove, label, disabled }: { childre
       if (Math.abs(dx) < START && Math.abs(dy) < START) return
       s.locked = Math.abs(dx) > Math.abs(dy) * 1.4 ? 'x' : 'y'
       if (s.locked === 'y') return // a scroll: leave it to the browser
-      e.currentTarget.setPointerCapture(e.pointerId)
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId)
+      } catch {
+        /* the pointer may already be gone; the swipe still works without capture */
+      }
       setDragging(true)
     }
     if (s.locked !== 'x') return

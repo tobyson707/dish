@@ -2,11 +2,13 @@ import { useId, useRef, useState, type KeyboardEvent } from 'react'
 import { addDays, addMonths, daysInMonth, startOfMonth, startOfWeek, weekdayMon0, type ISODate } from '@domain/dates.ts'
 import { cn } from '@/lib/cn'
 import { IconButton } from './Button'
-import type { DayState } from './Calendar'
+import { coverage, markLabel, type DayMark, type DayState } from './Calendar'
 
 const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
 // Calendar dates are plain YYYY-MM-DD strings throughout; formatting pins UTC so a
 // date never shifts to the day before or after in the viewer's time zone.
+const toMark = (v: DayState | DayMark | undefined): DayMark | undefined =>
+  !v || v === 'none' ? undefined : typeof v === 'string' ? { meals: 1, done: v === 'done' ? 1 : 0 } : v
 const label = (d: ISODate, o: Intl.DateTimeFormatOptions) => new Date(`${d}T12:00:00Z`).toLocaleDateString(undefined, { ...o, timeZone: 'UTC' })
 
 export interface DishCalendarProps {
@@ -19,8 +21,8 @@ export interface DishCalendarProps {
   onRangeChange?: (r: { from: ISODate; to: ISODate | null }) => void
   min?: ISODate
   max?: ISODate
-  /** meal indicators from real saved data */
-  markers?: Record<ISODate, DayState>
+  /** meal indicators from real saved data: day marks (meals, expected, done) or simple states */
+  markers?: Record<ISODate, DayState | DayMark>
   /** controlled month (any date inside it); uncontrolled when omitted */
   month?: ISODate
   onMonthChange?: (m: ISODate) => void
@@ -119,7 +121,9 @@ export function DishCalendar({ today, value, range, onChange, onRangeChange, min
           <div role="row" key={wi} className="grid grid-cols-7 gap-1">
             {week.map((d, i) => {
               if (!d) return <span key={`e${wi}${i}`} role="gridcell" aria-hidden="true" />
-              const st = markers?.[d] ?? 'none'
+              const mark = toMark(markers?.[d])
+              const cov = coverage(mark)
+              const allDone = !!mark && mark.done === mark.meals
               const sel = isSel(d)
               const off = disabled(d)
               return (
@@ -127,20 +131,22 @@ export function DishCalendar({ today, value, range, onChange, onRangeChange, min
                   <button
                     type="button"
                     data-date={d}
+                    data-coverage={cov}
                     tabIndex={d === focusTarget ? 0 : -1}
                     disabled={off}
                     onClick={() => select(d)}
                     onKeyDown={(e) => onKey(e, d)}
-                    aria-label={`${label(d, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}${d === today ? ', today' : ''}${st === 'done' ? ', all meals done' : st === 'partial' ? ', some meals done' : st === 'planned' ? ', meals planned' : ''}`}
+                    aria-label={`${label(d, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}${d === today ? ', today' : ''}${markLabel(mark)}`}
                     aria-pressed={sel}
                     className={cn(
-                      'press relative flex h-11 w-full flex-col items-center justify-center rounded-[14px] text-callout font-semibold transition-colors duration-150 outline-none focus-visible:ring-2 focus-visible:ring-focus sm:h-10',
-                      sel ? 'bg-accent text-accent-ink' : inRange(d) ? 'bg-accent-soft text-ink' : off ? 'text-disabled' : 'text-ink hover:bg-elevated',
-                      d === today && !sel && 'ring-1 ring-inset ring-accent-border',
+                      'press relative flex h-11 w-full flex-col items-center justify-center rounded-[14px] text-callout font-semibold outline-none focus-visible:ring-2 focus-visible:ring-focus sm:h-10',
+                      sel ? 'bg-accent text-accent-ink shadow-[0_8px_18px_-10px_var(--c-accent)]' : inRange(d) ? 'bg-accent-soft text-ink' : off ? 'text-disabled' : cov === 'full' ? 'bg-ink/[0.085] text-ink hover:bg-ink/[0.12]' : cov === 'partial' ? 'bg-ink/[0.04] text-ink hover:bg-ink/[0.08]' : 'text-ink hover:bg-elevated',
+                      d === today && !sel && 'ring-2 ring-inset ring-accent',
                     )}
                   >
                     <span className="num leading-none">{Number(d.slice(8))}</span>
-                    <span aria-hidden="true" className={cn('absolute bottom-1.5 h-1 w-1 rounded-full', st === 'done' ? (sel ? 'bg-accent-ink' : 'bg-accent') : st === 'partial' ? (sel ? 'bg-accent-ink' : 'bg-ink') : st === 'planned' ? (sel ? 'bg-accent-ink/60' : 'bg-dot') : 'hidden')} />
+                    {cov === 'partial' && <span aria-hidden="true" className={cn('absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full border', sel ? 'border-accent-ink' : 'border-ink/60')} />}
+                    {allDone && <span aria-hidden="true" className={cn('absolute bottom-1.5 h-1 w-1 rounded-full', sel ? 'bg-accent-ink' : 'bg-accent')} />}
                   </button>
                 </span>
               )
@@ -150,9 +156,10 @@ export function DishCalendar({ today, value, range, onChange, onRangeChange, min
       </div>
       {markers && (
         <ul className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-caption text-muted" aria-label="Key">
-          <li className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-dot" aria-hidden="true" /> Planned</li>
-          <li className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-ink" aria-hidden="true" /> Partly done</li>
-          <li className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" /> All done</li>
+          <li className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded-[5px] bg-ink/[0.085]" aria-hidden="true" /> Planned</li>
+          <li className="inline-flex items-center gap-1.5"><span className="relative h-3.5 w-3.5 rounded-[5px] bg-ink/[0.04]" aria-hidden="true"><span className="absolute right-0.5 top-0.5 h-1 w-1 rounded-full border border-ink/60" /></span> Partly planned</li>
+          <li className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-accent" aria-hidden="true" /> All eaten</li>
+          <li className="inline-flex items-center gap-1.5"><span className="h-3.5 w-3.5 rounded-[5px] ring-2 ring-inset ring-accent" aria-hidden="true" /> Today</li>
         </ul>
       )}
     </div>

@@ -34,7 +34,7 @@ import { Button, IconButton } from '@/components/ui/Button'
 import { PageHeader, Section } from '@/components/ui/Layout'
 import { Tag } from '@/components/ui/Badges'
 import { Segmented, Toggle } from '@/components/ui/Inputs'
-import { DateStrip, type DayState } from '@/components/ui/Calendar'
+import { DateStrip, toDayMarks } from '@/components/ui/Calendar'
 import { DishCalendar } from '@/components/ui/DishCalendar'
 import { DateRangeField } from '@/components/ui/DateField'
 import { Sheet } from '@/components/ui/Sheet'
@@ -124,7 +124,7 @@ export function PlanDetail() {
       />
       {(plan.cover_path || plan.description) && (
         <div className="flex items-start gap-4">
-          {plan.cover_path && <div className="h-20 w-28 shrink-0 overflow-hidden rounded-[16px]"><PlanCover plan={plan} /></div>}
+          {plan.cover_path && <div className="w-32 shrink-0 overflow-hidden rounded-[16px] sm:w-40" style={{ aspectRatio: 16 / 10 }}><PlanCover plan={plan} /></div>}
           {plan.description && <p className="text-ink-2">{plan.description}</p>}
         </div>
       )}
@@ -211,12 +211,9 @@ function PlanBoard({ plan, role, canEdit }: { plan: MealPlan; role: PlanRole; ca
     for (const k in m) m[k]!.sort(sortPlanned)
     return m
   }, [meals.data])
-  const states = useMemo(() => {
-    const s: Record<string, DayState> = {}
-    for (const [d, list] of Object.entries(byDate)) s[d] = list.every((x) => x.status !== 'planned') ? 'done' : 'planned'
-    return s
-  }, [byDate])
+
   const slots: MealSlot[] = plan.meal_slots?.length ? plan.meal_slots : role === 'owner' && prefs.data?.meal_slots?.length ? prefs.data.meal_slots : ['breakfast', 'lunch', 'dinner']
+  const states = useMemo(() => toDayMarks(meals.data ?? [], slots.length), [meals.data, slots.length])
   const scope = { planId: plan.id, role, ownerId: plan.user_id }
   const remove = useRemoveMeal(scope)
   const days = (from: ISODate, to: ISODate) => {
@@ -251,7 +248,7 @@ function PlanBoard({ plan, role, canEdit }: { plan: MealPlan; role: PlanRole; ca
         ) : view === 'custom' ? (
           <DateRangeField label="Dates" value={custom} min={plan.start_date} max={plan.end_date} onChange={(r) => setCustom(r)} hint="Any dates inside this plan, up to about two months." />
         ) : (
-          <DateStrip selected={date} today={today} states={states} onSelect={(d) => set('date', clamp(d, plan))} onPrev={() => set('date', clamp(addDays(date, -7), plan))} onNext={() => set('date', clamp(addDays(date, 7), plan))} />
+          <DateStrip selected={date} today={today} marks={states} onSelect={(d) => set('date', clamp(d, plan))} onPrev={() => set('date', clamp(addDays(date, -7), plan))} onNext={() => set('date', clamp(addDays(date, 7), plan))} />
         )}
       </div>
 

@@ -14,7 +14,7 @@ import { Button, ButtonLink, IconButton } from '@/components/ui/Button'
 import { FloatingActions, FloatingButton } from '@/components/ui/FloatingAction'
 import { PageHeader } from '@/components/ui/Layout'
 import { Segmented } from '@/components/ui/Inputs'
-import { DateStrip, type DayState } from '@/components/ui/Calendar'
+import { DateStrip, toDayMarks } from '@/components/ui/Calendar'
 import { DishCalendar } from '@/components/ui/DishCalendar'
 import { EmptyState, ErrorState, LoadingBlock } from '@/components/ui/States'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -70,14 +70,8 @@ export function PlanPage() {
     for (const k in m) m[k]!.sort(sortPlanned)
     return m
   }, [meals.data])
-  const states = useMemo(() => {
-    const s: Record<string, DayState> = {}
-    for (const [d, list] of Object.entries(byDate)) {
-      const done = list.filter((x) => x.status !== 'planned').length
-      s[d] = done === 0 ? 'planned' : done === list.length ? 'done' : 'partial'
-    }
-    return s
-  }, [byDate])
+  const expected = prefs.data?.meal_slots?.length ?? 3
+  const states = useMemo(() => toDayMarks(meals.data ?? [], expected), [meals.data, expected])
 
   const p = plan.data
   const notGenerated = (d: ISODate) => !!p && d >= p.start_date && d <= p.end_date && (!p.generated_through || d > p.generated_through)
@@ -122,7 +116,7 @@ export function PlanPage() {
                 <DishCalendar today={today} value={date} month={date} onMonthChange={(m) => setDate(m.slice(0, 7) === today.slice(0, 7) ? today : m)} onChange={setDate} markers={states} />
               </div>
             ) : (
-              <DateStrip selected={date} today={today} states={states} onSelect={setDate} onPrev={() => setDate(addDays(date, -7))} onNext={() => setDate(addDays(date, 7))} />
+              <DateStrip selected={date} today={today} marks={states} onSelect={setDate} onPrev={() => setDate(addDays(date, -7))} onNext={() => setDate(addDays(date, 7))} />
             )}
           </div>
 

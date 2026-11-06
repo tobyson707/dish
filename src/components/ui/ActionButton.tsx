@@ -48,13 +48,11 @@ export function useAction<A extends unknown[], R>(fn: (...args: A) => Promise<R>
 
 /** The icon for an action's state: its own icon, a spinner while busy, a tick once done. Each change cross-fades. */
 export function StateIcon({ phase, icon, doneIcon = 'check', filled, size = 18 }: { phase: ActionPhase; icon: IconName; doneIcon?: IconName; filled?: boolean; size?: number }) {
+  // the icon stays mounted (so its changes animate); the spinner sits over it while busy
   return (
     <span className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
-      {phase === 'busy' ? (
-        <span key="busy" className="state-in inline-flex"><Spinner size={size} /></span>
-      ) : (
-        <Icon name={phase === 'done' ? doneIcon : phase === 'error' ? 'alert' : icon} filled={phase === 'done' ? filled ?? false : filled} size={size} />
-      )}
+      <Icon name={phase === 'done' ? doneIcon : phase === 'error' ? 'alert' : icon} filled={filled} size={size} className={cn('transition-opacity duration-[var(--dur-micro)]', phase === 'busy' && 'opacity-0')} />
+      {phase === 'busy' && <span className="state-in absolute inset-0 inline-flex items-center justify-center"><Spinner size={size} /></span>}
     </span>
   )
 }
@@ -150,7 +148,10 @@ export function SaveToggle({ on, onToggle, label, savedMessage = 'Saved', remove
       className={cn('press inline-flex shrink-0 items-center justify-center gap-1.5 rounded-full', on ? 'text-accent-strong' : 'text-ink', withText && 'px-4 font-semibold', className)}
       style={withText ? { height: size } : { width: size, height: size }}
     >
-      {phase === 'busy' ? <span key="busy" className="state-in inline-flex"><Spinner size={18} /></span> : <Icon name={icon} size={18} filled={on} />}
+      <span className="relative inline-flex">
+        <Icon name={icon} size={18} filled={on} className={cn('transition-opacity duration-[var(--dur-micro)]', phase === 'busy' && 'opacity-0')} />
+        {phase === 'busy' && <span className="state-in absolute inset-0 inline-flex items-center justify-center"><Spinner size={18} /></span>}
+      </span>
       {withText && <span>{on ? 'Saved' : 'Save'}</span>}
     </button>
   )

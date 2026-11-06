@@ -51,9 +51,9 @@ const shot = (page: Page, name: string) => page.screenshot({ path: `test-results
 /** Opens a meal's actions in a plan workspace and saves new servings. */
 async function setServings(page: Page, mealName: string, times: number) {
   await page.getByRole('button', { name: `Actions for ${mealName}` }).first().click()
-  await page.getByRole('button', { name: /^Edit servings/ }).click()
+  await page.getByRole('button', { name: /^Edit meal/ }).click()
   for (let i = 0; i < times; i++) await page.getByRole('button', { name: 'Increase Servings' }).click()
-  await page.getByRole('button', { name: 'Save servings' }).click()
+  await page.getByRole('button', { name: 'Save changes' }).click()
 }
 
 test('library: independent plans, persistence, duplicate, archive, delete, per-plan export and shopping list @responsive', async ({ browser }) => {
@@ -101,6 +101,7 @@ test('library: independent plans, persistence, duplicate, archive, delete, per-p
 
   // 4. duplicate: new records, nothing shared with the source
   await page.getByRole('button', { name: 'Actions for Lunchbox' }).click()
+  await page.getByRole('button', { name: 'More', exact: true }).click() // secondary actions wait under More
   await page.getByRole('button', { name: /^Duplicate/ }).click()
   await page.getByRole('dialog', { name: 'Duplicate plan' }).getByRole('button', { name: 'Duplicate' }).click()
   await expect(page).toHaveURL(/\/plans\/[0-9a-f-]{36}$/)
@@ -120,7 +121,7 @@ test('library: independent plans, persistence, duplicate, archive, delete, per-p
   await page.getByRole('button', { name: 'Archived', exact: true }).click()
   await expect(page.getByRole('link', { name: 'Open Party food' })).toBeVisible()
   await page.getByRole('button', { name: 'Actions for Party food' }).click()
-  await page.getByRole('button', { name: /^Restore from the archive/ }).click()
+  await page.getByRole('button', { name: 'Restore', exact: true }).click()
   await expect(page.getByRole('link', { name: 'Open Party food' })).toHaveCount(0) // left the archive view
   await page.getByRole('button', { name: 'All plans', exact: true }).click()
   await expect(page.getByRole('link', { name: 'Open Party food' })).toBeVisible()
@@ -128,6 +129,7 @@ test('library: independent plans, persistence, duplicate, archive, delete, per-p
 
   // 6. delete, with confirmation
   await page.getByRole('button', { name: 'Actions for Copy of Lunchbox' }).click()
+  await page.getByRole('button', { name: 'More', exact: true }).click()
   await page.getByRole('button', { name: /^Delete/ }).click()
   await expect(page.getByRole('dialog', { name: /Delete “Copy of Lunchbox”/ })).toContainText("can't be undone")
   await page.getByRole('button', { name: 'Delete plan' }).click()
@@ -141,7 +143,8 @@ test('library: independent plans, persistence, duplicate, archive, delete, per-p
     const onReq = (r: { url: () => string }) => r.url().includes('/rest/v1/planned_meals') && reads.push(decodeURIComponent(r.url()))
     page.on('request', onReq)
     await page.goto(`/plans/${id}`)
-    await page.getByRole('button', { name: 'Export' }).click()
+    await page.getByRole('button', { name: 'Plan actions' }).click()
+    await page.getByRole('dialog', { name: title }).getByRole('button', { name: 'Export' }).click()
     const sheet = page.getByRole('dialog', { name: `Export “${title}”` })
     await expect(sheet).toBeVisible()
     await sheet.getByRole('button', { name: 'Preview' }).click()
@@ -184,7 +187,7 @@ test('collaboration: editor and viewer roles enforced by the server, live update
 
   // 7. invite an editor by email: the link is private, hashed in storage, and only for that address
   await a.page.getByRole('button', { name: 'Share' }).click()
-  const share = a.page.getByRole('dialog', { name: 'Share this plan' })
+  const share = a.page.getByRole('dialog', { name: 'Share', exact: true })
   await share.getByLabel('Their email (optional)').fill(b.email)
   await share.getByRole('button', { name: 'Create invitation link' }).click()
   const toB = (await share.getByLabel('Invitation link').inputValue()).split('/invite/')[1]!
@@ -224,17 +227,17 @@ test('collaboration: editor and viewer roles enforced by the server, live update
 
   // no silent overwrite: the owner saves an edit to a version the editor has since changed
   await a.page.getByRole('button', { name: `Actions for ${target.name}` }).first().click()
-  await a.page.getByRole('button', { name: /^Edit servings/ }).click()
+  await a.page.getByRole('button', { name: /^Edit meal/ }).click()
   await as(b.token).patch(`planned_meals?id=eq.${target.id}`, { portion: 3, client_updated_at: new Date().toISOString() })
   await a.page.getByRole('button', { name: 'Increase Servings' }).click()
-  await a.page.getByRole('button', { name: 'Save servings' }).click()
+  await a.page.getByRole('button', { name: 'Save changes' }).click()
   await expect(a.page.getByRole('dialog', { name: 'Changed by someone else' })).toBeVisible()
   await a.page.getByRole('button', { name: 'Keep their version' }).click()
   expect((await meals(plan)).find((m) => m.id === target.id)!.portion).toBe(3)
 
   // 11. a viewer can look, not change: no edit controls, and the server refuses edits
   await a.page.goto(`/plans/${plan}?panel=share`)
-  const share2 = a.page.getByRole('dialog', { name: 'Share this plan' })
+  const share2 = a.page.getByRole('dialog', { name: 'Share', exact: true })
   await share2.getByLabel('Permission', { exact: true }).selectOption('viewer')
   await share2.getByRole('button', { name: 'Create invitation link' }).click()
   const toC = (await share2.getByLabel('Invitation link').inputValue()).split('/invite/')[1]!
@@ -266,7 +269,7 @@ test('collaboration: editor and viewer roles enforced by the server, live update
 
   // 13. revoke an invitation: the link stops working at once and gives no access
   await a.page.goto(`/plans/${plan}?panel=share`)
-  const share3 = a.page.getByRole('dialog', { name: 'Share this plan' })
+  const share3 = a.page.getByRole('dialog', { name: 'Share', exact: true })
   await share3.getByRole('button', { name: 'Create invitation link' }).click()
   const toD = (await share3.getByLabel('Invitation link').inputValue()).split('/invite/')[1]!
   await share3.getByRole('button', { name: /^Cancel invitation/ }).first().click()
@@ -303,7 +306,7 @@ test('collaboration: editor and viewer roles enforced by the server, live update
   await Promise.all([a.close(), b.close(), c.close(), d.close()])
 })
 
-test('community (from the previous phase): publish with a preview, then remix as an independent copy', async ({ browser }) => {
+test('publishing: publish with a preview, find it in Discover, then remix as an independent copy', async ({ browser }) => {
   test.setTimeout(240_000)
   const a = await person(browser, 'pub', 'Ada Owner')
   const c = await person(browser, 'rmx', 'Chi Stranger')
@@ -311,13 +314,14 @@ test('community (from the previous phase): publish with a preview, then remix as
   const plan = await createPlan(a.page, title)
   const before = (await meals(plan)).length
   await a.page.goto(`/plans/${plan}?panel=publish`)
-  const pub = a.page.getByRole('dialog', { name: 'Publish to the community' })
+  const pub = a.page.getByRole('dialog', { name: 'Publish', exact: true })
   await expect(pub.getByText('This plan passes the checks.')).toBeVisible()
   await pub.getByRole('button', { name: 'Publish' }).click()
-  await expect(a.page.getByText('Published to the DISH community.')).toBeVisible()
-  await c.page.goto('/community')
-  await c.page.getByRole('searchbox', { name: 'Search plans' }).fill(title)
-  await c.page.getByRole('link', { name: `Preview ${title}` }).click()
+  await expect(a.page.getByText('Published. People on DISH can now find it in Discover.')).toBeVisible()
+  await c.page.goto('/community') // the old address leads to Discover's Meal Plans
+  await expect(c.page).toHaveURL(/\/discover\?tab=plans$/)
+  await c.page.getByRole('searchbox', { name: 'Search meal plans' }).fill(title)
+  await c.page.getByRole('link', { name: `Open ${title}`, exact: true }).click()
   await c.page.getByRole('button', { name: 'Remix' }).click()
   await c.page.getByRole('dialog', { name: 'Remix this plan' }).getByRole('button', { name: 'Remix' }).click()
   await expect(c.page).toHaveURL(/\/plans\/[0-9a-f-]+$/)

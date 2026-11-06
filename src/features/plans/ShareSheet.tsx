@@ -11,6 +11,7 @@ import { Button, IconButton } from '@/components/ui/Button'
 import { Select, TextField } from '@/components/ui/Field'
 import { Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
+import { ActionButton } from '@/components/ui/ActionButton'
 
 /**
  * Sharing, in one place, with the three kinds kept apart: invite specific people
@@ -49,9 +50,8 @@ export function ShareSheet({ plan, open, onClose, onPublish, onExport }: { plan:
   async function copy() {
     try {
       await navigator.clipboard.writeText(link!)
-      toast.show('Link copied.', { tone: 'success' })
     } catch {
-      toast.error('Couldn’t copy. Select the link and copy it yourself.')
+      throw new Error('Couldn’t copy. Select the link and copy it yourself.')
     }
   }
   const live = (invites.data ?? []).filter((i) => !i.revoked_at && !i.accepted_at && new Date(i.expires_at) > new Date())
@@ -75,7 +75,7 @@ export function ShareSheet({ plan, open, onClose, onPublish, onExport }: { plan:
             </Notice>
             <TextField label="Invitation link" readOnly value={link} onFocus={(e) => e.currentTarget.select()} />
             <div className="grid grid-cols-2 gap-2">
-              <Button icon="copy" onClick={() => void copy()}>Copy link</Button>
+              <ActionButton tone="ink" icon="copy" doneIcon="check" doneLabel="Copied" success="Link copied." className="h-12" action={copy}>Copy link</ActionButton>
               {typeof navigator.share === 'function' ? (
                 <Button variant="secondary" icon="share" onClick={() => void navigator.share({ title: text, text, url: link }).catch(() => undefined)}>Share</Button>
               ) : (

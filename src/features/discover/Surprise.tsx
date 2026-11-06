@@ -6,11 +6,12 @@ import { useSurprise, useReplaceMeal, type Suggestion } from '@/data/ai'
 import { useCreatePlannedMeal, usePlannedMeals, useActivePlan } from '@/data/plans'
 import { useCatalogue, CUISINES } from '@/data/catalogue'
 import { useFavourites, useToggleFavourite } from '@/data/favourites'
+import { SaveToggle } from '@/components/ui/ActionButton'
 import { useCurrency, useToday } from '@/hooks/useToday'
 import { useSyncState } from '@/offline/useSync'
 import { formatCostRange, formatKcal, formatMinutes } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
-import { Button, IconButton } from '@/components/ui/Button'
+import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/Layout'
 import { Select, TextField } from '@/components/ui/Field'
 import { Segmented, Toggle } from '@/components/ui/Inputs'
@@ -127,7 +128,7 @@ function SuggestionCard({ s, slot, today }: { s: Suggestion; slot: MealSlot; tod
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
             <Link to={`/recipes/${s.slug}`} className="text-title-3 font-bold leading-snug">{s.name}</Link>
-            <IconButton icon="heart" label={isFav ? 'Remove from favourites' : 'Save to favourites'} size={40} className={isFav ? 'text-accent-strong' : undefined} onClick={() => fav.mutate({ foodItemId: s.food_item_id, on: !isFav })} />
+            <SaveToggle on={isFav} onToggle={(on) => fav.mutateAsync({ foodItemId: s.food_item_id, on })} label={{ save: 'Save to favourites', remove: 'Remove from favourites' }} className="hover:bg-ink/6" />
           </div>
           <p className="num text-footnote text-muted">
             {s.method === 'cook' ? `Cook · ${formatMinutes(s.prep_minutes + s.cook_minutes)}` : 'Buy'} · {formatCostRange(s.est_cost_min, s.est_cost_max, s.cost_currency ?? 'NGN')}

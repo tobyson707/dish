@@ -32,7 +32,7 @@ export function placement(nat: { w: number; h: number }, frame: { w: number; h: 
 export function sourceRect(nat: { w: number; h: number }, frame: { w: number; h: number }, crop: CoverCrop) {
   const p = placement(nat, frame, crop)
   const k = nat.w / p.w // source px per frame px
-  return { sx: -p.left * k, sy: -p.top * k, sw: frame.w * k, sh: frame.h * k }
+  return { sx: -p.left * k || 0, sy: -p.top * k || 0, sw: frame.w * k, sh: frame.h * k }
 }
 
 /** Dragging the image by (dx, dy) frame px moves the focal point by this much. */

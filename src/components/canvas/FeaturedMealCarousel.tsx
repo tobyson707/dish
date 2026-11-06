@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn'
 import { formatTime } from '@/lib/time'
 import { FoodImage, HeroFood } from '@/components/ui/FoodImage'
 import { Icon } from '@/components/ui/Icon'
+import { Spinner } from '@/components/ui/Spinner'
 import { useAddToToday } from './useAddToToday'
 
 /** One featured item: a meal on today's plan, or a suggestion from the recommendation engine. */
@@ -92,13 +93,14 @@ export function FeaturedMealCarousel({ items, loading, footer }: { items: Featur
                 <button
                   type="button"
                   disabled={busy || added.has(cur.key)}
+                  aria-busy={busy || undefined}
                   aria-label={added.has(cur.key) ? `${cur.food.name} added` : `Add ${cur.food.name} to today's ${SLOT_LABEL[cur.slot].toLowerCase()}`}
                   onClick={async () => {
                     if (await add(cur.food, cur.slot)) setAdded((s) => new Set(s).add(cur.key))
                   }}
-                  className={cn('press inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold ring-1 ring-inset transition-colors', added.has(cur.key) ? 'bg-accent text-accent-ink ring-transparent' : 'bg-glass text-ink ring-[var(--c-glass-line)] backdrop-blur-md')}
+                  className={cn('press inline-flex h-11 items-center gap-1.5 rounded-full px-4 text-sm font-semibold ring-1 ring-inset transition-colors', added.has(cur.key) ? 'pulse-once bg-accent text-accent-ink ring-transparent' : 'bg-glass text-ink ring-[var(--c-glass-line)] backdrop-blur-md')}
                 >
-                  <Icon name={added.has(cur.key) ? 'check' : 'plus'} size={16} />
+                  {busy ? <span className="state-in inline-flex"><Spinner size={16} /></span> : <Icon name={added.has(cur.key) ? 'check' : 'plus'} size={16} />}
                   {added.has(cur.key) ? 'Added' : (
                     <>
                       <span className="sm:hidden">Add</span>

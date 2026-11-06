@@ -141,7 +141,11 @@ export function FloatingCategorySelector({ value, onSelect, overDrawer }: { valu
     if (!d.moved) {
       if (Math.abs(dy) < 6) return // a tap, not a turn
       d.moved = true
-      e.currentTarget.setPointerCapture(e.pointerId)
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId)
+      } catch {
+        /* the pointer may already be gone */
+      }
       engine.current?.stop()
       d.from = posRef.current
       d.y = e.clientY
