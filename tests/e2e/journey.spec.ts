@@ -143,23 +143,23 @@ test('planned vs eaten, locking, regenerate, grocery list, and offline sync', as
   await completeOnboardingFor(uid, { allergies: ['peanut'], cook_time: '30_60' })
   await signIn(page, email)
   await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
-  await expect(page.getByRole('heading', { name: "Let's plan your first meals." })).toBeVisible()
-  await page.getByRole('link', { name: 'Plan my meals' }).click()
+  await expect(page.getByText("Let's plan your first meals.")).toBeVisible()
+  await page.getByRole('link', { name: /Plan my meals/ }).click()
   await page.getByRole('button', { name: 'Create my plan' }).click()
-  await expect(page).toHaveURL(/\/plan\?date=/, { timeout: 30_000 })
+  await expect(page).toHaveURL(/\/plans\/[0-9a-f-]{36}$/, { timeout: 30_000 })
 
   // Diary: planned meals don't count as eaten
   await page.goto('/diary')
   await expect(page.getByText('Nothing logged yet')).toBeVisible()
   await expect(page.getByText('Planned, not logged yet')).toBeVisible()
 
-  // Mark first meal eaten from Home
+  // Mark the next meal eaten, starting from Home's featured meal
   await page.goto('/')
-  const firstCard = page.getByRole('article').first()
-  const mealName = (await firstCard.getByRole('heading').textContent())!.trim()
-  await firstCard.getByRole('button', { name: /Actions for/ }).click()
+  const mealName = (await page.locator('.feat-info h2').textContent())!.trim()
+  await page.getByRole('link', { name: 'View meal' }).click()
+  await expect(page).toHaveURL(/\/meal\//)
   await page.getByRole('button', { name: /I ate this/ }).click()
-  await expect(page.getByText(/added to your diary/)).toBeVisible()
+  await expect(page.getByText(/added to your diary|Added to your diary/i)).toBeVisible()
   await page.goto('/diary')
   await expect(page.getByRole('link', { name: new RegExp(mealName) })).toHaveCount(1)
   await page.screenshot({ path: shots('diary'), fullPage: true })
