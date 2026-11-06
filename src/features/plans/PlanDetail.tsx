@@ -92,7 +92,7 @@ export function PlanDetail() {
   const nameOf = (uidOf: string | null | undefined) => (uidOf === uid ? 'You' : people.data?.find((p) => p.user_id === uidOf)?.display_name.split(' ')[0] ?? 'Someone')
   useEffect(() => {
     if (!live.remote) return
-    toast.show(`${nameOf(live.remote.actor)}: ${live.remote.summary}`)
+    toast.show(`${live.remote.name || nameOf(live.remote.actor)}: ${live.remote.summary}`)
     live.clearRemote()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [live.remote])
@@ -359,20 +359,34 @@ function PeopleTab({ planId, owner, people, me, onInvite }: { planId: string; ow
 }
 
 function ActivityTab({ planId, nameOf }: { planId: string; nameOf: (id: string | null) => string }) {
-  const a = usePlanActivity(planId)
+  const uid = useUserId()
+  const [limit, setLimit] = useState(40)
+  const a = usePlanActivity(planId, true, limit)
   if (a.isPending) return <div className="mt-4"><LoadingBlock /></div>
   if (!a.data?.length) return <EmptyState className="mt-4" icon="history" title="No activity yet" message="Changes to this plan show up here." />
   return (
-    <ol className="mt-4 flex flex-col" aria-label="Activity">
-      {a.data.map((x) => (
-        <li key={x.id} className="flex gap-3 border-l-2 border-line py-2 pl-4">
-          <span className="min-w-0 text-sm">
-            <span className="font-semibold">{nameOf(x.actor)}</span> <span className="text-ink-2">{x.summary.charAt(0).toLowerCase() + x.summary.slice(1)}</span>
-            <span className="block text-micro text-muted">{new Date(x.created_at).toLocaleString()}</span>
-          </span>
-        </li>
-      ))}
-    </ol>
+    <>
+      <ol className="mt-4 flex flex-col" aria-label="Activity">
+        {a.data.map((x) => {
+          const who = x.actor === uid ? 'You' : x.actor_name || nameOf(x.actor)
+          // most lines are "<who> <did something>"; a few are statements about someone else
+          const statement = x.action === 'permission'
+          return (
+            <li key={x.id} className="flex gap-3 border-l-2 border-line py-2 pl-4">
+              <span className="min-w-0 text-sm">
+                {statement ? (
+                  <><span className="text-ink-2">{x.summary}</span> <span className="text-muted">({who === 'You' ? 'by you' : `by ${who}`})</span></>
+                ) : (
+                  <><span className="font-semibold">{who}</span> <span className="text-ink-2">{x.summary.charAt(0).toLowerCase() + x.summary.slice(1)}</span></>
+                )}
+                <span className="block text-micro text-muted">{new Date(x.created_at).toLocaleString()}</span>
+              </span>
+            </li>
+          )
+        })}
+      </ol>
+      {a.data.length >= limit && <Button className="mt-3" size="sm" variant="secondary" loading={a.isFetching} onClick={() => setLimit((n) => n + 60)}>Show earlier activity</Button>}
+    </>
   )
 }
 

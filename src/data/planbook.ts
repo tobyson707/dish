@@ -27,6 +27,8 @@ export interface PlanPerson {
 export interface PlanActivity {
   id: number
   actor: string | null
+  /** the person's first name when it happened (kept after they leave) */
+  actor_name?: string | null
   action: string
   summary: string
   created_at: string
@@ -177,12 +179,13 @@ export function usePlanPeople(id: string | undefined) {
   })
 }
 
-export function usePlanActivity(id: string | undefined, enabled = true) {
+export function usePlanActivity(id: string | undefined, enabled = true, limit = 40) {
   return useQuery({
-    queryKey: planKeys.activity(id ?? ''),
+    queryKey: [...planKeys.activity(id ?? ''), limit],
     enabled: !!id && enabled,
+    placeholderData: (prev) => prev,
     queryFn: async () => {
-      const { data, error } = await supabase.from('plan_activity').select('id, actor, action, summary, created_at').eq('plan_id', id!).order('created_at', { ascending: false }).limit(30)
+      const { data, error } = await supabase.from('plan_activity').select('id, actor, actor_name, action, summary, created_at').eq('plan_id', id!).order('created_at', { ascending: false }).limit(limit)
       if (error) throw error
       return (data ?? []) as PlanActivity[]
     },

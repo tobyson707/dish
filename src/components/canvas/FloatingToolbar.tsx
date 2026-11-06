@@ -1,17 +1,9 @@
 import { Link } from 'react-router'
-import { Icon, type IconName } from '@/components/ui/Icon'
+import { Icon } from '@/components/ui/Icon'
 import { useGamification } from '@/data/gamification'
 import { cn } from '@/lib/cn'
 
 const glassBtn = 'press flex h-11 w-11 items-center justify-center rounded-full bg-glass text-ink ring-1 ring-inset ring-[var(--c-glass-line)] shadow-[0_6px_20px_-8px_var(--c-shadow)] backdrop-blur-md transition-colors hover:bg-[var(--c-elevated)]'
-
-function GlassIcon({ icon, label, to }: { icon: IconName; label: string; to: string }) {
-  return (
-    <Link to={to} aria-label={label} title={label} className={glassBtn}>
-      <Icon name={icon} size={20} />
-    </Link>
-  )
-}
 
 /**
  * Compact streak: flame + the user's real current streak (server-computed by the
@@ -31,16 +23,23 @@ function StreakChip() {
   )
 }
 
-/** Floating controls along the top of the canvas — no full-width header bar. */
-export function FloatingToolbar({ className }: { className?: string }) {
+/**
+ * Floating controls along the top of the canvas (no header bar): the wordmark, then search,
+ * add and the streak. Favourites and reminders live in Discover and Profile.
+ */
+export function FloatingToolbar({ className, style, onSearch, onAdd }: { className?: string; style?: React.CSSProperties; onSearch: () => void; onAdd: () => void }) {
   return (
-    <div className={cn('flex items-center justify-between gap-2', className)}>
+    <div className={cn('flex items-center justify-between gap-2', className)} style={style}>
       <span className="select-none text-headline font-extrabold tracking-[0.18em] text-ink" aria-hidden="true">
-        DISH
+        DISH<span className="text-accent">.</span>
       </span>
       <div className="flex items-center gap-1.5 min-[380px]:gap-2">
-        <GlassIcon icon="heart" label="Favourites" to="/history" />
-        <GlassIcon icon="bell" label="Reminders" to="/profile/notifications" />
+        <button type="button" onClick={onSearch} aria-label="Search meals" title="Search" className={glassBtn}>
+          <Icon name="search" size={20} />
+        </button>
+        <button type="button" onClick={onAdd} aria-label="Add a meal" title="Add a meal" className={glassBtn}>
+          <Icon name="plus" size={20} />
+        </button>
         <StreakChip />
       </div>
     </div>

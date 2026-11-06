@@ -37,7 +37,7 @@ test('every plan length is created, fully saved, retrievable and navigable', asy
   const uid = await setUp(page, 'durations')
   for (const [label, duration, days] of DURATIONS) {
     await createPlan(page, label)
-    await expect(page).toHaveURL(/\/plan\?date=/, { timeout: 90_000 })
+    await expect(page).toHaveURL(/\/plans\/[0-9a-f-]{36}$/, { timeout: 90_000 }) // a new plan opens in its own workspace
     await expect(page.getByText(/plan is ready/)).toBeVisible()
 
     const [plan] = await rest<Plan[]>(`meal_plans?user_id=eq.${uid}&status=eq.active&select=*`)
@@ -82,7 +82,7 @@ test('an interrupted long plan keeps what was saved and resumes without duplicat
   const [partial] = await rest<Plan[]>(`meal_plans?user_id=eq.${uid}&status=eq.active&select=*`)
   expect(partial!.generated_through! < partial!.end_date).toBe(true) // the failure is visible, not reported as success
   await page.getByRole('button', { name: 'Continue planning' }).click()
-  await expect(page).toHaveURL(/\/plan\?date=/, { timeout: 60_000 })
+  await expect(page).toHaveURL(/\/plans\/[0-9a-f-]{36}$/, { timeout: 60_000 })
   const plans = await rest<Plan[]>(`meal_plans?user_id=eq.${uid}&select=*`)
   expect(plans.length).toBe(1) // retrying never created a second plan
   expect(plans[0]!.generated_through).toBe(plans[0]!.end_date)

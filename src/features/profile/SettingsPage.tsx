@@ -86,7 +86,7 @@ export function SettingsPage() {
       </Section>
       <Section title="Sounds">
         <div className="rounded-lg bg-elevated px-4">
-          <Toggle label="Interface sounds" description="A quiet dial click (and a tiny vibration where supported) when you turn the category selector." checked={sounds} onChange={setSounds} />
+          <Toggle label="Interface sounds" description="A quiet click (and a tiny vibration where supported) when you change the meal category on Home." checked={sounds} onChange={setSounds} />
         </div>
         <p className="mt-2 text-sm text-muted">Saved on this device. Everything works the same with sounds off.</p>
       </Section>

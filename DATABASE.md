@@ -142,3 +142,20 @@ No tables of its own. Disabled unless the function's environment has `DISH_DEV_T
   - `moderate_plan` (admins) removes a plan from the community and records a reason the owner sees.
   - `copy_plan` serves both Duplicate and Remix. It creates a new private draft owned by the caller, shifted to the chosen start date, with lineage and "Original by …". The source plan is never changed.
 - Gamification: `gamify_on_planned_meal` now ignores edits made by someone other than the owner, and counts only `on_calendar` meals towards daily completion.
+
+## Meal Plan Library (migration `20261110000100_plan_library.sql`)
+- `meal_plans`: `cover_path` (private `plan-covers` bucket at `<plan id>/<file>`; only the plan's people can read it, and only the owner can write), `meal_slots` (the plan's own meal times), `updated_by` (set by trigger).
+- **Activity.**
+  - Plan lifecycle: created, renamed, description, cover, archived, restored, made current.
+  - People: permission changed, removed, left.
+  - Meals: replaced versus edited.
+  - Exports: `log_plan_export`.
+  - A generation is one grouped "Generated N meals" line rather than one line per meal.
+  - Each entry keeps `actor_name`, so it still reads correctly after someone leaves.
+- **Shared plans.** `plan-generate` and `meal-replace` let editors act on someone else's plan using the owner's preferences and allergies. The role is checked on the server; viewers are refused.
+- **No silent overwrites.**
+  - Edits in a plan workspace update only the version that was loaded (`updated_at`). Otherwise the person chooses whose change wins.
+  - `meal-replace` accepts `expected_updated_at` and answers 409 when the meal has changed since.
+- **Realtime.** `meal_plans` and `plan_activity` are in the `supabase_realtime` publication, and RLS decides who receives each event. Every meal change bumps `meal_plans.version`, so one subscription per plan covers additions, edits and removals. Presence uses a private channel `plan:<id>`, guarded by policies on `realtime.messages` (`dish_realtime_policies()`).
+- **Locally**, `scripts/local-stack.sh` runs Supabase Realtime (IPv4 listener patch for sandboxes without IPv6), and the gateway proxies `/realtime/v1` WebSockets.
+- The brief's `meal_plan_entries`, `_members`, `_invitations`, `_activity` and `_versions` correspond to `planned_meals`, `plan_members`, `plan_invites`, `plan_activity` and `plan_revisions`. The role `contributor` is shown as "Editor".

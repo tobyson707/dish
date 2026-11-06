@@ -38,12 +38,11 @@ const CATEGORY_LINE: Record<Category, string> = {
 
 
 /**
- * Partial category workspace: a dark glass layer that slides in from the right
- * and settles flush beside the rotary selector, over a dimmed, softly blurred
- * Home (never pushed or resized). It is a non-modal layer so the selector —
- * which floats above it — stays usable: turning the dial swaps the content in
- * place. Esc, the close button, a swipe to the right or a tap on the dimmed
- * Home close it; Home's scroll position is kept.
+ * The category drawer: a full-height dark surface that slides in from the right with the
+ * same inset and corner radius as the Home canvas, over a dimmed Home (never pushed or
+ * resized). It is non-modal so the category selector, floating over its right edge,
+ * stays usable: choosing another category swaps the content in place. Esc, the close
+ * button, Back, a swipe to the right or a tap on the dimmed Home close it.
  */
 export function CategoryWorkspace({ category, open, onClose }: { category: Category; open: boolean; onClose: () => void }) {
   const [tab, setTab] = useState<Tab>('foryou')
@@ -89,7 +88,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
     return () => {
       delete root.dataset.overlay
       document.removeEventListener('keydown', onKey)
-      if (before?.isConnected && !before.closest('[data-rotary]')) before.focus({ preventScroll: true })
+      if (before?.isConnected && !before.closest('[aria-label="Meal category"]')) before.focus({ preventScroll: true })
     }
   }, [open, onClose])
 
@@ -127,12 +126,12 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
         aria-modal="false"
         aria-label={label}
         data-closing={closing || undefined}
-        className="cat-ws fixed z-50 flex flex-col overflow-hidden rounded-r-[28px] bg-[var(--c-glass-dark)] sm:rounded-[32px] text-on-glass-dark shadow-[-24px_0_70px_-20px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-xl"
+        className="cat-ws fixed z-50 flex flex-col overflow-hidden bg-[var(--c-glass-dark)] text-on-glass-dark shadow-[-30px_0_80px_-24px_var(--c-shadow)] ring-1 ring-white/10 backdrop-blur-2xl"
         style={{ translate: drag.offset ? `${drag.offset}px 0` : undefined, transition: drag.dragging ? 'none' : 'translate 260ms var(--ease-out)' }}
       >
         <header
-          className="flex shrink-0 items-start gap-3 px-5 pb-2 touch-pan-y sm:px-8 lg:px-10"
-          style={{ paddingTop: 'calc(var(--safe-top) + 28px)' }}
+          className="flex shrink-0 items-start gap-3 pb-2 pl-5 pr-4 touch-pan-y sm:pl-8"
+          style={{ paddingTop: 'calc(var(--safe-top) + 22px)' }}
           {...drag.handlers}
           onPointerDown={(e) => {
             // swipe right to close — but never capture a press meant for a button (e.g. Close)
@@ -151,7 +150,8 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
           </div>
           <IconButton icon="x" label="Close" onClick={onClose} className="-mr-1 shrink-0 text-on-glass-dark hover:bg-white/10" />
         </header>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 sm:px-8 lg:px-10" style={{ paddingBottom: 'calc(var(--safe-bottom) + 40px)' }}>
+        {/* the category selector floats over the drawer's right edge: content keeps clear of it */}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pl-5 sm:pl-8" style={{ paddingRight: 'calc(var(--notch-depth) - var(--canvas-m) + 4px)', paddingBottom: 'calc(var(--safe-bottom) + 40px)' }}>
           <div role="tablist" aria-label="Filter" className="mt-6 flex flex-wrap gap-1">
             {TABS.map((t) => (
               <button
@@ -169,7 +169,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
           <p className="mt-3 text-footnote text-on-glass-dark-muted">{TAB_HINT[tab]}</p>
           <div data-crossfade className="ws-swap mt-10" key={`${category}:${tab}`} style={{ ['--swap-dir' as string]: dir }}>
             {ranked.pending ? (
-              <div className="grid gap-8 sm:grid-cols-2">{[0, 1].map((i) => <div key={i} className="aspect-[4/3] animate-pulse rounded-[24px] bg-white/[0.06]" />)}</div>
+              <div className="grid gap-8">{[0, 1].map((i) => <div key={i} className="aspect-[4/3] animate-pulse rounded-[24px] bg-white/[0.06]" />)}</div>
             ) : items.length === 0 ? (
               <div className="rounded-[22px] bg-white/[0.05] p-5 ring-1 ring-inset ring-white/10">
                 <p className="font-semibold text-on-glass-dark">Nothing fits here right now</p>
@@ -180,7 +180,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
                       Show all suggestions
                     </button>
                   ) : (
-                    'Turn the dial to try another category.'
+                    'Choose another category on the right.'
                   )}
                 </p>
               </div>
@@ -188,7 +188,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
               <>
                 <section aria-label="Recommended">
                   <h3 className="label-caps !text-on-glass-dark-muted">Recommended for you</h3>
-                  <ul className="mt-5 grid gap-x-6 gap-y-10 sm:grid-cols-2">
+                  <ul className="mt-5 grid gap-y-10">
                     {items.slice(0, 2).map((f) => (
                       <FeaturedMeal key={f.id} food={f} slot={category === 'all' ? slotFor(f, prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']) : category} added={added.has(f.id)} busy={busy && busyId === f.id} disabled={busy} onView={() => view(f)} onAdd={() => void addMeal(f)} />
                     ))}

@@ -47,6 +47,7 @@ export const ICON_PATHS: Record<string, string> = {
   bag: 'M5 8h14l-1 13H6zM9 8V6a3 3 0 0 1 6 0v2',
   history: 'M4 12a8 8 0 1 0 2.3-5.7M4 4v4h4M12 8v4l3 2',
   share: 'M12 15V3M8 7l4-4 4 4M5 12v7a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-7',
+  menu: 'M4 7h16M4 12h16M4 17h10',
   users: 'M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM2 21v-1a6 6 0 0 1 12 0v1M16 3.5a4 4 0 0 1 0 7.5M22 21v-1a6 6 0 0 0-4-5.6',
   copy: 'M9 9h11v11H9zM5 15H4V4h11v1',
   link: 'M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1',

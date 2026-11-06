@@ -72,7 +72,7 @@ export function DevMode() {
           aria-label="Developer Mode"
           title="Developer Mode"
           data-dev-launcher
-          className="press motion-pop fixed left-3 z-[75] flex h-11 w-11 items-center justify-center rounded-full bg-ink text-on-ink opacity-60 shadow-[0_10px_30px_-12px_var(--c-shadow)] ring-1 ring-white/10 transition-opacity hover:opacity-100 focus-visible:opacity-100 md:bottom-5 md:left-5"
+          className="press motion-pop fixed left-3 z-[75] flex h-11 w-11 items-center justify-center rounded-full bg-ink text-on-ink opacity-60 shadow-[0_10px_30px_-12px_var(--c-shadow)] ring-1 ring-white/10 transition-opacity hover:opacity-100 focus-visible:opacity-100"
           style={{ bottom: 'calc(var(--nav-h) + var(--safe-bottom) + 22px)', ['--origin' as string]: 'bottom left' }}
         >
           <Icon name="wand" size={19} />

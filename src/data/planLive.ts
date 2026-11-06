@@ -13,6 +13,7 @@ export interface PresentPerson {
 
 export interface RemoteChange {
   actor: string | null
+  name: string | null
   summary: string
   at: string
 }
@@ -45,9 +46,9 @@ export function usePlanLive(planId: string | undefined, enabled: boolean) {
       void qc.invalidateQueries({ queryKey: planKeys.detail(planId) })
     })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'plan_activity', filter: `plan_id=eq.${planId}` }, (p) => {
-        const row = p.new as { actor: string | null; summary: string; created_at: string }
+        const row = p.new as { actor: string | null; actor_name: string | null; summary: string; created_at: string }
         void qc.invalidateQueries({ queryKey: planKeys.activity(planId) })
-        if (row.actor && row.actor !== uid) setRemote({ actor: row.actor, summary: row.summary, at: row.created_at })
+        if (row.actor && row.actor !== uid) setRemote({ actor: row.actor, name: row.actor_name, summary: row.summary, at: row.created_at })
       })
       .on('presence', { event: 'sync' }, () => {
         const state = ch.presenceState<PresentPerson>()

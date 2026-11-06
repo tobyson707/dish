@@ -150,8 +150,10 @@ test('library: independent plans, persistence, duplicate, archive, delete, per-p
     await preview.getByRole('button', { name: 'Download PDF' }).click()
     const pdf = fs.readFileSync((await (await dl).path())!, 'latin1')
     page.off('request', onReq)
-    expect(pdf).toContain(title)
-    expect(pdf).not.toContain(other)
+    // the PDF's title is stored as UTF-16BE hex (see export/pdf.ts)
+    const hex = (t: string) => [...t].map((ch) => ch.codePointAt(0)!.toString(16).padStart(4, '0')).join('').toUpperCase()
+    expect(pdf).toContain(hex(title))
+    expect(pdf).not.toContain(hex(other))
     expect(reads.filter((u) => u.includes('plan_id=eq.')).every((u) => u.includes(`plan_id=eq.${id}`))).toBe(true)
     await expect.poll(async () => (await rest<{ action: string }[]>(`plan_activity?plan_id=eq.${id}&action=eq.exported&select=action`)).length).toBe(1)
   }
@@ -233,7 +235,7 @@ test('collaboration: editor and viewer roles enforced by the server, live update
   // 11. a viewer can look, not change: no edit controls, and the server refuses edits
   await a.page.goto(`/plans/${plan}?panel=share`)
   const share2 = a.page.getByRole('dialog', { name: 'Share this plan' })
-  await share2.getByLabel('Permission').selectOption('viewer')
+  await share2.getByLabel('Permission', { exact: true }).selectOption('viewer')
   await share2.getByRole('button', { name: 'Create invitation link' }).click()
   const toC = (await share2.getByLabel('Invitation link').inputValue()).split('/invite/')[1]!
   await c.page.goto(`/invite/${toC}`)
@@ -286,7 +288,7 @@ test('collaboration: editor and viewer roles enforced by the server, live update
 
   // 15. activity history, and restoring a version (the audit trail is kept)
   await a.page.getByRole('tab', { name: 'activity' }).click()
-  for (const line of [/created/i, /Invited/, /Joined as an editor/, /Changed/, /is now an editor/, /Removed Chi/]) await expect(a.page.getByText(line).first()).toBeVisible()
+  for (const line of [/created/i, /invited/i, /joined as an editor/i, /changed/i, /is now an editor/i, /removed chi/i]) await expect(a.page.getByText(line).first()).toBeVisible()
   await shot(a.page, 'plan-activity')
   const before = (await rest<unknown[]>(`plan_activity?plan_id=eq.${plan}&select=id`)).length
   await fetch(`${API}/rest/v1/planned_meals?id=eq.${start[1]!.id}`, { method: 'DELETE', headers: { ...h, authorization: `Bearer ${a.token}`, apikey: ANON_KEY } })

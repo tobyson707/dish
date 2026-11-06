@@ -87,6 +87,7 @@ declare pid uuid := coalesce(new.plan_id, old.plan_id); nm text := coalesce(new.
 begin
   if pid is null then return null; end if;
   if current_setting('dish.restoring', true) = 'on' or current_setting('dish.bulk', true) = 'on' then return null; end if;
+  if tg_op = 'INSERT' and new.generation_job_id is not null then return null; end if; -- summarised per generation (below)
   if tg_op = 'UPDATE' and new.name is not distinct from old.name and new.date = old.date and new.slot = old.slot
      and new.portion = old.portion and new.locked = old.locked and new.food_item_id is not distinct from old.food_item_id
      and new.scheduled_time is not distinct from old.scheduled_time then
@@ -259,3 +260,35 @@ begin
 end $$;
 revoke all on function public.accept_plan_invite(text) from public;
 grant execute on function public.accept_plan_invite(text) to authenticated;
+
+-- ═══ 7. A readable history ══════════════════════════════════════════════════════
+-- The name is kept with each entry, so it still reads right after someone leaves the plan.
+alter table public.plan_activity add column if not exists actor_name text;
+create or replace function public.plan_activity_name() returns trigger
+language plpgsql security definer set search_path = public as $$
+begin
+  if new.actor is not null and new.actor_name is null then
+    select split_part(coalesce(display_name, ''), ' ', 1) into new.actor_name from profiles where id = new.actor;
+  end if;
+  return new;
+end $$;
+drop trigger if exists plan_activity_name on public.plan_activity;
+create trigger plan_activity_name before insert on public.plan_activity for each row execute function public.plan_activity_name();
+
+-- Generating meals is one event, not one line per meal: the planner's rows (they carry a
+-- generation job) are summarised once per statement.
+create or replace function public.plan_meals_generated() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare r record;
+begin
+  if current_setting('dish.restoring', true) = 'on' or current_setting('dish.bulk', true) = 'on' then return null; end if;
+  for r in select plan_id, count(*) n, min(date) a, max(date) b from new_rows where plan_id is not null and generation_job_id is not null group by plan_id loop
+    update meal_plans set version = version + 1 where id = r.plan_id;
+    insert into plan_activity (plan_id, actor, action, summary)
+      values (r.plan_id, auth.uid(), 'generated', format('Generated %s meal%s (%s to %s)', r.n, case when r.n = 1 then '' else 's' end, r.a, r.b));
+  end loop;
+  return null;
+end $$;
+drop trigger if exists planned_meals_generated on public.planned_meals;
+create trigger planned_meals_generated after insert on public.planned_meals
+  referencing new table as new_rows for each statement execute function public.plan_meals_generated();
