@@ -39,7 +39,7 @@ export function PlanPage() {
   const setView = (v: View) => setParams((p) => (p.set('view', v), p), { replace: true })
   const setDate = (d: ISODate) => setParams((p) => (p.set('date', d), p), { replace: true })
   const [addOpen, setAddOpen] = useState(params.get('add') === '1')
-  const [exportOpen, setExportOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(params.get('export') === '1')
   const [addSlot, setAddSlot] = useState<MealSlot | undefined>()
   const [actionsFor, setActionsFor] = useState<PlannedMeal | null>(null)
   const [regen, setRegen] = useState<null | { from: ISODate; to: ISODate; label: string }>(null)

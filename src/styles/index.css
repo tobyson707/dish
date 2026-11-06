@@ -514,3 +514,7 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
 .xfade-ghost { animation: xfade-out var(--dur-standard-exit) var(--ease-exit) forwards !important; }
 /* the theme cross-fade (View Transitions) must never swallow input */
 ::view-transition { pointer-events: none; }
+
+/* Developer Mode console: slides in from the right edge, leaves faster */
+.dev-console { animation: ws-in var(--dur-panel) var(--ease-enter) both; }
+.dev-console[data-closing] { animation: ws-out var(--dur-panel-exit) var(--ease-exit) forwards; }

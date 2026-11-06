@@ -1,6 +1,7 @@
 import { Suspense } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router'
 import { cn } from '@/lib/cn'
+import { DevMode } from '@/dev/DevMode'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator'
 import { LoadingBlock } from '@/components/ui/States'
@@ -68,6 +69,7 @@ export function AppShell() {
       <ReminderScheduler />
       <GamificationNotifier />
       <Celebrations />
+      <DevMode />
     </div>
   )
 }

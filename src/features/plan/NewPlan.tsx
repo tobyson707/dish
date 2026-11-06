@@ -136,7 +136,7 @@ export function NewPlan() {
 const FILL_STEPS = ['Organising your meals.', 'Building your schedule.', 'Saving your plan.']
 
 /** Real progress only: the bar and the count come from days the server has saved. */
-function PlanProgress({ phase, done, total }: { phase: 'create' | 'fill'; done: number; total: number }) {
+export function PlanProgress({ phase, done, total }: { phase: 'create' | 'fill'; done: number; total: number }) {
   const pct = total ? Math.round((done / total) * 100) : 0
   const label = phase === 'create' ? 'Preparing your meal plan.' : FILL_STEPS[Math.min(FILL_STEPS.length - 1, Math.floor((done / Math.max(1, total)) * FILL_STEPS.length))]
   return (

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { cn } from '@/lib/cn'
+import { getDev } from '@/dev/devStore'
 import { Navigate, useNavigate } from 'react-router'
 import { ALLERGEN_LABEL, COOK_TIME_LABEL, DIET_LABEL, SLOT_LABEL } from '@domain/types.ts'
 import { WEEKDAY_ABBR } from '@domain/dates.ts'
@@ -52,11 +53,15 @@ export function Onboarding() {
         <ErrorState message={friendlyError(profile.error ?? prefs.error ?? goal.error)} onRetry={() => void Promise.all([profile.refetch(), prefs.refetch(), goal.refetch()])} />
       </div>
     )
+  // Developer Mode: open any step as a no-save preview, even for a finished profile
+  const devStep = getDev().revealed ? new URLSearchParams(location.search).get('dev-step') : null
+  const devIndex = devStep ? STEPS.findIndex((x) => x.key === devStep) : -1
+  if (devIndex >= 0) return <Flow preview initial={draftFrom(profile.data, prefs.data, goal.data)} initialStep={devIndex} />
   if (profile.data.onboarding_completed_at) return <Navigate to={afterOnboarding} replace />
   return <Flow initial={draftFrom(profile.data, prefs.data, goal.data)} initialStep={Math.min(profile.data.onboarding_step, SUMMARY)} />
 }
 
-function Flow({ initial, initialStep }: { initial: Draft; initialStep: number }) {
+function Flow({ initial, initialStep, preview }: { initial: Draft; initialStep: number; preview?: boolean }) {
   const uid = useUserId()
   const { signOut } = useAuth()
   const qc = useQueryClient()
@@ -93,10 +98,16 @@ function Flow({ initial, initialStep }: { initial: Draft; initialStep: number })
     setStep(to)
     window.scrollTo({ top: 0 })
     // Save progress in the background so leaving and returning resumes here.
+    if (preview) return // Developer Mode preview: nothing is saved
     saveProgress(uid, to, d).catch(() => toast.error("We couldn't save your progress. Check your connection."))
   }
 
   async function finish() {
+    if (preview) {
+      toast.show('Preview only: nothing was saved.')
+      nav(-1)
+      return
+    }
     setSaving(true)
     try {
       await persistDraft(uid, d, { complete: true })
@@ -124,9 +135,13 @@ function Flow({ initial, initialStep }: { initial: Draft; initialStep: number })
         <div className="flex-1">
           <StepProgress step={step + 1} total={STEPS.length} />
         </div>
-        <button type="button" className="ml-2 text-sm font-semibold text-muted underline-offset-2 hover:underline" onClick={() => void signOut()}>
-          Sign out
-        </button>
+        {preview ? (
+          <span className="ml-2 rounded-full bg-accent-soft px-3 py-1 text-caption font-semibold text-accent-strong ring-1 ring-inset ring-accent-border">Preview · not saved</span>
+        ) : (
+          <button type="button" className="ml-2 text-sm font-semibold text-muted underline-offset-2 hover:underline" onClick={() => void signOut()}>
+            Sign out
+          </button>
+        )}
       </div>
       <main key={step} className={cn('flex-1 pt-8', s.key === 'summary' ? 'pb-60' : 'pb-36')} style={{ animation: `${dir > 0 ? 'swap-in' : 'rise'} 280ms var(--ease-out) both` }}>
         <p className="label-caps">{s.eyebrow}</p>

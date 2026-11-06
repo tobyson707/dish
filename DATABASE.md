@@ -106,3 +106,7 @@ The starter catalogue is **sample / reference data**:
 - Catalogue audit (by hand): Zobo and the banana and berry smoothie are beverages. The smoothie bowl, akara and pap, custard and the soups stay food. Nothing was ambiguous enough to need a review flag.
 - Existing planned meals and diary entries for those two move to the drink slot (same rows and IDs; the streak trigger is paused for this correction).
 - `enforce_meal_occasion()` trigger keeps every future write consistent, whatever the client.
+- `xp_transactions.event_type` also allows `dev_adjustment`: XP added by the Developer Mode simulator on test accounts, so simulated XP is labelled as such and the real level-up path runs.
+
+## Developer Mode (`supabase/functions/dev-tools`)
+No tables of its own. Disabled unless the function's environment has `DISH_DEV_TOOLS=enabled` (set by `scripts/local-stack.sh`; never set it on a hosted project you use for real people). Test accounts carry `app_metadata.dish_test = true` (set with the service role; users can't change app metadata), and every state-changing action refuses any other account.

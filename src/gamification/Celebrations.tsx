@@ -23,6 +23,27 @@ export function queueLevelCelebration(e: LevelEvent) {
   levelQueue = [...levelQueue, e]
   listeners.forEach((l) => l())
 }
+// Developer Mode previews: shown by the real overlay, never recorded anywhere
+interface PreviewEvent {
+  id: string
+  kind: 'achievement' | 'level'
+  ref: string // achievement id, or level title
+  at: string
+}
+let previewQueue: PreviewEvent[] = []
+export function previewCelebration(kind: 'achievement' | 'level', ref: string) {
+  previewQueue = [...previewQueue, { id: `p:${kind}:${ref}:${Date.now()}`, kind, ref, at: new Date().toISOString() }]
+  listeners.forEach((l) => l())
+}
+const usePreviewQueue = () =>
+  useSyncExternalStore(
+    (cb) => {
+      listeners.add(cb)
+      return () => listeners.delete(cb)
+    },
+    () => previewQueue,
+  )
+
 const useLevelQueue = () =>
   useSyncExternalStore(
     (cb) => {
@@ -32,7 +53,7 @@ const useLevelQueue = () =>
     () => levelQueue,
   )
 
-type Item = { key: string; kind: 'achievement'; id: string; at: string } | { key: string; kind: 'level'; id: string; title: string; at: string }
+type Item = ({ key: string; kind: 'achievement'; id: string; at: string } | { key: string; kind: 'level'; id: string; title: string; at: string }) & { preview?: boolean }
 
 /** Another layer is open (a sheet, the category drawer): never interrupt it. */
 const busy = () => !!document.querySelector('dialog:modal:not([data-celebration])') || !!document.documentElement.dataset.overlay
@@ -51,6 +72,7 @@ export function Celebrations() {
   const profile = useProfile()
   const toast = useToast()
   const levels = useLevelQueue()
+  const previews = usePreviewQueue()
   const ref = useRef<HTMLDialogElement>(null)
   const [current, setCurrent] = useState<Item | null>(null)
   const [sharing, setSharing] = useState(false)
@@ -58,10 +80,17 @@ export function Celebrations() {
   const pending = useMemo<Item[]>(() => {
     const ach = (g.data?.achievements ?? []).filter((a) => !a.celebrated_at).map((a) => ({ key: `a:${a.id}`, kind: 'achievement' as const, id: a.id, at: a.unlocked_at }))
     const lv = levels.map((l) => ({ key: `l:${l.id}`, kind: 'level' as const, id: l.id, title: l.title, at: l.at }))
-    return [...ach, ...lv].sort((a, b) => a.at.localeCompare(b.at))
-  }, [g.data, levels])
+    const pv = previews.map((p) => (p.kind === 'achievement' ? { key: p.id, kind: 'achievement' as const, id: p.ref, at: p.at, preview: true } : { key: p.id, kind: 'level' as const, id: p.id, title: p.ref, at: p.at, preview: true }))
+    // previews jump the queue: they were asked for just now
+    return [...pv, ...[...ach, ...lv].sort((a, b) => a.at.localeCompare(b.at))]
+  }, [g.data, levels, previews])
 
   async function markDone(item: Item) {
+    if (item.preview) {
+      previewQueue = previewQueue.filter((p) => p.id !== item.key)
+      listeners.forEach((l) => l())
+      return
+    }
     if (item.kind === 'level') {
       levelQueue = levelQueue.filter((l) => l.id !== item.id)
       listeners.forEach((l) => l())
@@ -75,7 +104,7 @@ export function Celebrations() {
   // pick the next item when idle; wait (poll gently) while another layer is open
   useEffect(() => {
     if (current || !pending.length || !defs.data) return
-    if (g.data && !g.data.feedback_enabled) {
+    if (g.data && !g.data.feedback_enabled && !pending[0]!.preview) {
       pending.forEach((p) => void markDone(p)) // feedback off: record silently
       return
     }
@@ -106,7 +135,7 @@ export function Celebrations() {
   const title = current.kind === 'level' ? current.title : (def?.name ?? 'Achievement')
   const line = current.kind === 'level' ? 'You reached a new level.' : (def?.description ?? '')
   const icon = current.kind === 'level' ? 'medal' : achievementIcon(def?.icon ?? 'medal')
-  const label = current.kind === 'level' ? 'New level' : 'Achievement unlocked'
+  const label = (current.kind === 'level' ? 'New level' : 'Achievement unlocked') + (current.preview ? ' · Preview' : '')
   const name = profile.data?.display_name?.trim() || null
 
   async function share() {

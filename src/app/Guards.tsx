@@ -5,6 +5,7 @@ import { useProfile } from '@/data/profile'
 import { ErrorState } from '@/components/ui/States'
 import { friendlyError } from '@/lib/errors'
 import { Splash } from '@/features/auth/Splash'
+import { getDev } from '@/dev/devStore'
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { session, loading, recovery } = useAuth()
@@ -31,7 +32,10 @@ export function RequireOnboarded({ children }: { children: ReactNode }) {
 
 export function RedirectIfAuthed({ children }: { children: ReactNode }) {
   const { session, loading, recovery } = useAuth()
+  const loc = useLocation()
   if (loading) return <Splash />
+  // Developer Mode screen navigator: view sign-in screens while signed in (explicit flag only)
+  if (getDev().revealed && new URLSearchParams(loc.search).has('dev-preview')) return <>{children}</>
   if (session && !recovery) return <Navigate to="/" replace />
   return <>{children}</>
 }

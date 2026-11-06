@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router'
 import { usePreferences, useProfile } from '@/data/profile'
 import { countryByCode } from '@/lib/geo'
+import { DevTapTarget } from '@/dev/DevTapTarget'
 import { PLANNING_GOAL_LABEL } from '@/types/db'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useSyncState } from '@/offline/useSync'
@@ -29,7 +30,10 @@ export function ProfilePage() {
     <div>
       <PageHeader eyebrow={user?.email ?? ''} title={p?.display_name || 'Profile'} large />
       <div className="flex items-center gap-4 rounded-[28px] bg-[var(--c-nav)] p-5 text-on-glass-dark">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-on-glass-dark text-title-2 font-extrabold text-on-glass-dark-ink">{(p?.display_name?.[0] ?? '•').toUpperCase()}</span>
+        {/* the avatar has no other job, so it hosts the hidden five-tap Developer Mode gesture */}
+        <DevTapTarget className="shrink-0">
+          <span className="flex h-14 w-14 items-center justify-center rounded-full bg-on-glass-dark text-title-2 font-extrabold text-on-glass-dark-ink">{(p?.display_name?.[0] ?? '•').toUpperCase()}</span>
+        </DevTapTarget>
         <div className="min-w-0">
           <p className="truncate text-sm opacity-70">{country ? `${country.flag} ${country.name}` : 'Country not set'} · {p?.currency}</p>
           <p className="truncate font-bold">{goals.length ? PLANNING_GOAL_LABEL[goals[0]!] + (goals.length > 1 ? ` +${goals.length - 1}` : '') : 'No goals chosen yet'}</p>

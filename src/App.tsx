@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ComponentType } from 'react'
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router'
+import { DevMode } from '@/dev/DevMode'
 import { AppShell } from '@/app/AppShell'
 import { RedirectIfAuthed, RequireAuth, RequireOnboarded } from '@/app/Guards'
 import { NotFound } from '@/app/NotFound'
@@ -46,6 +47,7 @@ const Terms = L(() => import('@/features/legal/Legal'), 'Terms')
 const Bare = () => (
   <Suspense fallback={<Splash />}>
     <Outlet />
+    <DevMode />
   </Suspense>
 )
 

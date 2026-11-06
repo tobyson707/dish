@@ -82,3 +82,10 @@ create trigger planned_meals_occasion before insert or update of slot, food_item
 drop trigger if exists diary_occasion on public.food_diary_entries;
 create trigger diary_occasion before insert or update of slot, food_item_id on public.food_diary_entries
   for each row execute function public.enforce_meal_occasion();
+
+-- 6. Developer Mode: XP added by the dev-tools simulator on TEST accounts is recorded
+--    as its own transaction type, so the real level-up path runs and simulated XP can
+--    never be mistaken for earned XP. Only the service role can write transactions.
+alter table public.xp_transactions drop constraint if exists xp_transactions_event_type_check;
+alter table public.xp_transactions add constraint xp_transactions_event_type_check check (event_type in
+  ('meal_logged','daily_plan_complete','all_planned_meals_complete','new_recipe','kitchen_cook','grocery_complete','streak_milestone','dev_adjustment'));
