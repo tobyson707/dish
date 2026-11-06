@@ -8,6 +8,8 @@ import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
 import { useUiSounds } from '@/lib/uiSound'
+import { formatTime, localeClock, useClockPreference, type ClockPreference } from '@/lib/time'
+import { Segmented } from '@/components/ui/Inputs'
 
 const OPTIONS: { value: ThemePreference; label: string; hint: string; icon: IconName }[] = [
   { value: 'light', label: 'Light', hint: 'Always use light appearance.', icon: 'sun' },
@@ -21,6 +23,7 @@ export function SettingsPage() {
   const setFeedback = useSetGamificationFeedback()
   const toast = useToast()
   const [sounds, setSounds] = useUiSounds()
+  const [clock, setClock] = useClockPreference()
   return (
     <div>
       <PageHeader back="/profile" eyebrow="Profile" title="Settings" />
@@ -67,9 +70,23 @@ export function SettingsPage() {
         </div>
         <p className="mt-2 text-sm text-muted">Your XP and achievements are still recorded when feedback is off.</p>
       </Section>
+      <Section title="Time format">
+        <Segmented<ClockPreference>
+          label="Time format"
+          hideLabel
+          value={clock}
+          onChange={setClock}
+          options={[
+            { value: 'auto', label: `Automatic (${localeClock() === '12h' ? '12-hour' : '24-hour'})` },
+            { value: '12h', label: '12-hour' },
+            { value: '24h', label: '24-hour' },
+          ]}
+        />
+        <p className="mt-2 text-sm text-muted">Times show as {formatTime('19:30', clock === 'auto' ? localeClock() : clock)}. Saved on this device; your meal times don’t change.</p>
+      </Section>
       <Section title="Sounds">
         <div className="rounded-lg bg-elevated px-4">
-          <Toggle label="Interface sounds" description="A quiet dial click (and a tiny vibration where supported) when you turn the category selector." checked={sounds} onChange={setSounds} />
+          <Toggle label="Interface sounds" description="A quiet click (and a tiny vibration where supported) when you change the meal category on Home." checked={sounds} onChange={setSounds} />
         </div>
         <p className="mt-2 text-sm text-muted">Saved on this device. Everything works the same with sounds off.</p>
       </Section>

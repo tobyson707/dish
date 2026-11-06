@@ -5,39 +5,25 @@ import { collectConsoleErrors, completeOnboardingFor, createUser, expectNoHorizo
  * The redesigned surfaces are real controls, not decoration: every one is
  * exercised against the local stack and must change real data or state.
  */
-test('home canvas: rail → workspace → add, search, appearance, featured paging @responsive', async ({ page }) => {
+test('home canvas: selector → drawer → add, featured meal, keyboard, search, appearance @responsive', async ({ page }) => {
   const errors = collectConsoleErrors(page)
   const email = uniqueEmail('canvas')
   const uid = await createUser(email)
   await completeOnboardingFor(uid)
+  await page.addLocatorHandler(page.getByText('DISH is ready to work offline.'), async () => {
+    await page.getByRole('button', { name: 'OK' }).click()
+  })
   await signIn(page, email)
   await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
-  await expect(page.getByRole('heading', { name: "Let's plan your first meals." })).toBeVisible() // honest empty state, no fake meals
   await expect(page.getByText("Let's make today delicious.")).toBeVisible()
-  await expect(page.getByText("What's cooking today?")).toHaveCount(0)
+  // no plan yet: honest invitation, and real suggestions (not invented meals)
+  await expect(page.getByRole('link', { name: /Plan my meals/ })).toBeVisible()
+  await expect(page.getByText(/^Suggested for /).first()).toBeVisible()
   await expectNoHorizontalScroll(page)
 
-  // Turning the rotary dial three detents (All → Breakfast → Lunch → Dinner) opens the
-  // side workspace; the page recedes behind it. Wheel on desktop, a slow drag on touch devices.
-  const rail = page.getByRole('toolbar', { name: 'Meal categories' })
-  if (test.info().project.use.isMobile) {
-    const b = (await rail.boundingBox())!
-    await page.mouse.move(b.x + b.width / 2, b.y + b.height - 10)
-    await page.mouse.down()
-    for (let i = 1; i <= 40; i++) {
-      await page.mouse.move(b.x + b.width / 2, b.y + b.height - 10 - (228 * i) / 40)
-      await page.waitForTimeout(20)
-    }
-    await page.waitForTimeout(150) // come to rest before letting go: no fling
-    await page.mouse.up()
-  } else {
-    await rail.hover()
-    for (let i = 0; i < 3; i++) {
-      await page.mouse.wheel(0, 100)
-      await page.waitForTimeout(120)
-    }
-  }
-  await expect(rail.getByRole('button', { name: 'Dinner' })).toHaveAttribute('aria-pressed', 'true')
+  // the selector opens the category drawer; adding a meal plans it for today
+  const sel = page.getByRole('radiogroup', { name: 'Meal category' })
+  await sel.getByRole('radio', { name: 'Dinner' }).click()
   const ws = page.getByRole('dialog', { name: 'Dinner ideas' })
   await expect(ws.getByRole('heading', { name: 'Dinner' })).toBeVisible()
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.overlay)).toBe('category')
@@ -50,34 +36,35 @@ test('home canvas: rail → workspace → add, search, appearance, featured pagi
   await expect(page.getByText(`Added ${meal} to today's dinner.`)).toBeVisible()
   await expect(ws).toBeHidden()
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.overlay ?? null)).toBeNull()
-  // …and the canvas now features the real planned meal
-  await expect(page.getByRole('article', { name: `Dinner: ${meal}` })).toBeVisible()
-  await expect(page.getByRole('link', { name: new RegExp(meal) }).first()).toBeVisible()
+  // …and with Dinner selected, Home now features that real planned meal
+  await expect(page.locator('.feat-info h2')).toHaveText(meal)
+  await expect(page.getByText(/^Next meal · Dinner/)).toBeVisible()
 
-  // Keyboard: arrows turn the dial (select only), Enter opens; Escape closes
-  await rail.getByRole('button', { name: 'Dinner' }).focus()
+  // keyboard: arrows move the selection without opening; Enter opens; Escape closes
+  await sel.getByRole('radio', { name: 'Dinner' }).focus()
   await page.keyboard.press('ArrowUp')
   await page.keyboard.press('ArrowUp')
-  await expect(rail.getByRole('button', { name: 'Breakfast' })).toHaveAttribute('aria-pressed', 'true')
+  await expect(sel.getByRole('radio', { name: 'Breakfast' })).toHaveAttribute('aria-checked', 'true')
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await page.keyboard.press('Enter')
   await expect(page.getByRole('dialog', { name: 'Breakfast ideas' })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(page.getByRole('dialog', { name: 'Breakfast ideas' })).toBeHidden()
 
-  // Search dock → search workspace with real catalogue results
-  await page.getByPlaceholder('Search meals, recipes...').click()
+  // search from the toolbar, with real catalogue results
+  await page.getByRole('button', { name: 'Search meals' }).click()
   const search = page.getByRole('dialog', { name: 'Search' })
   await search.getByPlaceholder('Meals, recipes, ingredients…').fill('plantain')
   await expect(search.getByRole('region', { name: 'Meals and recipes' }).getByRole('listitem').first()).toBeVisible()
-  // (Escape first clears a filled search field, as native search inputs do)
   await search.getByRole('button', { name: 'Close' }).click()
   await expect(search).toBeHidden()
 
-  // Appearance sheet from the toolbar: changes the theme for real
-  const ok = page.getByRole('button', { name: 'OK', exact: true }) // "ready to work offline" toast may cover the toolbar
-  if (await ok.isVisible()) await ok.click()
-  // Appearance moved off Home: Profile → Appearance
+  // add from the toolbar opens the add-meal flow
+  await page.getByRole('button', { name: 'Add a meal' }).click()
+  await expect(page.getByRole('dialog', { name: 'Add a meal' })).toBeVisible()
+  await page.keyboard.press('Escape')
+
+  // appearance (in Profile) changes the theme for real
   await page.goto('/profile')
   await page.getByRole('button', { name: /^Appearance/ }).click()
   const sheet = page.getByRole('dialog', { name: 'Appearance' })
@@ -87,7 +74,7 @@ test('home canvas: rail → workspace → add, search, appearance, featured pagi
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('light')
   await sheet.getByRole('button', { name: 'Close' }).click()
   await expect(sheet).toBeHidden()
-
+  void uid
   expect(errors).toEqual([])
 })
 

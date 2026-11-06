@@ -6,6 +6,7 @@ import { formatKcal, formatMoney } from '@/lib/format'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { Icon } from '@/components/ui/Icon'
 import { Tag } from '@/components/ui/Badges'
+import { formatTime } from '@/lib/time'
 
 /** Large, image-led card for Home ("hero") — circular crop motif from the reference. */
 export function MealHeroCard({ meal, onActions, compact }: { meal: PlannedMeal; onActions?: () => void; compact?: boolean }) {
@@ -18,7 +19,7 @@ export function MealHeroCard({ meal, onActions, compact }: { meal: PlannedMeal; 
       <Link to={`/meal/${meal.id}`} className="min-w-0 flex-1">
         <p className="label-caps flex items-center gap-2">
           {SLOT_LABEL[meal.slot]}
-          {meal.scheduled_time && <span className="num normal-case tracking-normal">{meal.scheduled_time.slice(0, 5)}</span>}
+          {meal.scheduled_time && <span className="num normal-case tracking-normal">{formatTime(meal.scheduled_time)}</span>}
         </p>
         <h3 className={cn('mt-1 font-bold leading-snug tracking-tight', compact ? 'line-clamp-2 text-base' : 'text-title-3')}>{meal.name}</h3>
         <div className={cn('mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-footnote text-ink-2', compact && 'hidden')}>

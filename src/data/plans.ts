@@ -44,7 +44,7 @@ export function usePlannedMeals(from: string, to: string, opts: { enabled?: bool
     meta: persistMeta(uid),
     enabled: opts.enabled ?? true,
     queryFn: async () => {
-      const { data, error } = await supabase.from('planned_meals').select(PM_SELECT).eq('user_id', uid).gte('date', from).lte('date', to).order('date').order('scheduled_time', { nullsFirst: false })
+      const { data, error } = await supabase.from('planned_meals').select(PM_SELECT).eq('user_id', uid).eq('on_calendar', true).gte('date', from).lte('date', to).order('date').order('scheduled_time', { nullsFirst: false })
       if (error) throw error
       return (data ?? []) as PlannedMeal[]
     },
@@ -130,6 +130,10 @@ export interface ManualMealInput {
   nutrition_source?: PlannedMeal['nutrition_source']
   plan_id?: string | null
   portion?: number
+  /** a shared plan's owner: the meal belongs to them (default: me) */
+  owner_id?: string
+  /** whether the meal shows on my calendar straight away (false for drafts and other people's plans) */
+  on_calendar?: boolean
 }
 
 export function useCreatePlannedMeal() {
@@ -139,7 +143,7 @@ export function useCreatePlannedMeal() {
     mutationFn: async (m: ManualMealInput) => {
       const row = {
         id: uuid(),
-        user_id: uid,
+        user_id: m.owner_id ?? uid,
         plan_id: m.plan_id ?? null,
         date: m.date,
         slot: m.slot,
@@ -158,8 +162,9 @@ export function useCreatePlannedMeal() {
         locked: false,
         client_updated_at: new Date().toISOString(),
       }
-      patchRangeLists<PlannedMeal>(qc, qk.planned(uid), m.date, (rows) => upsertIn(rows, { ...row, scheduled_time: null, rationale: null, updated_at: row.client_updated_at } as PlannedMeal).sort(sortPlanned))
-      await enqueue({ kind: 'upsert', table: 'planned_meals', row }, { label: `Add ${row.name}`, invalidate: [qk.planned(uid)] })
+      if (m.on_calendar !== false && row.user_id === uid)
+        patchRangeLists<PlannedMeal>(qc, qk.planned(uid), m.date, (rows) => upsertIn(rows, { ...row, scheduled_time: null, rationale: null, updated_at: row.client_updated_at } as PlannedMeal).sort(sortPlanned))
+      await enqueue({ kind: 'upsert', table: 'planned_meals', row }, { label: `Add ${row.name}`, invalidate: [qk.planned(uid), ...(row.plan_id ? [['plan-detail', row.plan_id]] : []), ['plans', uid]] })
       return row.id
     },
   })

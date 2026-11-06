@@ -3,7 +3,7 @@
  * App.tsx (keep in step when adding a route). Screens use the real app
  * components; nothing here is a mock-up.
  */
-export type RecordKind = 'planned_meal' | 'diary_entry' | 'grocery_list' | 'recipe'
+export type RecordKind = 'planned_meal' | 'diary_entry' | 'grocery_list' | 'recipe' | 'meal_plan' | 'published_plan'
 
 export interface ScreenEntry {
   id: string
@@ -71,6 +71,11 @@ export const SCREENS: ScreenEntry[] = [
   { id: 'plan-week', name: 'Weekly plan', category: 'Meal planning', path: '/plan?view=week' },
   { id: 'plan-month', name: 'Monthly plan (calendar)', category: 'Meal planning', path: '/plan?view=month', keywords: 'calendar' },
   { id: 'plan-new', name: 'Create plan (duration and start date)', category: 'Meal planning', path: '/plan/new', keywords: 'duration start date preferences' },
+  { id: 'plans', name: 'My plans (manage, share, publish)', category: 'Meal planning', path: '/plans', keywords: 'rename duplicate archive delete drafts current shared' },
+  { id: 'plan-detail', name: 'A saved plan (meals, people, activity, versions)', category: 'Meal planning', path: '/plans/:id', needs: 'meal_plan', keywords: 'collaboration contributors restore version history invite' },
+  { id: 'invite', name: 'Plan invitation link', category: 'Meal planning', path: '/invite/:token', note: 'Opens with a placeholder token, so it shows the “link doesn’t work” state. Real links come from Share on a plan.', keywords: 'invite accept join' },
+  { id: 'community', name: 'Community: shared plans', category: 'Meal planning', path: '/community', keywords: 'publish remix save browse' },
+  { id: 'community-plan', name: 'A shared plan preview (save, remix, report)', category: 'Meal planning', path: '/community/:id', needs: 'published_plan', keywords: 'remix report moderation' },
   { id: 'plan-export', name: 'Export plan (list or table)', category: 'Meal planning', path: '/plan?export=1', keywords: 'pdf png share grid table' },
   { id: 'plan-tour', name: 'Plan walkthrough', category: 'Meal planning', path: '/plan?welcome=1', note: 'Shows only if the tour has not been dismissed on this device.' },
   { id: 'meal-edit', name: 'Meal replacement and editing', category: 'Meal planning', path: '/meal/:id', needs: 'planned_meal', keywords: 'replace swap move portion' },

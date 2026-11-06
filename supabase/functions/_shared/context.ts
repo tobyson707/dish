@@ -6,7 +6,7 @@ import { addDays, todayInTimeZone } from './domain/dates.ts'
 import { HttpError } from './http.ts'
 
 const CATALOGUE_SELECT =
-  'id, slug, name, description, cuisine, meal_types, food_type, dietary_tags, allergens, ingredients_complete, spice_level, richness, prep_minutes, cook_minutes, can_cook, can_buy, est_cost_min, est_cost_max, cost_currency, calories, protein_g, carbs_g, fat_g, nutrition_source, image_path, recipe:recipes(servings, recipe_ingredients(quantity, unit, optional, ingredient:ingredients(id, name, category, allergens)))'
+  'id, slug, name, description, cuisine, meal_types, food_type, dietary_tags, allergens, ingredients_complete, spice_level, richness, prep_minutes, cook_minutes, can_cook, can_buy, est_cost_min, est_cost_max, cost_currency, calories, protein_g, carbs_g, fat_g, nutrition_source, verification_status, image_path, recipe:recipes(servings, recipe_ingredients(quantity, unit, optional, ingredient:ingredients(id, name, category, allergens)))'
 
 // deno-lint-ignore no-explicit-any
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -95,7 +95,7 @@ export async function loadHistory(db: SupabaseClient, userId: string, around: st
   const from = addDays(around, -days)
   const to = addDays(around, days)
   const [{ data: planned }, { data: eaten }] = await Promise.all([
-    db.from('planned_meals').select('food_item_id, date, slot').eq('user_id', userId).gte('date', from).lte('date', to).not('food_item_id', 'is', null),
+    db.from('planned_meals').select('food_item_id, date, slot').eq('user_id', userId).eq('on_calendar', true).gte('date', from).lte('date', to).not('food_item_id', 'is', null),
     db.from('food_diary_entries').select('food_item_id, local_date').eq('user_id', userId).gte('local_date', from).lte('local_date', to).not('food_item_id', 'is', null),
   ])
   return [

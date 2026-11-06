@@ -1,41 +1,30 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
-import { MEAL_SLOTS, SLOT_LABEL, type GroceryCategory, type MealSlot } from '@domain/types.ts'
 import { addDays, diffDays } from '@domain/dates.ts'
 import { leftoverNote } from '@domain/kitchen.ts'
 import { formatQuantity } from '@domain/units.ts'
 import type { KitchenItemRow } from '@/types/db'
 import { useKitchen, useKitchenMutations, type KitchenInput } from '@/data/kitchen'
 import { useIngredients } from '@/data/catalogue'
-import { useKitchenSuggest, type KitchenSuggestion } from '@/data/ai'
-import { useAddIngredientsToList } from '@/data/grocery'
-import { useLogDiary } from '@/data/diary'
-import { useCatalogue } from '@/data/catalogue'
 import { useToday } from '@/hooks/useToday'
-import { useSyncState } from '@/offline/useSync'
 import { friendlyError } from '@/lib/errors'
 import { dayLabel } from '@/lib/format'
 import { cn } from '@/lib/cn'
 import { Button, IconButton } from '@/components/ui/Button'
 import { PageHeader, Section } from '@/components/ui/Layout'
-import { Select, TextField } from '@/components/ui/Field'
+import { TextField } from '@/components/ui/Field'
 import { Toggle } from '@/components/ui/Inputs'
 import { Sheet } from '@/components/ui/Sheet'
-import { FoodImage } from '@/components/ui/FoodImage'
-import { EmptyState, ErrorState, LoadingBlock, Notice, Skeleton } from '@/components/ui/States'
-import { Icon } from '@/components/ui/Icon'
+import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { DateField } from '@/components/ui/DateField'
+import { UseWhatYouHave } from './UseWhatYouHave'
 
 export function KitchenPage() {
   const today = useToday()
   const kitchen = useKitchen()
   const mut = useKitchenMutations()
-  const suggest = useKitchenSuggest()
-  const { online } = useSyncState()
   const toast = useToast()
   const [editing, setEditing] = useState<KitchenItemRow | 'new' | 'leftover' | null>(null)
-  const [slot, setSlot] = useState<MealSlot | ''>('')
   const items = kitchen.data ?? []
   const leftovers = items.filter((i) => i.is_leftover)
   const pantry = items.filter((i) => !i.is_leftover)
@@ -88,97 +77,11 @@ export function KitchenPage() {
               </ul>
             </Section>
           )}
-          <Section title="Ideas from your kitchen">
-            <div className="flex flex-wrap items-end gap-2">
-              <Select label="For" className="min-w-36 flex-1" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot | '')} options={[{ value: '', label: 'Any meal' }, ...MEAL_SLOTS.map((s) => ({ value: s, label: SLOT_LABEL[s] }))]} />
-              <Button icon="sparkle" loading={suggest.isPending} disabled={!online} onClick={() => suggest.mutate({ slot: slot || null, today }, { onError: (e) => toast.error(friendlyError(e)) })}>Find recipes</Button>
-            </div>
-            {!online && <p className="mt-2 text-sm text-muted">Finding recipes needs a connection.</p>}
-            <div className="mt-4" aria-live="polite">
-              {suggest.isPending ? (
-                <div className="flex flex-col gap-3">{[0, 1].map((i) => <Skeleton key={i} className="h-40 rounded-xl" />)}</div>
-              ) : suggest.data ? (
-                suggest.data.suggestions.length === 0 ? (
-                  <Notice>Nothing in the catalogue is a close match yet. Try adding a few more staples (rice, onions, oil, tomatoes).</Notice>
-                ) : (
-                  <>
-                    {suggest.data.tip && <Notice icon="sparkle">{suggest.data.tip}</Notice>}
-                    <ul className="stagger mt-3 flex flex-col gap-3">{suggest.data.suggestions.map((s) => <KitchenCard key={s.food_item_id} s={s} />)}</ul>
-                  </>
-                )
-              ) : null}
-            </div>
-          </Section>
+          <UseWhatYouHave items={items} onEdit={setEditing} />
         </>
       )}
       <ItemSheet value={editing} onClose={() => setEditing(null)} />
     </div>
-  )
-}
-
-function nowSlot(): MealSlot {
-  const h = new Date().getHours()
-  return h < 11 ? 'breakfast' : h < 16 ? 'lunch' : h < 22 ? 'dinner' : 'snack'
-}
-
-function KitchenCard({ s }: { s: KitchenSuggestion }) {
-  const add = useAddIngredientsToList()
-  const toast = useToast()
-  const nav = useNavigate()
-  const today = useToday()
-  const catalogue = useCatalogue()
-  const log = useLogDiary()
-  const [cooked, setCooked] = useState(false)
-  async function cookedIt() {
-    const f = catalogue.data?.find((x) => x.id === s.food_item_id)
-    if (!f) return
-    await log.mutateAsync({
-      local_date: today,
-      slot: nowSlot(),
-      name: f.name,
-      servings: 1,
-      source: 'catalogue',
-      food_item_id: f.id,
-      nutrition: { calories: f.calories, protein_g: f.protein_g, carbs_g: f.carbs_g, fat_g: f.fat_g, source: f.nutrition_source, is_estimate: f.nutrition_is_estimate },
-    })
-    setCooked(true)
-    toast.show(`${f.name} added to your diary.`, { tone: 'success', action: { label: 'View', onClick: () => nav('/diary') } })
-  }
-  return (
-    <li className="rounded-xl bg-elevated p-4">
-      <div className="flex gap-3">
-        <FoodImage path={s.image_path} name={s.name} shape="circle" className="h-16 w-16 shrink-0" width={140} />
-        <div className="min-w-0">
-          <Link to={`/recipes/${s.slug}`} className="text-title-3 font-bold leading-snug">{s.name}</Link>
-          <p className={cn('text-sm font-semibold', s.can_make_now ? 'text-success' : 'text-ink-2')}>{s.can_make_now ? 'You have every listed ingredient' : `Missing ${s.missing.length} ingredient${s.missing.length > 1 ? 's' : ''}`}</p>
-          {s.uses_soon.length > 0 && <p className="text-footnote text-warning">Uses up: {s.uses_soon.join(', ')}</p>}
-        </div>
-      </div>
-      <div className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-        <div>
-          <p className="label-caps mb-1">You have</p>
-          <ul className="flex flex-wrap gap-1.5">{s.available.map((a) => <li key={a} className="inline-flex items-center gap-1 rounded-full bg-surface px-2.5 py-1"><Icon name="check" size={12} />{a}</li>)}</ul>
-        </div>
-        {s.missing.length > 0 && (
-          <div>
-            <p className="label-caps mb-1">To buy</p>
-            <ul className="flex flex-wrap gap-1.5">{s.missing.map((m) => <li key={m.name} className="rounded-full px-2.5 py-1 ring-1 ring-inset ring-line">{m.name}</li>)}</ul>
-          </div>
-        )}
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button size="sm" icon="check" disabled={cooked || !catalogue.data} loading={log.isPending} onClick={() => void cookedIt()}>{cooked ? 'Logged' : 'I cooked this'}</Button>
-        <Button size="sm" variant="secondary" onClick={() => nav(`/recipes/${s.slug}`)}>View recipe</Button>
-        {s.missing.length > 0 && (
-          <Button size="sm" icon="cart" loading={add.isPending} onClick={async () => {
-            try {
-              await add.mutateAsync({ items: s.missing.map((m) => ({ name: m.name, ingredient_id: m.ingredient_id, category: m.category as GroceryCategory, quantity: m.quantity, unit: m.unit })) })
-              toast.show('Missing ingredients added to your list.', { tone: 'success', action: { label: 'View', onClick: () => nav('/grocery') } })
-            } catch (e) { toast.error(friendlyError(e)) }
-          }}>Add missing to list</Button>
-        )}
-      </div>
-    </li>
   )
 }
 

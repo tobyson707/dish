@@ -23,6 +23,7 @@ import { Select, TextField } from '@/components/ui/Field'
 import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { DateField } from '@/components/ui/DateField'
+import { RecordStatus, isIncomplete } from './RecordStatus'
 
 export function RecipeDetail() {
   const { slug } = useParams()
@@ -45,6 +46,7 @@ export function RecipeDetail() {
   if (!food) return <EmptyState title="Recipe not found" message="It may have been removed." />
 
   const recipe = food.recipe
+  const incomplete = isIncomplete(food)
   const base = recipe?.servings ?? 1
   const s = servings ?? base
   const scale = s / base
@@ -69,8 +71,9 @@ export function RecipeDetail() {
       <FoodImage path={food.image_path} alt={food.image_alt} name={food.name} className="aspect-[4/5] max-h-[62dvh] w-full rounded-xl sm:aspect-[16/10] sm:max-h-none" width={960} priority />
       {food.image_credit && <p className="mt-1 text-micro text-muted">Photo: {food.image_credit}</p>}
       <p className="mt-4 text-ink-2">{food.description}</p>
+      <RecordStatus food={food} />
       <div className="mt-4 flex flex-wrap gap-2">
-        {food.can_cook && <Tag>{formatMinutes(food.prep_minutes + food.cook_minutes)}</Tag>}
+        {food.can_cook && !incomplete && <Tag>{formatMinutes(food.prep_minutes + food.cook_minutes)}</Tag>}
         {food.can_buy && <Tag>Can buy ready-made</Tag>}
         {food.meal_types.map((m) => <Tag key={m}>{SLOT_LABEL[m]}</Tag>)}
         {food.dietary_tags.filter((t) => !t.startsWith('contains_')).map((t) => <Tag key={t}>{t}</Tag>)}
@@ -84,12 +87,12 @@ export function RecipeDetail() {
       {verdict?.status === 'conflict' && <div className="mt-4"><Notice tone="error">Contains something you listed as an allergy: {verdict.hits.map((h) => ALLERGEN_LABEL[h as Allergen] ?? h).join(', ')}.</Notice></div>}
       <div className="mt-4">
         <Notice tone={food.ingredients_complete ? 'info' : 'warning'} icon="shield">
-          {food.allergens.length ? <>Listed ingredients include <strong>{food.allergens.map((a) => ALLERGEN_LABEL[a as Allergen] ?? a).join(', ')}</strong>. </> : 'No common allergens in the listed ingredients. '}
-          {food.ingredients_complete ? 'Brands and cooks vary, so check labels.' : "Versions vary a lot, so allergens can't be ruled out."}
+          {incomplete ? "Ingredients aren't recorded for this dish yet, so allergens can't be checked. Ask whoever prepares it." : <>{food.allergens.length ? <>Listed ingredients include <strong>{food.allergens.map((a) => ALLERGEN_LABEL[a as Allergen] ?? a).join(', ')}</strong>. </> : 'No common allergens in the listed ingredients. '}
+          {food.ingredients_complete ? 'Brands and cooks vary, so check labels.' : "Versions vary a lot, so allergens can't be ruled out."}</>}
         </Notice>
       </div>
 
-      <Section title={`Nutrition · per ${food.serving_qty} ${food.serving_unit}`} action={<ProvenanceBadge source={food.nutrition_source} isEstimate={food.nutrition_is_estimate} />}>
+      {!incomplete && <><Section title={`Nutrition · per ${food.serving_qty} ${food.serving_unit}`} action={<ProvenanceBadge source={food.nutrition_source} isEstimate={food.nutrition_is_estimate} />}>
         <dl className="grid grid-cols-4 gap-2 rounded-lg bg-elevated p-4 text-center">
           {[['Energy', food.calories == null ? '–' : formatKcal(food.calories).replace(' kcal', '')], ['Protein', food.protein_g == null ? '–' : `${food.protein_g}g`], ['Carbs', food.carbs_g == null ? '–' : `${food.carbs_g}g`], ['Fat', food.fat_g == null ? '–' : `${food.fat_g}g`]].map(([k, v]) => (
             <div key={k}><dt className="text-micro font-semibold uppercase tracking-wider text-muted">{k}</dt><dd className="num mt-1 text-title-3 font-extrabold">{v}</dd></div>
@@ -101,14 +104,20 @@ export function RecipeDetail() {
       <Section title="Cost per serving" action={<button type="button" className="text-sm font-semibold underline" onClick={() => setPriceOpen(true)}>Edit my price</button>}>
         <p className="num text-title-3 font-bold">{myPrice ? formatMoney(myPrice.amount, myPrice.currency) : formatCostRange(food.est_cost_min, food.est_cost_max, food.cost_currency)}</p>
         <p className="text-xs text-muted">{myPrice ? 'Your price, used in your plans and budget.' : 'Rough estimate only. Prices vary by city, vendor and season.'}</p>
-      </Section>
+      </Section></>}
 
       {recipe && recipe.recipe_ingredients.length > 0 && (
         <Section title="Ingredients" action={<span className="min-w-0"><Stepper label="Serves" value={s} onChange={setServings} min={1} max={20} step={1} /></span>}>
           <ul className="divide-y divide-line rounded-lg bg-elevated px-4">
             {recipe.recipe_ingredients.map((ri) => (
               <li key={ri.id} className="flex justify-between gap-3 py-2.5 text-sm">
-                <span>{ri.ingredient.name}{ri.optional && <span className="text-muted"> (optional)</span>}</span>
+                <span>
+                  {ri.ingredient.name}
+                  {ri.prep_state && <span className="text-muted">, {ri.prep_state}</span>}
+                  {ri.optional && <span className="text-muted"> (optional)</span>}
+                  {ri.note && <span className="block text-footnote text-muted">{ri.note}</span>}
+                  {!!ri.substitutions?.length && <span className="block text-footnote text-muted">Or: {ri.substitutions.join(', ')}</span>}
+                </span>
                 <span className="num text-muted">{formatQuantity(ri.quantity == null ? null : Math.round(ri.quantity * scale * 100) / 100, ri.unit)}</span>
               </li>
             ))}
@@ -128,7 +137,7 @@ export function RecipeDetail() {
           <p className="mt-4 text-xs text-muted">Recipe: {recipe.source}.</p>
         </Section>
       ) : (
-        <Section title="Method"><p className="text-sm text-muted">This is usually bought ready-made, so there's no recipe here.</p></Section>
+        <Section title="Method"><p className="text-sm text-muted">{incomplete ? "The method for this dish isn't recorded yet. We only add recipes we can source, so nothing here is guessed." : "This is usually bought ready-made, so there's no recipe here."}</p></Section>
       )}
       <AddToPlanSheet open={planOpen} onClose={() => setPlanOpen(false)} foodId={food.id} />
       <PriceSheet open={priceOpen} onClose={() => setPriceOpen(false)} foodId={food.id} current={myPrice?.amount ?? midCost(food.est_cost_min, food.est_cost_max)} currency={currency} hasOverride={!!myPrice} />

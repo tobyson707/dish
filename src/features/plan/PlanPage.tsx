@@ -101,8 +101,8 @@ export function PlanPage() {
           <>
             <IconButton icon="download" label="Export meal plan" onClick={() => setExportOpen(true)} />
             <IconButton icon="cart" label="Shopping list" onClick={() => nav('/grocery')} />
-            <ButtonLink to="/plan/new" size="sm" variant="secondary" icon="plus">
-              New plan
+            <ButtonLink to="/plans" size="sm" variant="secondary" icon="plan">
+              Library
             </ButtonLink>
           </>
         }
@@ -190,7 +190,8 @@ export function PlanPage() {
   )
 }
 
-function DayBlock({ date, today, meals, slots, onActions, onAdd, notGenerated, compact }: { date: ISODate; today: ISODate; meals: PlannedMeal[]; slots: MealSlot[]; onActions: (m: PlannedMeal) => void; onAdd: (s: MealSlot) => void; notGenerated: boolean; compact?: boolean }) {
+/** One day of meals with an add button per empty meal time. Shared by the calendar and plan workspaces. */
+export function DayBlock({ date, today, meals, slots, onActions, onAdd, notGenerated, compact }: { date: ISODate; today: ISODate; meals: PlannedMeal[]; slots: MealSlot[]; onActions?: (m: PlannedMeal) => void; onAdd?: (s: MealSlot) => void; notGenerated: boolean; compact?: boolean }) {
   const emptySlots = slots.filter((s) => !meals.some((m) => m.slot === s))
   return (
     <section aria-label={dayLabel(date, today)} className={compact ? 'border-b border-line py-3' : ''}>
@@ -198,10 +199,10 @@ function DayBlock({ date, today, meals, slots, onActions, onAdd, notGenerated, c
       <ul className="flex flex-col">
         {meals.map((m) => (
           <div key={`${m.id}-${m.food_item_id}`} className="animate-[swap-in_var(--dur-standard)_var(--ease-enter)_both]">
-            <MealRow meal={m} onActions={() => onActions(m)} />
+            <MealRow meal={m} onActions={onActions ? () => onActions(m) : undefined} />
           </div>
         ))}
-        {!notGenerated &&
+        {!notGenerated && onAdd &&
           emptySlots.map((s) => (
             <li key={s}>
               <button type="button" onClick={() => onAdd(s)} className="press flex w-full items-center gap-3 py-2.5 text-left">

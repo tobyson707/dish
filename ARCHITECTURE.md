@@ -143,22 +143,33 @@ Device access is isolated in `src/platform/*` (camera, notifications, haptics). 
 - **Motion** is CSS only (no animation library): spring easing `--ease-spring`, keyframes in `index.css`; `prefers-reduced-motion` collapses all of it.
 - **Food imagery**: `FoodImage`/`HeroFood` resolve a Supabase storage image, then a bundled licensed photo from `src/data/meal-photos.json` (filled by `node scripts/fetch-meal-photos.mjs`, Wikimedia Commons CC0/PD/CC BY/BY-SA with credits), else a tasteful plate composition with the dish initials. Photos are never filtered.
 
-## Rotary category selector (infinite, fixed overlay)
+## Floating navigation (`src/components/nav/FloatingNavigation.tsx`)
 
-- `useRotary` (`src/components/canvas/useRotary.ts`): dependency-free dial engine with one **unbounded** position (in detents). The selected category is `mod(round(pos), 5)`; each of the five DOM items is placed at its repeat nearest the centre (`loopOffset`), so the sequence repeats forever both ways with a constant 5 items (plus 5 ink copies). After every settle the position is re-centred into [0, 5) — invisible because rendering is modular — so numbers never grow.
-- Input: drag follows the finger 1:1; on release, momentum uses only the last 90 ms of movement and only after ≥ 0.35 detent of travel (tiny flicks never skip; a finger that rested before lifting doesn't fling), capped at ±3 detents. Mouse-wheel notches = one detent each (rate-limited); trackpad turns continuously (~99 px/detent) and snaps after 130 ms. Wheel input over the dial never scrolls the page. Spring k 430 / ζ 0.8 (critically damped and faster under reduced motion), integrated in fixed 4 ms sub-steps. Wheel commits wait until the wheel is quiet ~380 ms.
-- `RotaryCategorySelector` is **portalled to `<body>`** with `position: fixed` (z 55): it takes no layout space and doesn't move when Home scrolls. Its right edge is measured from the Home canvas (`ResizeObserver` + resize, self-correcting against scrollbar/zoom differences) and published as `--rotary-right`; vertical placement uses `--rotary-top` (centred above the mobile nav and safe areas). Home's lower content keeps a right gutter of `--rotary-w` so the dial never covers a card's actions.
-- Keyboard: arrows/Home/End select (wrapping), Enter/Space opens; roving tabindex, `aria-pressed`, live announcement.
+- There is no bottom bar or side rail. One floating button sits at the bottom-left of every screen (inset by `--canvas-m` and the safe areas). It opens a compact panel that grows from the button: Home, Plan, Diary, Discover and Profile (the current one in accent), plus four shortcuts (Shopping, Kitchen, Scan, Surprise) that used to crowd Home.
+- The panel closes on a choice, a tap outside, or Escape (focus returns to the button). Routes are unchanged.
+- `--nav-h` is now the clearance kept above the button. Toasts, floating action buttons, the shopping-list bar and the Developer Mode launcher already sit above it, and pages end with padding so their last content can scroll clear.
 
-## Category workspace (partial overlay)
+## Home (`src/features/home/Home.tsx`)
 
-- `CategoryWorkspace` is a **non-modal** layer (`section role="dialog" aria-modal="false"`, portalled, z 50) so the dial above it stays usable — a modal `<dialog>` would sit in the top layer and hide it. It slides in from the right and settles flush beside the dial (`.cat-ws`: right = dial position, width ≈ 75 % of a phone viewport / ≤ 520 px on desktop, always leaving Home visible). A scrim (z 40) dims and lightly blurs Home without moving or resizing it; `html[data-overlay]` locks page scroll (position kept).
-- Turning the dial while open swaps title and results in place (direction-aware `.ws-swap`). Close: Esc (ignored while a modal sheet is on top), the close button, swipe right on the header, or a tap on the dimmed Home. Focus moves to the heading on open and returns afterwards.
-
-## Home & header
-
-- Header: DISH wordmark · favourites · reminders · Plan · **streak** (`StreakChip`, from `useGamification().current_streak`, the server-computed value — no client logic; links to Profile → My progress). Settings moved to Profile (first item).
-- Home content: canvas (headline, featured meal, next meal) → search/add dock → today's menu (compact cards with actions). Removed from Home: date strip, quick-action grid, progress card and nutrition grid — all still in Plan, Discover, Profile and Diary.
+- **Canvas.** Home is one fixed canvas: `.home-canvas`, inset `--canvas-m`, radius `--canvas-r`, no page scroll. It holds:
+  - The toolbar: wordmark, then search, add and the streak.
+  - The greeting, set lower than before and left-aligned.
+  - `FeaturedMealCarousel`.
+- **Featured meals.** `FeaturedMealCarousel` shows today's planned meals for the selected category. When none are planned, it shows the top suggestions from `useRankedMeals`, the same recommender as the drawer, and never invented records.
+  - The featured meal's own photo is a blurred colour wash behind the canvas; `HeroFood` shows the dish in front.
+  - Previous and next (and a horizontal swipe) slide items in the direction of travel.
+  - When there's no plan, one quiet line (`PlanInvite`, from `homeState`) offers the right next step.
+- **Category selector.** `FloatingCategorySelector` is fixed and vertically centred at the right edge.
+  - It sits in a page-coloured notch (`.sel-notch`) whose filleted shoulders (`::before`/`::after` radial gradients) make the canvas appear to curve around it.
+  - Inactive categories are icons; the active one becomes an accent pill with its name (vertical text, revealed with a grid-row transition).
+  - It is a radiogroup. Arrows select without opening; a click or Enter opens the drawer.
+- **Category drawer.** `CategoryWorkspace` is full height, anchored right, with the canvas's inset and radius.
+  - Width: about 92 % on phones, at most 480 px on tablets, `clamp(380px, 34vw, 480px)` on desktop.
+  - It slides in from the right (`--dur-panel` 380 ms in, about 280 ms out) over a dimmed Home that never moves.
+  - The selector stays above it, and its notch background fades away, so changing category swaps the content in place.
+  - Close: the button, Escape, a tap on Home, a swipe, or Back. Opening pushes a history entry; Back (or the phone's back gesture) closes the drawer instead of leaving Home.
+- **Removed from Home.** Today's menu list and the shortcut grid. Today's meals are in the carousel and on Plan; the shortcuts are in the navigation panel.
+- **Short screens** (phones in landscape): the dish image steps aside and the greeting shrinks, so text and controls never overlap.
 
 ## Meal-plan export (`src/features/plan/export/`)
 
@@ -213,3 +224,19 @@ Hidden. Revealed by pressing F9 twice within 600ms (desktop; ignored while typin
 - **Simulated time**: an app-level clock (`appToday`) used by `useToday`, with day jumps, a custom date, time zone, leap-year and year-end shortcuts and a persistent "Simulated date" pill. Ignored in production.
 - **Previews** (never saved): the real celebration overlay for every achievement and level (labelled "Preview"), toasts, confirmation dialog, empty, loading and plan-progress states.
 - **Simulation** (`supabase/functions/dev-tools`): off unless the deployment sets `DISH_DEV_TOOLS=enabled` (the local stack does; hosted projects must not). It creates dedicated test accounts (`app_metadata.dish_test`) and only ever changes those: streaks are replayed through `gamify_record_day` (milestone XP and achievements follow), XP totals drive the real level-up notifier, unlocks write the real row (duplicates prevented by the constraint), and scenarios reset the test account to known states (the weekly plan uses the real planner).
+
+## Named plans, collaboration and community (`src/features/plans/`, `src/data/planbook.ts`)
+- `/plans` (My plans: current, drafts, shared with me, archived), `/plans/:id` (meals, people, activity, versions; share and publish panels), `/invite/:token`, `/community`, `/community/:id`.
+- Creating a plan can make it current (the previous current plan becomes a draft; nothing is deleted) or save it as a draft. `plan-generate` only generates for the owner and plans around the slots that are already taken (calendar meals for the current plan, the plan's own meals for a draft).
+- A signed-out person opening an invite link is brought back to it after signing in or finishing onboarding (`Guards.tsx`).
+- Export takes an optional `plan`. It exports that plan's meals with its name and attribution ("Created by Ada with Bola", "Original by …"); plans longer than 31 days are exported in ranges.
+
+## Catalogue records and "Use what you have"
+- `RecordStatus` shows each record's verification status, origin, other names, provenance and references. Discover search reaches the whole catalogue (name, other names, cuisine, country, region) but never past an allergy.
+- `whatYouCanMake` (`_shared/domain/kitchen.ts`), pure and unit-tested:
+  - Runs `safetyScreen` first. Leftovers more than 3 days old or with no cooked date, and items past their date, are excluded with a reason; usable leftovers carry a caution.
+  - Then produces three tiers:
+    - Recognised recipes, with missing ingredients and quantity checks where units are comparable.
+    - Variations, only where the recipe names the swap.
+    - Plain "simple use-up ideas" that never name a dish.
+  - Allergies, diet and exclusions are hard filters, and incomplete records are never suggested.

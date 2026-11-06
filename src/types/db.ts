@@ -80,6 +80,9 @@ export interface RecipeIngredientRow {
   note: string | null
   optional: boolean
   sort: number
+  /** e.g. chopped, soaked overnight, cooked */
+  prep_state?: string | null
+  substitutions?: string[]
   ingredient: Ingredient
 }
 
@@ -135,7 +138,24 @@ export interface FoodItem {
   image_prompt_version?: string | null
   image_generated_at?: string | null
   is_sample: boolean
+  /** names people also use for the dish (search) */
+  alt_names?: string[]
+  /** ISO 3166-1 alpha-2 countries the dish comes from (empty: regional or international) */
+  countries?: string[]
+  region?: string | null
+  verification_status?: VerificationStatus
+  provenance?: string | null
+  source_refs?: SourceRef[]
+  last_reviewed_at?: string | null
   recipe?: Recipe | null
+}
+
+export type VerificationStatus = 'verified' | 'partial' | 'awaiting_review' | 'incomplete' | 'unverified'
+export interface SourceRef {
+  label: string
+  url?: string
+  /** a reviewer has checked the record against this source */
+  checked: boolean
 }
 
 export type FoodImageStatus = 'none' | 'queued' | 'generating' | 'review' | 'approved' | 'rejected' | 'failed'
@@ -174,9 +194,29 @@ export interface MealPlan {
   start_date: ISODate
   end_date: ISODate
   generated_through: ISODate | null
-  status: 'active' | 'archived'
+  /** active = the current plan (the one on the calendar); one per person */
+  status: PlanStatus
   created_at: string
+  updated_at?: string
+  description?: string | null
+  budget_amount?: number | null
+  visibility?: 'private' | 'published'
+  published_at?: string | null
+  version?: number
+  remix_of?: string | null
+  remix_root?: string | null
+  remix_attribution?: string | null
+  allow_remix?: boolean
+  unpublished_reason?: string | null
+  /** private cover image in the plan-covers bucket */
+  cover_path?: string | null
+  /** this plan's meal times (null: the owner's usual meals) */
+  meal_slots?: MealSlot[] | null
+  updated_by?: string | null
 }
+
+export type PlanStatus = 'draft' | 'active' | 'archived'
+export type PlanRole = 'owner' | 'contributor' | 'viewer'
 
 export type PlannedStatus = 'planned' | 'eaten' | 'skipped'
 
@@ -184,6 +224,10 @@ export interface PlannedMeal {
   id: string
   user_id: string
   plan_id: string | null
+  /** shared plans: who last changed it */
+  updated_by?: string | null
+  /** on the owner's calendar (free-standing, current plan, or already eaten/skipped) */
+  on_calendar?: boolean
   date: ISODate
   slot: MealSlot
   scheduled_time: string | null

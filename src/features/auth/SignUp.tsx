@@ -1,9 +1,10 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, type FormEvent, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { z } from 'zod'
 import { supabase } from '@/lib/supabase'
 import { env } from '@/lib/env'
-import { friendlyError } from '@/lib/errors'
+import { authProblem, friendlyError } from '@/lib/errors'
+import { useCooldown } from './useCooldown'
 import { Button } from '@/components/ui/Button'
 import { PasswordField, TextField } from '@/components/ui/Field'
 import { Notice } from '@/components/ui/States'
@@ -23,24 +24,42 @@ export function SignUp() {
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  // set synchronously, so a double tap or a second Enter can't start a second request
+  // before React has re-rendered the disabled button
+  const inFlight = useRef(false)
+  const cooldown = useCooldown()
 
   async function submit(e: FormEvent) {
     e.preventDefault()
+    if (inFlight.current || cooldown.left > 0) return
     const parsed = Schema.safeParse(form)
     if (!parsed.success) return setErrors(fieldErrors(parsed.error))
     setErrors({})
     setFormError(null)
+    inFlight.current = true
     setBusy(true)
-    const { data, error } = await supabase.auth.signUp({
-      email: parsed.data.email,
-      password: parsed.data.password,
-      options: { data: { display_name: parsed.data.name }, emailRedirectTo: redirectUrl('/onboarding') },
-    })
-    setBusy(false)
-    if (error) return setFormError(friendlyError(error))
-    if (data.session) nav('/onboarding', { replace: true })
-    else nav('/check-email', { replace: true, state: { email: parsed.data.email } })
+    try {
+      // exactly one request per submission: no automatic retries
+      const { data, error } = await supabase.auth.signUp({
+        email: parsed.data.email,
+        password: parsed.data.password,
+        options: { data: { display_name: parsed.data.name }, emailRedirectTo: redirectUrl('/onboarding') },
+      })
+      if (error) {
+        const p = authProblem(error)
+        if (p?.retryAfter) cooldown.start(p.retryAfter)
+        return setFormError(p?.message ?? friendlyError(error))
+      }
+      if (data.session) nav('/onboarding', { replace: true })
+      else nav('/check-email', { replace: true, state: { email: parsed.data.email } })
+    } catch (err) {
+      setFormError(friendlyError(err))
+    } finally {
+      inFlight.current = false
+      setBusy(false)
+    }
   }
+
 
   return (
     <AuthLayout title="Let's get cooking." subtitle="Create your account. It takes a minute." footer={<>Already have an account? <Link to="/sign-in" className="font-semibold text-ink underline">Sign in</Link></>}>
@@ -56,8 +75,8 @@ export function SignUp() {
           </span>
         </label>
         {errors.agree && <p role="alert" className="text-footnote font-medium text-error">{errors.agree}</p>}
-        <Button type="submit" size="lg" block loading={busy}>
-          Create account
+        <Button type="submit" size="lg" block loading={busy} disabled={cooldown.left > 0}>
+          {cooldown.left > 0 ? `Try again in ${cooldown.label}` : 'Create account'}
         </Button>
         {env.googleAuth && <GoogleButton onClick={() => void supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: redirectUrl('/onboarding') } })} />}
       </form>

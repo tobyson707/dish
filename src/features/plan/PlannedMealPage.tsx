@@ -17,10 +17,16 @@ import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/St
 import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
 import { MealActionsSheet } from '@/components/meal/MealActions'
+import { usePlan } from '@/data/planbook'
+import { useUserId } from '@/features/auth/AuthProvider'
+import { formatTime } from '@/lib/time'
 
 export function PlannedMealPage() {
   const { id } = useParams()
   const meal = usePlannedMeal(id)
+  const uid = useUserId()
+  // a meal in a saved plan follows that plan's roles (someone else's plan, or a draft)
+  const plan = usePlan(meal.data?.plan_id ?? undefined)
   const catalogue = useCatalogue()
   const prefs = usePreferences()
   const today = useToday()
@@ -37,7 +43,7 @@ export function PlannedMealPage() {
 
   return (
     <div>
-      <PageHeader back eyebrow={`${SLOT_LABEL[m.slot]} · ${dayLabel(m.date, today)}${m.scheduled_time ? ` · ${m.scheduled_time.slice(0, 5)}` : ''}`} title={m.name} actions={<IconButton icon="dots" label="More actions" onClick={() => setActions(true)} />} />
+      <PageHeader back eyebrow={`${SLOT_LABEL[m.slot]} · ${dayLabel(m.date, today)}${m.scheduled_time ? ` · ${formatTime(m.scheduled_time)}` : ''}`} title={m.name} actions={<IconButton icon="dots" label="More actions" onClick={() => setActions(true)} />} />
       {/* circle → rounded-rect reveal, echoing the reference motion */}
       <div className="origin-left animate-[pop_var(--dur-standard)_var(--ease-enter)_both]">
         <FoodImage path={m.food_item?.image_path} alt={m.food_item?.image_alt} name={m.name} className="aspect-[4/3] w-full rounded-xl transition-[border-radius] duration-500" width={960} priority />
@@ -52,7 +58,9 @@ export function PlannedMealPage() {
       {m.rationale && <p className="mt-2 text-sm text-muted">Why this: {m.rationale}</p>}
 
       <div className="mt-6 grid grid-cols-2 gap-2">
-        {m.status !== 'eaten' ? (
+        {m.user_id !== uid ? (
+          <ButtonLink to={`/plans/${m.plan_id}`} variant="secondary" icon="plan">Open the plan</ButtonLink>
+        ) : m.status !== 'eaten' ? (
           <Button icon="check" onClick={async () => { await status.mutateAsync({ meal: m, status: 'eaten' }); toast.success('Added to your diary.') }}>
             I ate this
           </Button>
@@ -124,7 +132,7 @@ export function PlannedMealPage() {
           </ul>
         </section>
       )}
-      <MealActionsSheet meal={actions ? m : null} onClose={() => setActions(false)} />
+      <MealActionsSheet meal={actions ? m : null} onClose={() => setActions(false)} scope={m.plan_id && plan.data?.role && (m.user_id !== uid || plan.data.plan.status !== 'active') ? { planId: m.plan_id, role: plan.data.role, ownerId: m.user_id } : undefined} />
     </div>
   )
 }

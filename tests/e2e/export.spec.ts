@@ -10,7 +10,8 @@ async function withPlan(page: Page) {
   await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
   await page.goto('/plan/new')
   await page.getByRole('button', { name: 'Create my plan' }).click()
-  await expect(page).toHaveURL(/\/plan\?date=/, { timeout: 30_000 })
+  await expect(page).toHaveURL(/\/plans\/[0-9a-f-]{36}$/, { timeout: 30_000 }) // a new plan opens in its own workspace
+  await page.goto('/plan')
 }
 
 const bytesOf = async (d: Download) => readFileSync((await d.path())!)

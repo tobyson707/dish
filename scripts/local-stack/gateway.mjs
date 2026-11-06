@@ -1,6 +1,8 @@
 // Minimal local API gateway (stand-in for Kong in the Supabase CLI stack).
-// Routes /auth/v1, /rest/v1, /storage/v1, /functions/v1 to local containers.
+// Routes /auth/v1, /rest/v1, /storage/v1, /functions/v1 to local containers, and
+// /realtime/v1 WebSocket upgrades to Supabase Realtime (tenant "realtime-dev").
 import http from 'node:http'
+import net from 'node:net'
 
 const ROUTES = [
   ['/auth/v1', 'http://127.0.0.1:9999'],
@@ -16,8 +18,7 @@ const CORS = {
   'access-control-expose-headers': 'content-range, x-supabase-api-version',
 }
 
-http
-  .createServer((req, res) => {
+const server = http.createServer((req, res) => {
     if (req.method === 'OPTIONS') {
       // reflect requested headers (supabase-js adds e.g. x-retry-count on retries)
       const asked = req.headers['access-control-request-headers']
@@ -45,4 +46,28 @@ http
     })
     req.pipe(upstream)
   })
-  .listen(PORT, () => console.log(`gateway listening on :${PORT}`))
+
+// Realtime: /realtime/v1/websocket?... → :4000/socket/websocket?... The tenant is taken from
+// the Host header's first label, as with Kong in the official stack.
+server.on('upgrade', (req, socket, head) => {
+  if (!req.url.startsWith('/realtime/v1/')) return socket.destroy()
+  const path = '/socket/' + req.url.slice('/realtime/v1/'.length)
+  const up = net.connect(4000, '127.0.0.1', () => {
+    const lines = [`${req.method} ${path} HTTP/1.1`]
+    for (let i = 0; i < req.rawHeaders.length; i += 2) {
+      const k = req.rawHeaders[i]
+      lines.push(`${k}: ${k.toLowerCase() === 'host' ? 'realtime-dev.localhost:4000' : req.rawHeaders[i + 1]}`)
+    }
+    up.write(lines.join('\r\n') + '\r\n\r\n')
+    if (head?.length) up.write(head)
+    socket.pipe(up).pipe(socket)
+  })
+  const close = () => {
+    socket.destroy()
+    up.destroy()
+  }
+  up.on('error', close)
+  socket.on('error', close)
+})
+
+server.listen(PORT, () => console.log(`gateway listening on :${PORT}`))

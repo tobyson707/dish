@@ -31,6 +31,8 @@ export interface ExportModel {
   to: ISODate
   title: string
   preparedFor: string | null
+  /** shared or remixed plans: who made it ('Created by Ada · with Ben and Chi', 'Original by Ada') */
+  attribution: string | null
   rangeLabel: string // "Monday 2 – Sunday 8 November 2026"
   shortRange: string // "2–8 Nov 2026"
   note: string | null
@@ -78,7 +80,7 @@ export function validateRange(from: ISODate, to: ISODate): string | null {
   return null
 }
 
-export function buildExportModel(input: { meals: PlannedMeal[]; from: ISODate; to: ISODate; displayName: string | null | undefined; includeNutrition: boolean; note?: string | null }): ExportModel {
+export function buildExportModel(input: { meals: PlannedMeal[]; from: ISODate; to: ISODate; displayName: string | null | undefined; includeNutrition: boolean; note?: string | null; title?: string | null; attribution?: string | null }): ExportModel {
   const { from, to } = input
   const byDate = new Map<string, ExportMeal[]>()
   for (const m of input.meals) {
@@ -111,7 +113,8 @@ export function buildExportModel(input: { meals: PlannedMeal[]; from: ISODate; t
   return {
     from,
     to,
-    title: 'My Meal Plan',
+    title: (input.title ?? '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'My Meal Plan',
+    attribution: (input.attribution ?? '').replace(/\s+/g, ' ').trim().slice(0, 120) || null,
     preparedFor: name ? name.slice(0, 60) : null,
     rangeLabel: rangeLabel(from, to),
     shortRange: shortRange(from, to),

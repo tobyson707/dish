@@ -5,10 +5,11 @@ import { notificationPermission, pushSupported, requestNotificationPermission, s
 import { WEEKDAY_ABBR } from '@domain/dates.ts'
 import { PageHeader } from '@/components/ui/Layout'
 import { Toggle } from '@/components/ui/Inputs'
-import { Select, TextField } from '@/components/ui/Field'
+import { Select } from '@/components/ui/Field'
 import { ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
+import { TimeField } from '@/components/ui/TimePicker'
 
 export function NotificationsPage() {
   const prefs = useNotificationPrefs()
@@ -56,8 +57,8 @@ export function NotificationsPage() {
       <div className="mt-4 grid grid-cols-2 gap-3">
         <Select label="Cooking lead time" value={String(p.lead_minutes)} onChange={(e) => void set({ lead_minutes: Number(e.target.value) })} options={[15, 30, 45, 60, 90].map((m) => ({ value: String(m), label: `${m} min before` }))} />
         <Select label="Shopping day" value={p.grocery_day == null ? '' : String(p.grocery_day)} onChange={(e) => void set({ grocery_day: e.target.value === '' ? null : Number(e.target.value) })} options={[{ value: '', label: 'None' }, ...WEEKDAY_ABBR.map((d, i) => ({ value: String(i), label: d }))]} />
-        <TextField label="Quiet from" type="time" value={p.quiet_start?.slice(0, 5) ?? ''} onChange={(e) => void set({ quiet_start: e.target.value || null })} />
-        <TextField label="Quiet until" type="time" value={p.quiet_end?.slice(0, 5) ?? ''} onChange={(e) => void set({ quiet_end: e.target.value || null })} />
+        <TimeField label="Quiet from" optional fallback="22:00" value={p.quiet_start ?? null} onChange={(v) => void set({ quiet_start: v })} />
+        <TimeField label="Quiet until" optional fallback="07:00" value={p.quiet_end ?? null} onChange={(v) => void set({ quiet_end: v })} />
       </div>
       <Notice icon="info">
         {pushSupported()

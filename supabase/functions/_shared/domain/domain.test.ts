@@ -38,6 +38,14 @@ describe('allergens', () => {
 })
 
 describe('planner', () => {
+  it('never plans a catalogue record whose recipe is not recorded (incomplete or unverified), even when relaxed', () => {
+    const base = CATALOGUE.find((m) => m.slug === 'jollof-rice-chicken')!
+    for (const verification_status of ['incomplete', 'unverified'] as const) {
+      const m = { ...base, verification_status }
+      expect(exclusionReason(m, { prefs: basePrefs({}), slot: 'dinner', mealsPerDay: 3, relax: true })).toBe('incomplete')
+    }
+    expect(exclusionReason({ ...base, verification_status: 'awaiting_review' }, { prefs: basePrefs({}), slot: 'dinner', mealsPerDay: 3, relax: true })).toBeNull()
+  })
   const days = rangeDates('2026-11-02', '2026-11-08')
   const slots = slotsForRange(days[0]!, days.at(-1)!, ['breakfast', 'lunch', 'dinner', 'snack'])
 

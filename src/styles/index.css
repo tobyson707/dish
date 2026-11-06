@@ -117,7 +117,7 @@
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
-  --nav-h: 64px;
+  --nav-h: 60px; /* clearance kept free above the floating navigation button (bottom-left) */
 
   color-scheme: light;
 }
@@ -446,38 +446,110 @@ html[data-workspace] .recede-target {
 /* while a sheet or workspace is open the page behind must not scroll (position is kept) */
 html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
 
-/* ---- Rotary selector overlay geometry (fixed; never part of the layout) ---- */
+/* ---- Floating Home geometry (canvas, curved selector notch, drawer, floating nav) ----
+   One inset and one radius shared by the Home canvas and the category drawer, so the
+   drawer reads as a second surface of the same family sliding over the first. */
 :root {
-  --rotary-w: 70px;
-  --rotary-right: 0px; /* the dial is flush with the viewport's right edge */
-  --cat-ws-gap: 6px; /* space between the drawer and the dial (no overlap) */
-  /* centred in the space between the top safe area and the mobile bottom nav */
-  --rotary-top: calc(var(--safe-top) + (100dvh - var(--safe-top) - var(--nav-h) - var(--safe-bottom) - 26px) / 2);
-  /* phones: nearly everything left of the dial; a 16px strip of Home stays visible
-     (and tappable to close), so the drawer still reads as a layer over Home */
-  --cat-ws-w: calc(100vw - var(--rotary-w) - var(--cat-ws-gap) - 16px);
+  --canvas-m: 8px; /* canvas and drawer inset from the screen edges */
+  --canvas-r: 34px; /* canvas and drawer corner radius */
+  --sel-w: 48px; /* the category selector's width */
+  --notch-depth: 62px; /* how far the selector's notch curves into the canvas */
+  --notch-fillet: 18px; /* the rounded shoulder where the canvas edge turns into the notch */
+  --nav-btn: 52px; /* floating navigation button */
+  --drawer-w: 92vw; /* phones: nearly full width, a sliver of Home stays visible */
 }
-@media (min-width: 380px) { :root { --rotary-w: 78px; } }
-@media (min-width: 640px) { :root { --cat-ws-w: 76vw; } }
-@media (min-width: 768px) { :root { --rotary-top: 50dvh; --cat-ws-w: min(60vw, 680px); } }
-@media (min-width: 1280px) { :root { --cat-ws-w: min(50vw, 760px); } }
+@media (min-width: 640px) { :root { --canvas-m: 12px; --drawer-w: min(70vw, 480px); } }
+@media (min-width: 1024px) { :root { --canvas-r: 38px; --drawer-w: clamp(380px, 34vw, 480px); } }
 
-/* Category drawer: a full-height application panel anchored to the right,
-   immediately left of the dial (never under it), sliding in from beyond the edge */
+/* Category drawer: full height, anchored right, the same inset and radius as the canvas */
 .cat-ws {
-  right: calc(var(--rotary-right) + var(--rotary-w) + var(--cat-ws-gap));
-  width: min(var(--cat-ws-w), calc(100vw - var(--rotary-right) - var(--rotary-w) - var(--cat-ws-gap)));
-  top: 0;
-  bottom: 0;
+  top: var(--canvas-m);
+  bottom: var(--canvas-m);
+  right: var(--canvas-m);
+  width: var(--drawer-w);
+  border-radius: var(--canvas-r);
   animation: cat-in var(--dur-panel) var(--ease-enter) both;
 }
-/* closes back towards the right edge, ~20% faster than it opened */
-.cat-ws[data-closing] { animation: cat-out var(--dur-panel-exit) var(--ease-exit) forwards; }
+/* closes back the way it came, a little faster than it opened (≈280ms) */
+.cat-ws[data-closing] { animation: cat-out calc(var(--dur-panel) * 0.74) var(--ease-exit) forwards; }
 .cat-scrim { animation: fade var(--dur-standard) var(--ease-enter) both; }
-.cat-scrim[data-closing] { animation: fade-out var(--dur-panel-exit) var(--ease-exit) forwards; }
-/* a physical slide from beyond the right edge (no fade as the entrance) */
-@keyframes cat-in { from { transform: translateX(calc(100% + var(--rotary-right) + var(--rotary-w) + var(--cat-ws-gap))); } to { transform: none; } }
-@keyframes cat-out { to { transform: translateX(calc(100% + var(--rotary-right) + var(--rotary-w) + var(--cat-ws-gap))); } }
+.cat-scrim[data-closing] { animation: fade-out calc(var(--dur-panel) * 0.74) var(--ease-exit) forwards; }
+@keyframes cat-in { from { transform: translateX(calc(100% + var(--canvas-m) + 24px)); } to { transform: none; } }
+@keyframes cat-out { to { transform: translateX(calc(100% + var(--canvas-m) + 24px)); } }
+
+/* The selector's notch: page-coloured, it cuts into the canvas's right edge with rounded
+   shoulders above and below, so the canvas appears to curve around the selector. */
+.sel-notch {
+  background: var(--c-bg);
+  border-radius: 26px 0 0 26px;
+  transition: background-color var(--dur-standard) var(--ease-move);
+}
+.sel-notch::before,
+.sel-notch::after {
+  content: '';
+  position: absolute;
+  right: var(--canvas-m);
+  width: var(--notch-fillet);
+  height: var(--notch-fillet);
+  pointer-events: none;
+  transition: opacity var(--dur-standard) var(--ease-move);
+}
+.sel-notch::before { bottom: 100%; background: radial-gradient(circle at 0 0, transparent calc(var(--notch-fillet) - 0.5px), var(--c-bg) var(--notch-fillet)); }
+.sel-notch::after { top: 100%; background: radial-gradient(circle at 0 100%, transparent calc(var(--notch-fillet) - 0.5px), var(--c-bg) var(--notch-fillet)); }
+/* over the open drawer the notch steps back: only the selector itself remains */
+.sel-notch[data-over-drawer] { background-color: transparent; }
+.sel-notch[data-over-drawer]::before, .sel-notch[data-over-drawer]::after { opacity: 0; }
+/* the active item's name opens out beside its icon (vertical, read bottom to top) */
+.sel-label { writing-mode: vertical-rl; transform: rotate(180deg); }
+.sel-reveal { display: grid; grid-template-rows: 0fr; transition: grid-template-rows var(--dur-standard) var(--ease-move), opacity var(--dur-fast) var(--ease-move); opacity: 0; }
+.sel-reveal[data-on] { grid-template-rows: 1fr; opacity: 1; }
+.sel-reveal > * { min-height: 0; overflow: hidden; }
+
+/* Floating navigation panel: grows out of its button (bottom-left) */
+.nav-pop { transform-origin: bottom left; animation: nav-pop var(--dur-standard) var(--ease-enter) both; }
+.nav-pop[data-closing] { animation: nav-pop-out var(--dur-fast) var(--ease-exit) forwards; }
+@keyframes nav-pop { from { opacity: 0; transform: translateY(8px) scale(0.92); } to { opacity: 1; transform: none; } }
+@keyframes nav-pop-out { to { opacity: 0; transform: translateY(6px) scale(0.95); } }
+
+/* Home canvas: the whole screen, inset, rounded; controls float on and around it */
+.home-canvas {
+  position: fixed;
+  inset: var(--canvas-m);
+  border-radius: var(--canvas-r);
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--c-elevated);
+  animation: fade var(--dur-panel) var(--ease-enter) both;
+}
+.home-greet { position: absolute; left: 22px; right: calc(var(--notch-depth) + 14px); top: calc(var(--safe-top) + 112px); }
+.feat-hero { left: 50%; top: 48%; width: min(60vw, 330px, 24dvh); transform: translate(-58%, -50%); }
+@media (min-height: 820px) { .feat-hero { top: 50%; width: min(64vw, 340px, 30dvh); } }
+.feat-info { left: 22px; right: 22px; bottom: calc(var(--safe-bottom) + var(--nav-btn) + 30px); max-width: 30rem; }
+.feat-nav { right: 14px; bottom: calc(var(--safe-bottom) + 14px); }
+@media (min-width: 640px) {
+  .home-greet { left: 40px; top: calc(var(--safe-top) + 128px); }
+  .feat-info { left: 40px; }
+  .feat-nav { right: 22px; bottom: calc(var(--safe-bottom) + 20px); }
+}
+@media (min-width: 1024px) {
+  .home-greet { left: 64px; right: 50%; top: calc(var(--safe-top) + 150px); }
+  .feat-hero { left: auto; right: calc(var(--notch-depth) + 7%); top: 50%; width: min(38vw, 560px, 64dvh); transform: translateY(-50%); }
+  .feat-info { left: 64px; bottom: calc(var(--safe-bottom) + var(--nav-btn) + 44px); }
+  .feat-nav { right: calc(var(--notch-depth) + 28px); bottom: 32px; }
+}
+/* short screens (phones in landscape): words first, the dish steps aside */
+@media (max-height: 560px) {
+  .home-greet { top: calc(var(--safe-top) + 76px); }
+  .home-greet h1 { font-size: 2rem; }
+  .home-greet p { display: none; }
+  .feat-hero { display: none; }
+  .feat-info { bottom: calc(var(--safe-bottom) + 18px); left: calc(var(--nav-btn) + 32px); }
+}
+
+/* Featured meal carousel: the next item slides in from the side it came from */
+.feat-in { animation: feat-in var(--dur-panel) var(--ease-enter) both; }
+@keyframes feat-in { from { opacity: 0; transform: translateX(calc(var(--feat-dir, 1) * 48px)); } to { opacity: 1; transform: none; } }
+.feat-wash { animation: fade var(--dur-celebrate) var(--ease-move) both; }
 
 /* achievement celebration: restrained pop, a soft glow and a few sparks */
 .celebration[open] .celebration-card { animation: celebrate-in var(--dur-celebrate) var(--ease-enter) both; }
@@ -518,3 +590,34 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
 /* Developer Mode console: slides in from the right edge, leaves faster */
 .dev-console { animation: ws-in var(--dur-panel) var(--ease-enter) both; }
 .dev-console[data-closing] { animation: ws-out var(--dur-panel-exit) var(--ease-exit) forwards; }
+
+/* ── Static text is not editable ──
+   Browsers can show a blinking caret in ordinary text (e.g. caret browsing, F7), which
+   makes headings and labels look editable. Only real editing surfaces get a caret and the
+   text cursor; controls get a pointer and aren't text-selected by a tap. Text selection
+   itself stays on everywhere else, so recipes and ingredients can still be copied. */
+@layer base {
+  body { caret-color: transparent; cursor: default; }
+  input, textarea, [contenteditable]:not([contenteditable='false']) { caret-color: auto; cursor: text; }
+  input[type='checkbox'], input[type='radio'], input[type='range'], input[type='button'], input[type='submit'], select { cursor: pointer; }
+  a[href], button:not(:disabled), [role='button'], [role='tab'], [role='option'], [role='radio'], [role='switch'], summary, label[for] { cursor: pointer; }
+  button, [role='button'], [role='tab'], [role='radio'], [role='switch'], nav a, summary { -webkit-user-select: none; user-select: none; }
+}
+
+/* Time picker wheels: no scrollbar, rows fade towards the edges */
+.wheel-scroll {
+  scrollbar-width: none;
+  mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
+}
+.wheel-scroll::-webkit-scrollbar {
+  display: none;
+}
+.wheel-row {
+  transition: color var(--dur-micro) var(--ease-move), font-weight var(--dur-micro) var(--ease-move);
+}
+@media (prefers-reduced-motion: reduce) {
+  .wheel-row {
+    transition: none;
+  }
+}

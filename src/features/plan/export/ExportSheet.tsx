@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { addDays, startOfWeek } from '@domain/dates.ts'
 import { usePlannedMeals } from '@/data/plans'
+import { logPlanExport, usePlanMeals, usePlanPeople } from '@/data/planbook'
+import type { MealPlan } from '@/types/db'
 import { useProfile } from '@/data/profile'
 import { useToday } from '@/hooks/useToday'
 import { friendlyError } from '@/lib/errors'
@@ -20,7 +22,7 @@ const A4_LANDSCAPE_PT = { w: A4_PT.h, h: A4_PT.w }
 import { loadExportAssets, renderGridPdfPages, renderGridPngParts, renderPdfPages, renderPngParts, toBlob, type ExportAssets } from './render'
 import { canShareFiles, downloadFiles, shareOrDownload } from './share'
 
-type Period = 'today' | 'week' | 'custom'
+type Period = 'today' | 'week' | 'custom' | 'plan'
 type Format = 'png' | 'pdf'
 type Layout = 'list' | 'grid'
 
@@ -55,12 +57,14 @@ async function generate(model: ExportModel, assets: ExportAssets, format: Format
  * Plan → Export: choose a period, options and format, preview the real file,
  * then download or share it. Uses only the user's own planned meals.
  */
-export function ExportSheet({ open, onClose, anchorDate }: { open: boolean; onClose: () => void; anchorDate: string }) {
+export function ExportSheet({ open, onClose, anchorDate, plan }: { open: boolean; onClose: () => void; anchorDate: string; plan?: MealPlan | null }) {
   const today = useToday()
   const profile = useProfile()
   const toast = useToast()
-  const [period, setPeriod] = useState<Period>('week')
-  const [custom, setCustom] = useState({ from: startOfWeek(anchorDate), to: addDays(startOfWeek(anchorDate), 6) })
+  // a saved plan exports its own meals (any status, shared or not), from its first day
+  const planDays = plan ? Math.round((Date.parse(plan.end_date) - Date.parse(plan.start_date)) / 86_400_000) + 1 : 0
+  const [period, setPeriod] = useState<Period>(plan ? (planDays <= MAX_EXPORT_DAYS ? 'plan' : 'week') : 'week')
+  const [custom, setCustom] = useState(plan ? { from: plan.start_date, to: planDays <= MAX_EXPORT_DAYS ? plan.end_date : addDays(plan.start_date, 6) } : { from: startOfWeek(anchorDate), to: addDays(startOfWeek(anchorDate), 6) })
   const [format, setFormat] = useState<Format>('pdf')
   const [layout, setLayout] = useState<Layout>('list')
   const [nutrition, setNutrition] = useState(false)
@@ -71,12 +75,26 @@ export function ExportSheet({ open, onClose, anchorDate }: { open: boolean; onCl
   const [error, setError] = useState<string | null>(null)
   const assetsRef = useRef<{ key: string; assets: ExportAssets } | null>(null)
 
-  const range = period === 'today' ? { from: today, to: today } : period === 'week' ? { from: startOfWeek(anchorDate), to: addDays(startOfWeek(anchorDate), 6) } : custom
+  const week = plan ? { from: plan.start_date, to: addDays(plan.start_date, 6) } : { from: startOfWeek(anchorDate), to: addDays(startOfWeek(anchorDate), 6) }
+  const range = period === 'today' ? { from: today, to: today } : period === 'week' ? week : period === 'plan' && plan ? { from: plan.start_date, to: plan.end_date } : custom
   const rangeError = validateRange(range.from, range.to)
-  const meals = usePlannedMeals(range.from, range.to, { enabled: open && !rangeError })
+  const calendar = usePlannedMeals(range.from, range.to, { enabled: open && !rangeError && !plan })
+  const planMeals = usePlanMeals(open && plan && !rangeError ? plan.id : undefined, plan?.version, range)
+  const people = usePlanPeople(open && plan ? plan.id : undefined)
+  const meals = plan ? planMeals : calendar
+  const attribution = useMemo(() => {
+    if (!plan) return null
+    const owner = people.data?.find((p) => p.role === 'owner')
+    const others = (people.data ?? []).filter((p) => p.role === 'contributor').map((p) => p.display_name.split(' ')[0])
+    const by = owner ? `Created by ${owner.display_name.split(' ')[0]}${others.length ? ` with ${others.join(', ')}` : ''}` : null
+    return [plan.remix_attribution, by].filter(Boolean).join(' · ') || null
+  }, [plan, people.data])
   const model = useMemo(
-    () => (meals.data && !rangeError ? buildExportModel({ meals: meals.data, from: range.from, to: range.to, displayName: profile.data?.display_name, includeNutrition: nutrition, note }) : null),
-    [meals.data, rangeError, range.from, range.to, profile.data?.display_name, nutrition, note],
+    () =>
+      meals.data && !rangeError
+        ? buildExportModel({ meals: meals.data, from: range.from, to: range.to, displayName: plan ? null : profile.data?.display_name, includeNutrition: nutrition, note, title: plan?.title, attribution })
+        : null,
+    [meals.data, rangeError, range.from, range.to, profile.data?.display_name, nutrition, note, plan, attribution],
   )
 
   // free preview memory when it is replaced or the sheet closes
@@ -124,6 +142,7 @@ export function ExportSheet({ open, onClose, anchorDate }: { open: boolean; onCl
         files = (await generate(model, await assetsFor(model), fmt, layout)).files
       }
       await downloadFiles(files)
+      if (plan) void logPlanExport(plan.id, `${fmt.toUpperCase()} (${layout === 'grid' ? 'table' : 'list'}) for ${model.shortRange}`).catch(() => undefined)
       toast.success(files.length > 1 ? `${files.length} images saved.` : `Saved ${files[0]!.name}`)
     } catch (e) {
       toast.error(friendlyError(e))
@@ -136,6 +155,7 @@ export function ExportSheet({ open, onClose, anchorDate }: { open: boolean; onCl
     if (!output) return
     try {
       const r = await shareOrDownload(output.files, { title: model?.title ?? 'My Meal Plan', text: model ? `My meal plan · ${model.shortRange}` : undefined })
+      if (plan && model) void logPlanExport(plan.id, `${output.format.toUpperCase()} (${output.layout === 'grid' ? 'table' : 'list'}) for ${model.shortRange}`).catch(() => undefined)
       if (r === 'downloaded') toast.show("Sharing files isn't available in this browser, so we saved it to your device instead.")
     } catch (e) {
       toast.error(friendlyError(e))
@@ -146,19 +166,24 @@ export function ExportSheet({ open, onClose, anchorDate }: { open: boolean; onCl
   const shareable = output ? canShareFiles(output.files) : false
 
   return (
-    <Sheet open={open} onClose={onClose} title={step === 'options' ? 'Export meal plan' : 'Preview'} description={step === 'options' ? 'Save or share your plan as an image or a PDF.' : undefined} size="lg">
+    <Sheet open={open} onClose={onClose} title={step === 'options' ? (plan ? `Export “${plan.title}”` : 'Export meal plan') : 'Preview'} description={step === 'options' ? 'Save or share your plan as an image or a PDF.' : undefined} size="lg">
       {step === 'options' ? (
         <div className="flex flex-col gap-5 pb-2">
           <fieldset>
             <legend className="text-sm font-semibold">Period</legend>
             <div role="radiogroup" aria-label="Period" className="mt-2 grid grid-cols-3 gap-2">
-              {(
-                [
-                  ['today', 'Today', shortRange(today, today)],
-                  ['week', 'This week', shortRange(startOfWeek(anchorDate), addDays(startOfWeek(anchorDate), 6))],
-                  ['custom', 'Custom', 'Choose dates'],
-                ] as const
-              ).map(([id, label, sub]) => (
+              {(plan
+                  ? [
+                      ...(planDays <= MAX_EXPORT_DAYS ? [['plan', 'Whole plan', shortRange(plan.start_date, plan.end_date)] as const] : []),
+                      ['week', 'First week', shortRange(week.from, week.to)] as const,
+                      ['custom', 'Custom', planDays > MAX_EXPORT_DAYS ? `Up to ${MAX_EXPORT_DAYS} days at a time` : 'Choose dates'] as const,
+                    ]
+                  : ([
+                      ['today', 'Today', shortRange(today, today)],
+                      ['week', 'This week', shortRange(week.from, week.to)],
+                      ['custom', 'Custom', 'Choose dates'],
+                    ] as const)
+                ).map(([id, label, sub]) => (
                 <button key={id} type="button" role="radio" aria-checked={period === id} onClick={() => setPeriod(id)} className={cn('press flex flex-col items-start rounded-[18px] p-3 text-left transition-colors', period === id ? 'bg-ink text-on-ink' : 'bg-elevated ring-1 ring-inset ring-line')}>
                   <span className="font-semibold">{label}</span>
                   <span className={cn('mt-0.5 text-caption', period === id ? 'opacity-75' : 'text-muted')}>{sub}</span>

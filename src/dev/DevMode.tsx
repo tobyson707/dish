@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useRef } from 'react'
-import { useDev, setDev, clockSimulated } from './devStore'
+import { useEffect, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react'
+import { useDev, setDev, getDev, clockSimulated } from './devStore'
+import { diag, installF9, onDiag } from './shortcut'
+import type { DevAccess } from './access'
 import { useDevAccess } from './access'
 import { ENV_LABEL } from './env'
 import { DevConsole } from './DevConsole'
@@ -9,11 +11,6 @@ import { useToast } from '@/components/ui/Toast'
 import { useToday } from '@/hooks/useToday'
 import { MOTION } from '@/styles/motion'
 import { cn } from '@/lib/cn'
-
-const typing = (t: EventTarget | null) => {
-  const el = t as HTMLElement | null
-  return !!el && (el.isContentEditable || /^(input|textarea|select)$/i.test(el.tagName))
-}
 
 /**
  * Developer Mode: a hidden QA console. Revealed by pressing F9 twice within
@@ -26,7 +23,6 @@ export function DevMode() {
   const dev = useDev()
   const access = useDevAccess()
   const toast = useToast()
-  const lastF9 = useRef(0)
   const { mounted, closing } = usePresence(dev.open && access.authorised, MOTION.exit(MOTION.panel))
 
   // hide everything again if access goes away (sign out, account switch)
@@ -34,30 +30,40 @@ export function DevMode() {
     if (!access.authorised && (dev.revealed || dev.open)) setDev({ revealed: false, open: false })
   }, [access.authorised, dev.revealed, dev.open])
 
+  // latest values for the one long-lived F9 listener (installed once, never re-registered)
+  const latest = useRef({ access, toast })
+  useLayoutEffect(() => {
+    latest.current = { access, toast }
+  })
+  useEffect(
+    () =>
+      installF9({
+        authorised: () => latest.current.access.authorised,
+        toggle: () => {
+          const revealed = !getDev().revealed
+          setDev({ revealed, open: revealed ? getDev().open : false })
+          latest.current.toast.show(revealed ? 'Developer Mode on.' : 'Developer Mode off.')
+        },
+      }),
+    [],
+  )
+  // Esc closes the console (a sheet inside it closes first)
   useEffect(() => {
+    if (!dev.open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && dev.open) {
-        if (document.querySelector('dialog:modal')) return // a sheet inside the console closes first
-        e.preventDefault()
-        setDev({ open: false })
-        return
-      }
-      if (e.key !== 'F9' || e.repeat || typing(e.target) || !access.authorised) return
-      const now = performance.now()
-      if (now - lastF9.current <= 600) {
-        lastF9.current = 0
-        const revealed = !dev.revealed
-        setDev({ revealed, open: revealed ? dev.open : false })
-        toast.show(revealed ? 'Developer Mode on.' : 'Developer Mode off.')
-      } else lastF9.current = now
+      if (e.key !== 'Escape' || document.querySelector('dialog:modal')) return
+      e.preventDefault()
+      setDev({ open: false })
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [access.authorised, dev.revealed, dev.open, toast])
+  }, [dev.open])
 
-  if (!access.authorised) return null
+  if (!access.authorised) return <ShortcutDiagnostics access={access} />
+
   return (
     <>
+      <ShortcutDiagnostics access={access} />
       {clockSimulated(dev) && <SimulatedClockPill />}
       {dev.revealed && !dev.open && (
         <button
@@ -66,7 +72,7 @@ export function DevMode() {
           aria-label="Developer Mode"
           title="Developer Mode"
           data-dev-launcher
-          className="press motion-pop fixed left-3 z-[75] flex h-11 w-11 items-center justify-center rounded-full bg-ink text-on-ink opacity-60 shadow-[0_10px_30px_-12px_var(--c-shadow)] ring-1 ring-white/10 transition-opacity hover:opacity-100 focus-visible:opacity-100 md:bottom-5 md:left-5"
+          className="press motion-pop fixed left-3 z-[75] flex h-11 w-11 items-center justify-center rounded-full bg-ink text-on-ink opacity-60 shadow-[0_10px_30px_-12px_var(--c-shadow)] ring-1 ring-white/10 transition-opacity hover:opacity-100 focus-visible:opacity-100"
           style={{ bottom: 'calc(var(--nav-h) + var(--safe-bottom) + 22px)', ['--origin' as string]: 'bottom left' }}
         >
           <Icon name="wand" size={19} />
@@ -91,5 +97,37 @@ function SimulatedClockPill() {
     >
       Simulated date · {label}
     </button>
+  )
+}
+
+/**
+ * Development and preview only: proves the F9 listener is mounted and shows
+ * what it saw. Open with ?dev-diagnostics in the address bar (kept for the tab).
+ * Never rendered in production.
+ */
+function ShortcutDiagnostics({ access }: { access: DevAccess }) {
+  const snap = useSyncExternalStore(onDiag, () => diag.events[0]?.at ?? diag.listeners, () => 0)
+  void snap
+  if (access.env === 'production') return null
+  let on: boolean
+  try {
+    if (new URLSearchParams(location.search).has('dev-diagnostics')) sessionStorage.setItem('dish:dev:diag', '1')
+    on = sessionStorage.getItem('dish:dev:diag') === '1'
+  } catch {
+    on = false
+  }
+  if (!on) return null
+  return (
+    <aside aria-label="Developer Mode diagnostics" className="fixed right-3 top-16 z-[90] w-72 rounded-[14px] bg-ink/90 p-3 text-caption text-on-ink shadow-lg">
+      <p className="font-bold">F9 shortcut diagnostics</p>
+      <p className="mt-1">Environment: {access.env} · listener mounted: {diag.listeners === 1 ? 'yes (1)' : diag.listeners === 0 ? 'no' : `${diag.listeners} (should be 1)`}</p>
+      <p>Account authorised: {access.authorised ? 'yes' : 'no (sign in; in production, admins only)'}</p>
+      <ul className="mt-2 flex flex-col gap-0.5">
+        {diag.events.length === 0 ? <li className="opacity-70">No F9 presses seen yet. Press F9 (some laptops need Fn).</li> : diag.events.map((e) => (
+          <li key={e.at + e.decision} className="num">{new Date(e.at).toLocaleTimeString()} · {e.key}/{e.code}{e.repeat ? ' (held)' : ''} → {e.decision}</li>
+        ))}
+      </ul>
+      <button type="button" className="mt-2 underline" onClick={() => { try { sessionStorage.removeItem('dish:dev:diag') } catch { /* ignore */ } location.reload() }}>Hide diagnostics</button>
+    </aside>
   )
 }
