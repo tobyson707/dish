@@ -518,3 +518,16 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
 /* Developer Mode console: slides in from the right edge, leaves faster */
 .dev-console { animation: ws-in var(--dur-panel) var(--ease-enter) both; }
 .dev-console[data-closing] { animation: ws-out var(--dur-panel-exit) var(--ease-exit) forwards; }
+
+/* ── Static text is not editable ──
+   Browsers can show a blinking caret in ordinary text (e.g. caret browsing, F7), which
+   makes headings and labels look editable. Only real editing surfaces get a caret and the
+   text cursor; controls get a pointer and aren't text-selected by a tap. Text selection
+   itself stays on everywhere else, so recipes and ingredients can still be copied. */
+@layer base {
+  body { caret-color: transparent; cursor: default; }
+  input, textarea, [contenteditable]:not([contenteditable='false']) { caret-color: auto; cursor: text; }
+  input[type='checkbox'], input[type='radio'], input[type='range'], input[type='button'], input[type='submit'], select { cursor: pointer; }
+  a[href], button:not(:disabled), [role='button'], [role='tab'], [role='option'], [role='radio'], [role='switch'], summary, label[for] { cursor: pointer; }
+  button, [role='button'], [role='tab'], [role='radio'], [role='switch'], nav a, summary { -webkit-user-select: none; user-select: none; }
+}
