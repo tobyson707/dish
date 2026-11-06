@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router'
 import { ROLE_LABEL, useAcceptInvite, usePeekInvite } from '@/data/planbook'
 import { clearReturn } from '@/app/Guards'
+import { supabase } from '@/lib/supabase'
 import { friendlyError } from '@/lib/errors'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/Layout'
@@ -30,6 +31,8 @@ export function InvitePage() {
     const p = PROBLEM[info?.status ?? 'invalid'] ?? PROBLEM.invalid!
     return <EmptyState className="mt-16" icon="link" title={p.title} message={p.message} action={<ButtonLink to="/plans">My plans</ButtonLink>} />
   }
+  if (info.already_member)
+    return <EmptyState className="mt-16" icon="users" title="You already have access" message={`“${info.plan_title}” is in your Library.`} action={<ButtonLink to="/plans?tab=shared">Open the Library</ButtonLink>} />
   return (
     <div>
       <PageHeader title="You’re invited" />
@@ -40,9 +43,17 @@ export function InvitePage() {
           As a {ROLE_LABEL[info.role!].toLowerCase()}, you can {info.role === 'contributor' ? 'add and remove meals' : 'see the plan'}. They’ll see your name on the plan. Your own diary, profile and plans stay private.
         </p>
       </div>
-      {info.email_restricted && <div className="mt-3"><Notice>This invitation is for a specific email address. Use the account it was sent to.</Notice></div>}
+      {info.email_restricted && !info.for_you && (
+        <div className="mt-3">
+          <Notice tone="warning">This invitation was sent to a different email address. Sign in with that account to accept it.</Notice>
+          <Button className="mt-3" variant="secondary" block onClick={async () => {
+            await supabase.auth.signOut()
+            nav('/sign-in', { replace: true, state: { from: `/invite/${token}` } })
+          }}>Use another account</Button>
+        </div>
+      )}
       <div className="mt-5 flex flex-col gap-2">
-        <Button size="lg" block loading={accept.isPending} onClick={async () => {
+        <Button size="lg" block disabled={info.email_restricted && !info.for_you} loading={accept.isPending} onClick={async () => {
           try {
             const id = await accept.mutateAsync(token!)
             toast.show(`You joined “${info.plan_title}”.`, { tone: 'success' })

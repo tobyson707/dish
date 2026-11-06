@@ -20,6 +20,7 @@ AUTH_IMAGE=supabase/gotrue:v2.197.0
 REST_IMAGE=postgrest/postgrest:v12.2.12
 STORAGE_IMAGE=supabase/storage-api:v1.89.11
 EDGE_IMAGE=supabase/edge-runtime:v1.77.9
+REALTIME_IMAGE=supabase/realtime:v2.34.47
 MAIL_IMAGE=axllent/mailpit:latest
 PGPASS=${LOCAL_PG_PASSWORD:-postgres-local-dev}
 SITE_URL=${SITE_URL:-http://localhost:5173}
@@ -103,6 +104,25 @@ up() {
     -e PGRST_APP_SETTINGS_JWT_SECRET="$JWT_SECRET"
   wait_for rest curl -sf http://127.0.0.1:3001/
 
+  echo "▸ realtime"
+  # Supabase Realtime (live plan updates, presence). Tenant "realtime-dev" is seeded; the
+  # gateway sends /realtime/v1 there. Policies on realtime.messages need its schema, so
+  # they are (re)applied once it has migrated.
+  psql_admin -c "create schema if not exists _realtime"
+  # The image listens on IPv6 only; some sandboxes have no IPv6, so use a copy of its
+  # runtime config that listens on IPv4 (local development only).
+  if [[ ! -f $STATE/realtime-runtime.exs ]]; then
+    docker run --rm --entrypoint cat $REALTIME_IMAGE /app/releases/2.34.47/runtime.exs | sed 's/socket_opts: \[:inet6\]/socket_opts: [:inet]/' > "$STATE/realtime-runtime.exs"
+  fi
+  run realtime $REALTIME_IMAGE -v "$STATE/realtime-runtime.exs:/app/releases/2.34.47/runtime.exs:ro" -e DB_IP_VERSION=ipv4 -e PORT=4000 -e DB_HOST=127.0.0.1 -e DB_PORT=54322 -e DB_USER=supabase_admin \
+    -e DB_PASSWORD="$PGPASS" -e DB_NAME=postgres -e DB_AFTER_CONNECT_QUERY='SET search_path TO _realtime' \
+    -e DB_ENC_KEY=supabaserealtime -e API_JWT_SECRET="$JWT_SECRET" -e SECRET_KEY_BASE="${JWT_SECRET}${JWT_SECRET}" \
+    -e ERL_AFLAGS='-proto_dist inet_tcp' -e DNS_NODES="''" -e RLIMIT_NOFILE=10000 -e APP_NAME=realtime \
+    -e SEED_SELF_HOST=true -e RUN_JANITOR=true
+  wait_for realtime curl -s -o /dev/null http://127.0.0.1:4000/
+  for _ in $(seq 1 60); do [[ $(psql_admin -tAc "select to_regclass('realtime.messages') is not null") == t ]] && break; sleep 1; done
+  psql_admin -f "$ROOT/scripts/local-stack/realtime.sql"
+
   echo "▸ functions"
   local envfile=$STATE/functions.env
   # IMAGE_PROVIDER=mock: catalogue image generation works locally without a key.
@@ -143,7 +163,7 @@ ENV
 }
 
 down() {
-  for n in functions rest storage auth mail db; do docker rm -f "dish-$n" >/dev/null 2>&1 || true; done
+  for n in functions realtime rest storage auth mail db; do docker rm -f "dish-$n" >/dev/null 2>&1 || true; done
   for p in gateway npm-mirror; do
     [[ -f $STATE/$p.pid ]] && kill "$(cat "$STATE/$p.pid")" 2>/dev/null || true
     rm -f "$STATE/$p.pid"

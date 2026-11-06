@@ -11,6 +11,10 @@ import { qk } from './keys'
 export interface PlanListItem extends MealPlan {
   role: PlanRole
   meal_count: number
+  /** other people with access (editors and viewers) */
+  member_count: number
+  /** a few of the plan's meal photos, for the card collage when there's no cover */
+  collage: { path: string | null; slug: string | null; name: string }[]
 }
 
 export interface PlanPerson {
@@ -53,6 +57,9 @@ export interface InvitePeek {
   owner_name?: string
   role?: 'contributor' | 'viewer'
   email_restricted?: boolean
+  /** the invitation's email matches the signed-in account (or it isn't restricted) */
+  for_you?: boolean
+  already_member?: boolean
 }
 
 export interface CommunityPlan {
@@ -106,18 +113,27 @@ export function useMyPlans() {
   return useQuery({
     queryKey: planKeys.all(uid),
     queryFn: async (): Promise<PlanListItem[]> => {
+      const cols = `*, meals:planned_meals(count), people:plan_members(count), collage:planned_meals(name, food_item:food_items(image_path, slug))`
       const [own, shared] = await Promise.all([
-        supabase.from('meal_plans').select('*, planned_meals(count)').eq('user_id', uid).order('updated_at', { ascending: false }),
-        supabase.from('plan_members').select('role, plan:meal_plans(*, planned_meals(count))').eq('user_id', uid),
+        supabase.from('meal_plans').select(cols).eq('user_id', uid).order('updated_at', { ascending: false }).limit(6, { referencedTable: 'collage' }),
+        supabase.from('plan_members').select(`role, plan:meal_plans(${cols})`).eq('user_id', uid).limit(6, { referencedTable: 'plan.collage' }),
       ])
       if (own.error) throw own.error
       if (shared.error) throw shared.error
-      const count = (r: { planned_meals?: { count: number }[] }) => r.planned_meals?.[0]?.count ?? 0
-      type Row = MealPlan & { planned_meals?: { count: number }[] }
-      const mine = ((own.data ?? []) as Row[]).map((p) => ({ ...p, role: 'owner' as const, meal_count: count(p) }))
-      const theirs = ((shared.data ?? []) as unknown as { role: PlanRole; plan: Row | null }[])
-        .filter((m) => m.plan)
-        .map((m) => ({ ...m.plan!, role: m.role, meal_count: count(m.plan!) }))
+      type Row = MealPlan & { meals?: { count: number }[]; people?: { count: number }[]; collage?: { name: string; food_item: { image_path: string | null; slug: string } | null }[] }
+      const shape = (p: Row, role: PlanRole): PlanListItem => {
+        const { meals, people, collage, ...plan } = p
+        const seen = new Set<string>()
+        return {
+          ...plan,
+          role,
+          meal_count: meals?.[0]?.count ?? 0,
+          member_count: people?.[0]?.count ?? 0,
+          collage: (collage ?? []).filter((c) => !seen.has(c.name) && seen.add(c.name)).slice(0, 4).map((c) => ({ path: c.food_item?.image_path ?? null, slug: c.food_item?.slug ?? null, name: c.name })),
+        }
+      }
+      const mine = ((own.data ?? []) as unknown as Row[]).map((p) => shape(p, 'owner'))
+      const theirs = ((shared.data ?? []) as unknown as { role: PlanRole; plan: Row | null }[]).filter((m) => m.plan).map((m) => shape(m.plan!, m.role))
       return [...mine, ...theirs]
     },
   })
@@ -137,13 +153,16 @@ export function usePlan(id: string | undefined, opts: { poll?: boolean } = {}) {
   })
 }
 
-export function usePlanMeals(id: string | undefined, version?: number) {
+/** A plan's meals, optionally for a date range (long plans are read a range at a time). */
+export function usePlanMeals(id: string | undefined, version?: number, range?: { from: string; to: string }) {
   return useQuery({
-    queryKey: [...planKeys.meals(id ?? ''), version ?? 0],
+    queryKey: [...planKeys.meals(id ?? ''), version ?? 0, range?.from ?? '', range?.to ?? ''],
     enabled: !!id,
     placeholderData: (prev) => prev,
     queryFn: async () => {
-      const { data, error } = await supabase.from('planned_meals').select(PM_SELECT).eq('plan_id', id!).order('date').order('scheduled_time', { nullsFirst: false })
+      let q = supabase.from('planned_meals').select(PM_SELECT).eq('plan_id', id!)
+      if (range) q = q.gte('date', range.from).lte('date', range.to)
+      const { data, error } = await q.order('date').order('scheduled_time', { nullsFirst: false }).limit(2000)
       if (error) throw error
       return (data ?? []) as PlannedMeal[]
     },
@@ -400,7 +419,7 @@ export function useModeratePlan() {
 }
 
 export const STATUS_LABEL: Record<PlanStatus, string> = { active: 'Current', draft: 'Draft', archived: 'Archived' }
-export const ROLE_LABEL: Record<PlanRole, string> = { owner: 'Owner', contributor: 'Contributor', viewer: 'Viewer' }
+export const ROLE_LABEL: Record<PlanRole, string> = { owner: 'Owner', contributor: 'Editor', viewer: 'Viewer' }
 
 /** The link someone opens to accept an invitation. The token is only ever in this link. */
 export const inviteUrl = (token: string) => `${window.location.origin}/invite/${token}`
@@ -454,4 +473,92 @@ export function useRemovePlanMeal(planId: string) {
     },
     onSuccess: () => invalidatePlans(qc, uid, planId),
   })
+}
+
+// ── Covers ───────────────────────────────────────────────────────────────────
+export const COVER_BUCKET = 'plan-covers'
+
+/** A short-lived link to a private cover image (only the plan's people can get one). */
+export function useCoverUrl(path: string | null | undefined) {
+  return useQuery({
+    queryKey: ['plan-cover', path],
+    enabled: !!path,
+    staleTime: 50 * 60_000,
+    queryFn: async () => {
+      const { data, error } = await supabase.storage.from(COVER_BUCKET).createSignedUrl(path!, 3600, { transform: undefined })
+      if (error) throw error
+      return data.signedUrl
+    },
+  })
+}
+
+/** Resize in the browser (max 1600px wide, JPEG) before upload: small, and no metadata from the original file. */
+async function shrink(file: File): Promise<Blob> {
+  const bmp = await createImageBitmap(file)
+  const scale = Math.min(1, 1600 / bmp.width)
+  const c = document.createElement('canvas')
+  c.width = Math.round(bmp.width * scale)
+  c.height = Math.round(bmp.height * scale)
+  c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height)
+  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Could not read that image.'))), 'image/jpeg', 0.85))
+}
+
+export function useSetCover() {
+  const uid = useUserId()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ plan, file }: { plan: Pick<MealPlan, 'id' | 'cover_path'>; file: File | null }) => {
+      let path: string | null = null
+      if (file) {
+        if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error('Choose a JPEG, PNG or WebP image.')
+        if (file.size > 15 * 1024 * 1024) throw new Error('That image is too large. Choose one under 15 MB.')
+        path = `${plan.id}/${crypto.randomUUID()}.jpg`
+        const { error } = await supabase.storage.from(COVER_BUCKET).upload(path, await shrink(file), { contentType: 'image/jpeg' })
+        if (error) throw error
+      }
+      const { error } = await supabase.from('meal_plans').update({ cover_path: path }).eq('id', plan.id)
+      if (error) throw error
+      if (plan.cover_path) await supabase.storage.from(COVER_BUCKET).remove([plan.cover_path])
+    },
+    onSuccess: (_d, v) => invalidatePlans(qc, uid, v.plan.id),
+  })
+}
+
+// ── Editing a plan's meals without overwriting someone else's change ──────────
+/** Someone changed (or removed) this meal after it was loaded. */
+export class PlanConflict extends Error {
+  constructor(public current: PlannedMeal | null) {
+    super(current ? 'Someone else changed this meal a moment ago.' : 'Someone else removed this meal a moment ago.')
+    this.name = 'PlanConflict'
+  }
+}
+
+export type PlanMealPatch = Partial<Pick<PlannedMeal, 'locked' | 'portion' | 'date' | 'slot' | 'scheduled_time'>>
+
+/**
+ * Saves only if the meal is still the version this person saw (optimistic concurrency on
+ * updated_at). Otherwise throws PlanConflict with the current version, so the person can
+ * keep theirs or apply their own change on purpose (force).
+ */
+export function usePlanMealUpdate(planId: string) {
+  const uid = useUserId()
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ meal, patch, force }: { meal: PlannedMeal; patch: PlanMealPatch; force?: boolean }) => {
+      let q = supabase.from('planned_meals').update({ ...patch, client_updated_at: new Date().toISOString() }).eq('id', meal.id)
+      if (!force && meal.updated_at) q = q.eq('updated_at', meal.updated_at)
+      const { data, error } = await q.select('id')
+      if (error) throw error
+      if (!data?.length) {
+        const { data: now } = await supabase.from('planned_meals').select(PM_SELECT).eq('id', meal.id).maybeSingle()
+        throw new PlanConflict((now as PlannedMeal | null) ?? null)
+      }
+    },
+    onSettled: () => invalidatePlans(qc, uid, planId),
+  })
+}
+
+/** Exports are part of a plan's history. Best effort: never blocks the export itself. */
+export async function logPlanExport(planId: string, detail: string) {
+  await supabase.rpc('log_plan_export', { p_plan: planId, p_detail: detail })
 }

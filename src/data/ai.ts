@@ -49,7 +49,7 @@ export function useAIStatus() {
 }
 
 export interface GeneratePlanInput {
-  create?: { duration: PlanDuration; start_date: string; title?: string; description?: string; budget_amount?: number | null; replace_active?: boolean }
+  create?: { duration: PlanDuration; start_date: string; title?: string; description?: string; budget_amount?: number | null; replace_active?: boolean; meal_slots?: MealSlot[]; empty?: boolean }
   plan_id?: string
   /** regenerate a range inside an existing plan; locked meals are kept */
   regenerate?: { from: string; to: string }
@@ -105,7 +105,7 @@ export function useReplaceMeal() {
   const uid = useUserId()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (input: { planned_meal_id: string; choose_food_item_id?: string; exclude?: string[] }) => invokeFn<{ suggestions?: Suggestion[]; replaced?: PlannedMeal; engine: string; ai_used: boolean }>('meal-replace', input),
+    mutationFn: (input: { planned_meal_id: string; choose_food_item_id?: string; exclude?: string[]; expected_updated_at?: string }) => invokeFn<{ suggestions?: Suggestion[]; replaced?: PlannedMeal; engine: string; ai_used: boolean }>('meal-replace', input),
     onSuccess: (r) => {
       if (r.replaced) {
         void qc.invalidateQueries({ queryKey: qk.planned(uid) })

@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { createContext, useContext, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
 import { MEAL_SLOTS, SLOT_LABEL, occasionsFor, type MealSlot } from '@domain/types.ts'
-import type { PlannedMeal } from '@/types/db'
+import type { PlanRole, PlannedMeal } from '@/types/db'
+import { PlanConflict, usePlanMealUpdate, useRemovePlanMeal, planKeys, type PlanMealPatch } from '@/data/planbook'
+import { useQueryClient } from '@tanstack/react-query'
+import { formatTime } from '@/lib/time'
 import { useDeletePlannedMeal, useSetMealStatus, useUpdatePlannedMeal } from '@/data/plans'
 import { invokeFn, useReplaceMeal, type Suggestion } from '@/data/ai'
 import { useCatalogue, toCatalogueMeal } from '@/data/catalogue'
@@ -26,10 +29,34 @@ import { TimeField } from '@/components/ui/TimePicker'
 
 type Panel = 'menu' | 'replace' | 'move' | 'portion' | null
 
-export function MealActionsSheet({ meal, onClose }: { meal: PlannedMeal | null; onClose: () => void }) {
+/**
+ * A meal opened from a plan's workspace. Edits are checked against the version the
+ * person saw, so a collaborator's change is never silently overwritten; what someone may
+ * do follows their role (the server enforces the same rules).
+ */
+export interface PlanScope {
+  planId: string
+  role: PlanRole
+  ownerId: string
+}
+
+interface Writer {
+  save: (patch: PlanMealPatch, label: string) => Promise<boolean>
+  scope: PlanScope | null
+}
+const WriterCtx = createContext<Writer | null>(null)
+const useWriter = () => useContext(WriterCtx)!
+
+const SLOT_DEFAULT_TIME: Record<MealSlot, string> = { breakfast: '08:00', lunch: '13:00', snack: '16:00', dinner: '19:00', drink: '15:00' }
+
+export function MealActionsSheet({ meal, onClose, scope }: { meal: PlannedMeal | null; onClose: () => void; scope?: PlanScope }) {
   const [panel, setPanel] = useState<Panel>('menu')
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [forId, setForId] = useState<string | null>(null)
+  const [conflict, setConflict] = useState<{ patch: PlanMealPatch; label: string; current: PlannedMeal | null } | null>(null)
+  const calendarUpdate = useUpdatePlannedMeal()
+  const planUpdate = usePlanMealUpdate(scope?.planId ?? '')
+  const toast = useToast()
   if (meal && meal.id !== forId) {
     // reset to the main menu whenever a different meal is opened
     setForId(meal.id)
@@ -40,8 +67,26 @@ export function MealActionsSheet({ meal, onClose }: { meal: PlannedMeal | null; 
     setPanel('menu')
     onClose()
   }
+  // true when saved; false when someone else changed it first (the conflict prompt opens)
+  const save = async (patch: PlanMealPatch, label: string): Promise<boolean> => {
+    if (!scope) {
+      await calendarUpdate.mutateAsync({ id: meal.id, patch, label })
+      return true
+    }
+    try {
+      await planUpdate.mutateAsync({ meal, patch })
+      return true
+    } catch (e) {
+      if (e instanceof PlanConflict) {
+        setConflict({ patch, label, current: e.current })
+        return false
+      }
+      toast.error(friendlyError(e))
+      return false
+    }
+  }
   return (
-    <>
+    <WriterCtx.Provider value={{ save, scope: scope ?? null }}>
       <Sheet open={!!meal && !confirmDelete} onClose={close} title={panel === 'replace' ? 'Not feeling it? Switch it up' : panel === 'move' ? 'Move meal' : panel === 'portion' ? 'Edit portion' : meal.name} description={panel === 'menu' ? `${SLOT_LABEL[meal.slot]} · ${meal.date}` : undefined}>
         {panel === 'menu' && <Menu meal={meal} onPanel={setPanel} onClose={close} onDelete={() => setConfirmDelete(true)} />}
         {panel === 'replace' && <ReplacePanel meal={meal} onDone={close} />}
@@ -49,7 +94,31 @@ export function MealActionsSheet({ meal, onClose }: { meal: PlannedMeal | null; 
         {panel === 'portion' && <PortionPanel meal={meal} onDone={close} />}
       </Sheet>
       <DeleteConfirm meal={meal} open={confirmDelete} onDone={() => { setConfirmDelete(false); close() }} onCancel={() => setConfirmDelete(false)} />
-    </>
+      <Sheet open={!!conflict} onClose={() => { setConflict(null); close() }} title="Changed by someone else" description={conflict?.current ? 'While you were editing, this meal was changed. Nothing has been overwritten.' : 'While you were editing, this meal was removed from the plan.'}>
+        {conflict?.current && (
+          <div className="rounded-lg bg-elevated p-4 text-sm">
+            <p className="label-caps text-muted">Now in the plan</p>
+            <p className="mt-1 font-semibold">{conflict.current.name}</p>
+            <p className="num text-muted">{SLOT_LABEL[conflict.current.slot]} · {conflict.current.date}{conflict.current.scheduled_time ? ` · ${formatTime(conflict.current.scheduled_time)}` : ''} · ×{conflict.current.portion}</p>
+          </div>
+        )}
+        <div className="mt-4 flex flex-col gap-2">
+          <Button block variant="secondary" onClick={() => { setConflict(null); close() }}>Keep their version</Button>
+          {conflict?.current && (
+            <Button block onClick={async () => {
+              try {
+                await planUpdate.mutateAsync({ meal: conflict.current!, patch: conflict.patch, force: true })
+                toast.show('Your change is saved.', { tone: 'success' })
+              } catch (e) {
+                toast.error(friendlyError(e))
+              }
+              setConflict(null)
+              close()
+            }}>Apply my change instead</Button>
+          )}
+        </div>
+      </Sheet>
+    </WriterCtx.Provider>
   )
 }
 
@@ -73,7 +142,10 @@ function Menu({ meal, onPanel, onClose, onDelete }: { meal: PlannedMeal; onPanel
   const nav = useNavigate()
   const toast = useToast()
   const status = useSetMealStatus()
-  const update = useUpdatePlannedMeal()
+  const { save, scope } = useWriter()
+  // eating and skipping are the plan owner's; viewers only look
+  const canTick = !scope || scope.role === 'owner'
+  const canEdit = !scope || scope.role !== 'viewer'
   const catalogue = useCatalogue()
   const addToList = useAddIngredientsToList()
   const favs = useFavourites()
@@ -90,22 +162,27 @@ function Menu({ meal, onPanel, onClose, onDelete }: { meal: PlannedMeal; onPanel
 
   return (
     <ul className="flex flex-col">
-      {meal.status !== 'eaten' && <Action icon="check" label="I ate this" hint="Adds it to your food diary" onClick={() => void setStatus('eaten')} />}
-      {meal.status === 'planned' && <Action icon="x" label="Skip this meal" onClick={() => void setStatus('skipped')} />}
-      {meal.status !== 'planned' && <Action icon="refresh" label="Mark as planned again" hint={meal.status === 'eaten' ? 'Removes the diary entry it created' : undefined} onClick={() => void setStatus('planned')} />}
-      <Action icon="swap" label="Replace meal" hint={meal.locked ? 'Unlock first to replace' : 'Get a few suggestions that fit'} disabled={meal.locked || meal.status === 'eaten'} onClick={() => onPanel('replace')} />
-      <Action icon="move" label="Move to another day or time" onClick={() => onPanel('move')} />
-      <Action icon="edit" label="Edit portion" hint={`Currently ×${meal.portion}`} onClick={() => onPanel('portion')} />
-      <Action
-        icon={meal.locked ? 'unlock' : 'lock'}
-        label={meal.locked ? 'Unlock meal' : 'Lock meal'}
-        hint={meal.locked ? undefined : "Keeps it when you regenerate"}
-        onClick={() => {
-          void update.mutateAsync({ id: meal.id, patch: { locked: !meal.locked }, label: `${meal.locked ? 'Unlock' : 'Lock'} ${meal.name}` })
-          toast.show(meal.locked ? 'Unlocked' : 'Locked. Regenerating will keep this meal.')
-          onClose()
-        }}
-      />
+      {canTick && meal.status !== 'eaten' && <Action icon="check" label="I ate this" hint="Adds it to your food diary" onClick={() => void setStatus('eaten')} />}
+      {canTick && meal.status === 'planned' && <Action icon="x" label="Skip this meal" onClick={() => void setStatus('skipped')} />}
+      {canTick && meal.status !== 'planned' && <Action icon="refresh" label="Mark as planned again" hint={meal.status === 'eaten' ? 'Removes the diary entry it created' : undefined} onClick={() => void setStatus('planned')} />}
+      {canEdit && (
+        <>
+          <Action icon="swap" label="Replace meal" hint={meal.locked ? 'Unlock first to replace' : 'Get a few suggestions that fit'} disabled={meal.locked || meal.status === 'eaten'} onClick={() => onPanel('replace')} />
+          <Action icon="move" label="Move or change the time" onClick={() => onPanel('move')} />
+          <Action icon="edit" label="Edit servings" hint={`Currently ×${meal.portion}`} onClick={() => onPanel('portion')} />
+          <Action
+            icon={meal.locked ? 'unlock' : 'lock'}
+            label={meal.locked ? 'Unlock meal' : 'Lock meal'}
+            hint={meal.locked ? undefined : 'Keeps it when you regenerate'}
+            onClick={async () => {
+              if (await save({ locked: !meal.locked }, `${meal.locked ? 'Unlock' : 'Lock'} ${meal.name}`)) {
+                toast.show(meal.locked ? 'Unlocked' : 'Locked. Regenerating will keep this meal.')
+                onClose()
+              }
+            }}
+          />
+        </>
+      )}
       {food?.recipe && food.recipe.steps.length > 0 && <Action icon="diary" label="Open recipe" onClick={() => nav(`/recipes/${food.slug}`)} />}
       {food?.recipe && meal.method === 'cook' && (
         <Action
@@ -127,13 +204,15 @@ function Menu({ meal, onPanel, onClose, onDelete }: { meal: PlannedMeal; onPanel
         />
       )}
       {meal.food_item_id && <Action icon="heart" label={isFav ? 'Remove from favourites' : 'Add to favourites'} onClick={() => { toggleFav.mutate({ foodItemId: meal.food_item_id!, on: !isFav }); toast.show(isFav ? 'Removed from favourites' : 'Saved to favourites'); onClose() }} />}
-      <Action icon="trash" label="Remove from plan" tone="danger" onClick={onDelete} />
+      {canEdit && <Action icon="trash" label="Remove from plan" tone="danger" onClick={onDelete} />}
     </ul>
   )
 }
 
 function ReplacePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void }) {
   const replace = useReplaceMeal()
+  const { scope } = useWriter()
+  const qc = useQueryClient()
   const toast = useToast()
   const [exclude, setExclude] = useState<string[]>([])
   const [choosing, setChoosing] = useState<string | null>(null)
@@ -150,7 +229,8 @@ function ReplacePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void 
   const choose = async (s: Suggestion) => {
     setChoosing(s.food_item_id)
     try {
-      await replace.mutateAsync({ planned_meal_id: meal.id, choose_food_item_id: s.food_item_id })
+      await replace.mutateAsync({ planned_meal_id: meal.id, choose_food_item_id: s.food_item_id, expected_updated_at: scope ? meal.updated_at : undefined })
+      if (scope) void qc.invalidateQueries({ queryKey: planKeys.detail(scope.planId) })
       toast.success(`Swapped ${meal.name} for ${s.name}.`)
       onDone()
     } catch (e) {
@@ -198,7 +278,7 @@ function ReplacePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void 
 }
 
 function MovePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void }) {
-  const update = useUpdatePlannedMeal()
+  const { save } = useWriter()
   const toast = useToast()
   const [date, setDate] = useState(meal.date)
   const [slot, setSlot] = useState<MealSlot>(meal.slot)
@@ -207,14 +287,15 @@ function MovePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void }) 
     <div className="flex flex-col gap-4">
       <DateField label="Day" value={date} onChange={(d) => d && setDate(d)} />
       <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={(meal.food_item ? occasionsFor(meal.food_item.food_type) : MEAL_SLOTS).map((s) => ({ value: s, label: SLOT_LABEL[s] }))} />
-      <TimeField label="Time (optional)" optional value={time || null} fallback={({ breakfast: '08:00', lunch: '13:00', snack: '16:00', dinner: '19:00', drink: '15:00' } as Record<MealSlot, string>)[slot]} onChange={(v) => setTime(v ?? '')} />
+      <TimeField label="Time (optional)" optional value={time || null} fallback={SLOT_DEFAULT_TIME[slot]} onChange={(v) => setTime(v ?? '')} />
       <Button
         block
         disabled={!date}
         onClick={async () => {
-          await update.mutateAsync({ id: meal.id, patch: { date, slot, scheduled_time: time || null }, label: `Move ${meal.name}` })
-          toast.success('Moved.')
-          onDone()
+          if (await save({ date, slot, scheduled_time: time || null }, `Move ${meal.name}`)) {
+            toast.success('Saved.')
+            onDone()
+          }
         }}
       >
         Move meal
@@ -224,14 +305,14 @@ function MovePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void }) 
 }
 
 function PortionPanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void }) {
-  const update = useUpdatePlannedMeal()
+  const { save } = useWriter()
   const [portion, setPortion] = useState(meal.portion)
   return (
     <div className="flex flex-col gap-5">
       <Stepper label="Servings" value={portion} onChange={setPortion} min={0.25} max={10} step={0.25} format={(v) => `×${v}`} />
       {meal.calories != null && <p className="num text-sm text-muted">≈ {formatKcal(Math.round(meal.calories * portion))} (estimate)</p>}
-      <Button block onClick={async () => { await update.mutateAsync({ id: meal.id, patch: { portion }, label: `Portion for ${meal.name}` }); onDone() }}>
-        Save portion
+      <Button block onClick={async () => { if (await save({ portion }, `Servings for ${meal.name}`)) onDone() }}>
+        Save servings
       </Button>
     </div>
   )
@@ -239,6 +320,8 @@ function PortionPanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void 
 
 function DeleteConfirm({ meal, open, onDone, onCancel }: { meal: PlannedMeal; open: boolean; onDone: () => void; onCancel: () => void }) {
   const del = useDeletePlannedMeal()
+  const { scope } = useWriter()
+  const removeFromPlan = useRemovePlanMeal(scope?.planId ?? '')
   const toast = useToast()
   return (
     <ConfirmDialog
@@ -249,8 +332,13 @@ function DeleteConfirm({ meal, open, onDone, onCancel }: { meal: PlannedMeal; op
       danger
       onCancel={onCancel}
       onConfirm={async () => {
-        await del.mutateAsync(meal)
-        toast.show('Removed from your plan.')
+        try {
+          if (scope) await removeFromPlan.mutateAsync(meal.id)
+          else await del.mutateAsync(meal)
+          toast.show('Removed from the plan.')
+        } catch (e) {
+          toast.error(friendlyError(e))
+        }
         onDone()
       }}
     />

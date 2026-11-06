@@ -1,7 +1,7 @@
-import { useState, type ReactNode } from 'react'
+import { useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import type { MealPlan, PlanRole } from '@/types/db'
-import { useChangeMember, useCopyPlan, useDeletePlan, useSetPlanStatus, useUpdatePlan } from '@/data/planbook'
+import { useChangeMember, useCopyPlan, useDeletePlan, useSetCover, useSetPlanStatus, useUpdatePlan } from '@/data/planbook'
 import { useUserId } from '@/features/auth/AuthProvider'
 import { useToday } from '@/hooks/useToday'
 import { friendlyError } from '@/lib/errors'
@@ -35,6 +35,9 @@ export function PlanActions({ plan, onClose, from = 'list', initial = 'menu' }: 
   const setStatus = useSetPlanStatus()
   const del = useDeletePlan()
   const leave = useChangeMember(plan?.id ?? '')
+  const setCover = useSetCover()
+  const file = useRef<HTMLInputElement>(null)
+  const [focus, setFocus] = useState<'title' | 'description'>('title')
   if (!plan) return null
   const owner = plan.role === 'owner'
   const close = () => {
@@ -59,18 +62,33 @@ export function PlanActions({ plan, onClose, from = 'list', initial = 'menu' }: 
           {owner && plan.status !== 'active' && (
             <Action icon="check" label="Make it my current plan" hint="It goes on your calendar. Your current plan becomes a draft." onClick={() => void run(() => setStatus.mutateAsync({ id: plan.id, status: 'active' }), `“${plan.title}” is now your current plan.`)} />
           )}
-          {owner && <Action icon="edit" label="Rename or edit details" onClick={() => setDialog('edit')} />}
+          {owner && <Action icon="edit" label="Rename" onClick={() => { setFocus('title'); setDialog('edit') }} />}
+          {owner && <Action icon="edit" label={plan.description ? 'Edit description' : 'Add a description'} onClick={() => { setFocus('description'); setDialog('edit') }} />}
+          {owner && <Action icon="image" label="Change cover image" hint={plan.cover_path ? undefined : 'Until then, the cover is a collage of its meals.'} onClick={() => file.current?.click()} />}
+          {owner && plan.cover_path && <Action icon="x" label="Remove cover image" onClick={() => void run(() => setCover.mutateAsync({ plan, file: null }), 'Cover removed.')} />}
           <Action icon="copy" label="Duplicate" hint="A new draft you own. This plan isn't changed." onClick={() => setDialog('copy')} />
           <Action icon="download" label="Export as PDF or image" onClick={() => setDialog('export')} />
           {owner && <Action icon="users" label="Share and invite" onClick={() => nav(`/plans/${plan.id}?panel=share`)} />}
           {owner && <Action icon="community" label={plan.visibility === 'published' ? 'Community settings' : 'Publish to the community'} onClick={() => nav(`/plans/${plan.id}?panel=publish`)} />}
           {owner && plan.status !== 'archived' && <Action icon="archive" label="Archive" hint="Hidden from your plans list and calendar. Nothing is deleted." onClick={() => setDialog('archive')} />}
-          {owner && plan.status === 'archived' && <Action icon="refresh" label="Restore as a draft" onClick={() => void run(() => setStatus.mutateAsync({ id: plan.id, status: 'draft' }), 'Restored as a draft.')} />}
+          {owner && plan.status === 'archived' && <Action icon="refresh" label="Restore from the archive" hint="It comes back as a draft." onClick={() => void run(() => setStatus.mutateAsync({ id: plan.id, status: 'draft' }), 'Restored. It’s back in My plans as a draft.')} />}
           {!owner && plan.role && <Action icon="logout" label="Leave this plan" onClick={() => setDialog('leave')} />}
           {owner && <Action icon="trash" label="Delete" danger onClick={() => setDialog('delete')} />}
         </ul>
+        <input
+          ref={file}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          hidden
+          aria-label="Cover image"
+          onChange={(e) => {
+            const f = e.target.files?.[0]
+            e.target.value = ''
+            if (f) void run(() => setCover.mutateAsync({ plan, file: f }), 'Cover updated.')
+          }}
+        />
       </Sheet>
-      {owner && <EditDetails key={plan.id} plan={plan} open={dialog === 'edit'} onClose={close} />}
+      {owner && <EditDetails key={`${plan.id}-${focus}`} plan={plan} focus={focus} open={dialog === 'edit'} onClose={close} />}
       <CopyPlan key={plan.id} plan={plan} open={dialog === 'copy'} onClose={close} mode="duplicate" />
       <ExportSheet open={dialog === 'export'} onClose={close} anchorDate={plan.start_date} plan={plan} />
       <ConfirmDialog
@@ -129,7 +147,7 @@ function Action({ icon, label, hint, onClick, danger }: { icon: IconName; label:
   )
 }
 
-export function EditDetails({ plan, open, onClose }: { plan: MealPlan; open: boolean; onClose: () => void }) {
+export function EditDetails({ plan, open, onClose, focus = 'title' }: { plan: MealPlan; open: boolean; onClose: () => void; focus?: 'title' | 'description' }) {
   const update = useUpdatePlan()
   const toast = useToast()
   const [title, setTitle] = useState(plan.title)
@@ -149,8 +167,8 @@ export function EditDetails({ plan, open, onClose }: { plan: MealPlan; open: boo
   return (
     <Sheet open={open} onClose={onClose} title="Plan details" footer={<Button block loading={update.isPending} onClick={() => void save()}>Save</Button>}>
       <div className="flex flex-col gap-4">
-        <TextField label="Name" value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} error={err} />
-        <TextField label="Description (optional)" value={description} maxLength={500} onChange={(e) => setDescription(e.target.value)} />
+        <TextField label="Name" autoFocus={focus === 'title'} value={title} maxLength={80} onChange={(e) => setTitle(e.target.value)} error={err} />
+        <TextField label="Description (optional)" autoFocus={focus === 'description'} value={description} maxLength={500} onChange={(e) => setDescription(e.target.value)} />
         <TextField label="Budget for this plan (optional)" inputMode="decimal" placeholder="No budget" value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^0-9.]/g, ''))} />
       </div>
     </Sheet>

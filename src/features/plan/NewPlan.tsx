@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
-import { PLAN_DURATIONS, PLAN_DURATION_LABEL, type PlanDuration } from '@domain/types.ts'
+import { MEAL_SLOTS, PLAN_DURATIONS, PLAN_DURATION_LABEL, SLOT_LABEL, type MealSlot, type PlanDuration } from '@domain/types.ts'
+import { usePreferences } from '@/data/profile'
 import { addDays, planEndDate } from '@domain/dates.ts'
 import { useActivePlan, usePlannedMeals } from '@/data/plans'
 import { useAIStatus, useGeneratePlan } from '@/data/ai'
@@ -10,7 +11,7 @@ import { useToday } from '@/hooks/useToday'
 import { dayLabel } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { Button } from '@/components/ui/Button'
-import { ChoiceCard } from '@/components/ui/Chip'
+import { ChipGroup, ChoiceCard } from '@/components/ui/Chip'
 import { TextField } from '@/components/ui/Field'
 import { DateField } from '@/components/ui/DateField'
 import { toDayStates } from '@/components/ui/Calendar'
@@ -45,6 +46,10 @@ export function NewPlan() {
   const [replace, setReplace] = useState(true)
   const [description, setDescription] = useState('')
   const [budget, setBudget] = useState('')
+  const prefs = usePreferences()
+  const [slotsChoice, setSlots] = useState<MealSlot[] | null>(null)
+  const slots = slotsChoice ?? prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']
+  const [start_mode, setStartMode] = useState<'generate' | 'empty'>('generate')
   const [err, setErr] = useState<string | null>(null)
   // once created, a retry only continues filling this plan (never creates another)
   const [created, setCreated] = useState<MealPlan | null>(null)
@@ -62,10 +67,14 @@ export function NewPlan() {
     let unfilled = 0
     try {
       if (!plan) {
-        const r = await gen.mutateAsync({ create: { duration, start_date: start, title: title.trim() || undefined, description: description.trim() || undefined, budget_amount: budget ? Number(budget) : null, replace_active: replace }, today })
+        const r = await gen.mutateAsync({ create: { duration, start_date: start, title: title.trim() || undefined, description: description.trim() || undefined, budget_amount: budget ? Number(budget) : null, replace_active: replace, meal_slots: slots, empty: start_mode === 'empty' }, today })
         plan = r.plan
         unfilled += r.unfilled.length
         setCreated(plan)
+      }
+      if (start_mode === 'empty') {
+        toast.show('Your plan is ready to fill in.', { tone: 'success' })
+        return nav(`/plans/${plan.id}`, { replace: true })
       }
       if (!isComplete(plan)) {
         const f = await fill(plan, today)
@@ -74,7 +83,8 @@ export function NewPlan() {
       }
       if (!isComplete(plan)) throw new Error('Part of the plan could not be saved.')
       toast.show(`Your ${PLAN_DURATION_LABEL[plan.duration].toLowerCase()} plan is ready.${unfilled ? ` We couldn't find a suitable meal for ${unfilled} slot${unfilled > 1 ? 's' : ''}; you can add those yourself.` : ''}`, { tone: 'success' })
-      nav(plan.status === 'active' ? `/plan?date=${plan.start_date}` : `/plans/${plan.id}`, { replace: true })
+      // the first plan goes straight to the calendar; every other plan opens in its own workspace
+      nav(first ? `/plan?date=${plan.start_date}` : `/plans/${plan.id}`, { replace: true })
     } catch (e) {
       setErr(friendlyError(e))
     }
@@ -125,6 +135,15 @@ export function NewPlan() {
             Meals come from DISH's catalogue, filtered by your allergies, preferences, budget and cooking time.{' '}
             {ai.data?.ai_configured ? 'AI helps rank the options for variety.' : 'AI ranking isn\'t set up on this server, so DISH uses its built-in planner.'} You can replace or lock any meal afterwards.
           </Notice>
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-semibold">Meals to plan</span>
+            <ChipGroup label="Meals to plan" options={MEAL_SLOTS.map((s) => ({ value: s, label: SLOT_LABEL[s] }))} value={slots} onChange={(v) => v.length && setSlots(MEAL_SLOTS.filter((s) => v.includes(s)))} />
+            <p className="text-footnote text-muted">For this plan only. Your allergies, diet, budget and cooking time always apply.</p>
+          </div>
+          <div role="radiogroup" aria-label="How to start" className="grid gap-2 sm:grid-cols-2">
+            <ChoiceCard selected={start_mode === 'generate'} onClick={() => setStartMode('generate')} title="Generate meals" description="DISH fills the plan from its catalogue." />
+            <ChoiceCard selected={start_mode === 'empty'} onClick={() => setStartMode('empty')} title="Start with an empty plan" description="Add meals yourself. You can generate later." />
+          </div>
           <Button size="lg" block iconRight="arrow" onClick={() => void create()} disabled={!online || !start}>
             Create my plan
           </Button>

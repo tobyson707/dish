@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { MealPlan } from '@/types/db'
-import { inviteUrl, ROLE_LABEL, useCreateInvite, usePlanInvites, useRevokeInvite } from '@/data/planbook'
+import { inviteUrl, ROLE_LABEL, useCreateInvite, usePlanInvites, usePlanPeople, useRevokeInvite } from '@/data/planbook'
+import { useUserId } from '@/features/auth/AuthProvider'
+import { PeopleList } from './PeopleList'
 import { friendlyError } from '@/lib/errors'
 import { Sheet } from '@/components/ui/Sheet'
 import { Button, IconButton } from '@/components/ui/Button'
@@ -18,6 +20,8 @@ export function ShareSheet({ plan, open, onClose }: { plan: MealPlan; open: bool
   const create = useCreateInvite(plan.id)
   const revoke = useRevokeInvite(plan.id)
   const invites = usePlanInvites(plan.id, open)
+  const people = usePlanPeople(open ? plan.id : undefined)
+  const uid = useUserId()
   const [role, setRole] = useState<'contributor' | 'viewer'>('contributor')
   const [email, setEmail] = useState('')
   const [days, setDays] = useState('7')
@@ -71,15 +75,21 @@ export function ShareSheet({ plan, open, onClose }: { plan: MealPlan; open: bool
           </>
         ) : (
           <>
-            <Select label="They can" value={role} onChange={(e) => setRole(e.target.value as 'contributor' | 'viewer')} options={[{ value: 'contributor', label: 'Add and change meals (contributor)' }, { value: 'viewer', label: 'Only view (viewer)' }]} />
+            <Select label="Permission" value={role} onChange={(e) => setRole(e.target.value as 'contributor' | 'viewer')} options={[{ value: 'contributor', label: 'Editor: add, change and remove meals' }, { value: 'viewer', label: 'Viewer: look and export only' }]} />
             <TextField label="Their email (optional)" type="email" placeholder="Anyone with the link" hint="If you add one, only that account can use the link." value={email} onChange={(e) => setEmail(e.target.value)} error={err} />
             <Select label="Link expires after" value={days} onChange={(e) => setDays(e.target.value)} options={[{ value: '1', label: '1 day' }, { value: '7', label: '7 days' }, { value: '30', label: '30 days' }]} />
             <Button block icon="link" loading={create.isPending} onClick={() => void make()}>Create invitation link</Button>
           </>
         )}
+        {(people.data?.length ?? 0) > 0 && (
+          <section aria-label="People with access">
+            <h3 className="label-caps mb-1">People with access</h3>
+            <PeopleList planId={plan.id} owner people={people.data!} me={uid} />
+          </section>
+        )}
         {live.length > 0 && (
-          <section aria-label="Open invitations">
-            <h3 className="label-caps mb-1">Open invitations</h3>
+          <section aria-label="Pending invitations">
+            <h3 className="label-caps mb-1">Pending invitations</h3>
             <ul className="divide-y divide-line rounded-lg bg-elevated px-4">
               {live.map((i) => (
                 <li key={i.id} className="flex items-center gap-3 py-2.5 text-sm">

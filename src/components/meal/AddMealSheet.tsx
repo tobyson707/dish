@@ -18,7 +18,8 @@ import { DateField } from '@/components/ui/DateField'
 
 const n = (v: string) => (v.trim() === '' || !Number.isFinite(Number(v)) ? null : Number(v))
 
-export function AddMealSheet({ open, onClose, date, slot: initialSlot, planId }: { open: boolean; onClose: () => void; date: string; slot?: MealSlot; planId?: string | null }) {
+/** ownerId / onCalendar: adding to a plan in its workspace (possibly someone else's, possibly a draft). */
+export function AddMealSheet({ open, onClose, date, slot: initialSlot, planId, ownerId, onCalendar, minDate, maxDate }: { open: boolean; onClose: () => void; date: string; slot?: MealSlot; planId?: string | null; ownerId?: string; onCalendar?: boolean; minDate?: string; maxDate?: string }) {
   const create = useCreatePlannedMeal()
   const currency = useCurrency()
   const prefs = usePreferences()
@@ -42,14 +43,14 @@ export function AddMealSheet({ open, onClose, date, slot: initialSlot, planId }:
     if (mode === 'catalogue') {
       if (!picked) return
       await create.mutateAsync({
-        date: day, slot, plan_id: planId, name: picked.name, food_item_id: picked.id,
+        date: day, slot, plan_id: planId, owner_id: ownerId, on_calendar: onCalendar, name: picked.name, food_item_id: picked.id,
         calories: picked.calories, protein_g: picked.protein_g, carbs_g: picked.carbs_g, fat_g: picked.fat_g,
         nutrition_source: picked.nutrition_source, est_cost: midCost(picked.est_cost_min, picked.est_cost_max), est_cost_currency: picked.cost_currency,
         method: picked.can_cook ? 'cook' : 'buy',
       })
     } else {
       if (!m.name.trim()) return setErr('Give the meal a name')
-      await create.mutateAsync({ date: day, slot, plan_id: planId, name: m.name, calories: n(m.calories), protein_g: n(m.protein), carbs_g: n(m.carbs), fat_g: n(m.fat), est_cost: n(m.cost), est_cost_currency: currency, method: m.method })
+      await create.mutateAsync({ date: day, slot, plan_id: planId, owner_id: ownerId, on_calendar: onCalendar, name: m.name, calories: n(m.calories), protein_g: n(m.protein), carbs_g: n(m.carbs), fat_g: n(m.fat), est_cost: n(m.cost), est_cost_currency: currency, method: m.method })
     }
     toast.success(`Added to ${SLOT_LABEL[slot].toLowerCase()}.`)
     reset()
@@ -59,7 +60,7 @@ export function AddMealSheet({ open, onClose, date, slot: initialSlot, planId }:
     <Sheet open={open} onClose={reset} title="Add a meal" size="lg" footer={<Button block onClick={() => void save()} disabled={mode === 'catalogue' && !picked} loading={create.isPending}>Add to plan</Button>}>
       <div className="flex flex-col gap-4">
         <div className="grid grid-cols-2 gap-3">
-          <DateField label="Day" value={day} onChange={(d) => d && setDay(d)} />
+          <DateField label="Day" min={minDate} max={maxDate} value={day} onChange={(d) => d && setDay(d)} />
           <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={(picked ? occasionsFor(picked.food_type) : MEAL_SLOTS).map((s) => ({ value: s, label: SLOT_LABEL[s] }))} />
         </div>
         <Segmented label="Add from" hideLabel value={mode} onChange={setMode} options={[{ value: 'catalogue', label: 'Catalogue' }, { value: 'manual', label: 'My own meal' }]} />

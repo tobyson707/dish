@@ -1,88 +1,108 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router'
-import { PLAN_DURATION_LABEL, SLOT_LABEL, occasionsFor, type MealSlot } from '@domain/types.ts'
-import { midCost } from '@domain/budget.ts'
+import { PLAN_DURATION_LABEL, type MealSlot } from '@domain/types.ts'
+import { addDays, daysInMonth, startOfMonth, startOfWeek, type ISODate } from '@domain/dates.ts'
 import {
   ROLE_LABEL,
   STATUS_LABEL,
-  useAddPlanMeal,
-  useChangeMember,
   usePlan,
   usePlanActivity,
   usePlanMeals,
   usePlanPeople,
   usePlanRevisions,
-  useRemovePlanMeal,
   useRestoreRevision,
   useSetPlanStatus,
   type PlanPerson,
 } from '@/data/planbook'
+import { usePlanLive } from '@/data/planLive'
+import { useGeneratePlan } from '@/data/ai'
 import { useCatalogue } from '@/data/catalogue'
-import { isIncomplete } from '@/features/recipes/RecordStatus'
-import { usePlanFill, isComplete } from '@/features/plan/usePlanFill'
+import { useGenerateGroceryList } from '@/data/grocery'
+import { usePreferences } from '@/data/profile'
+import { sortPlanned } from '@/data/plans'
+import { usePlanFill, isComplete, daysSaved, planDays } from '@/features/plan/usePlanFill'
 import { shortRange } from '@/features/plan/export/model'
+import { DayBlock } from '@/features/plan/PlanPage'
+import { ExportSheet } from '@/features/plan/export/ExportSheet'
 import { useUserId } from '@/features/auth/AuthProvider'
 import { useCurrency, useToday } from '@/hooks/useToday'
 import { dayLabel, formatMoney } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
-import type { PlannedMeal } from '@/types/db'
+import type { MealPlan, PlanRole, PlannedMeal } from '@/types/db'
 import { Button, IconButton } from '@/components/ui/Button'
 import { PageHeader, Section } from '@/components/ui/Layout'
 import { Tag } from '@/components/ui/Badges'
-import { Select } from '@/components/ui/Field'
-import { DateField } from '@/components/ui/DateField'
-import { SearchSelect } from '@/components/ui/SearchSelect'
+import { Segmented, Toggle } from '@/components/ui/Inputs'
+import { DateStrip, type DayState } from '@/components/ui/Calendar'
+import { DishCalendar } from '@/components/ui/DishCalendar'
+import { DateRangeField } from '@/components/ui/DateField'
 import { Sheet } from '@/components/ui/Sheet'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
+import { MealActionsSheet } from '@/components/meal/MealActions'
+import { AddMealSheet } from '@/components/meal/AddMealSheet'
 import { PlanActions } from './PlanActions'
 import { ShareSheet } from './ShareSheet'
 import { PublishSheet } from './PublishSheet'
+import { PlanCover } from './PlanCover'
+import { PeopleList, initials } from './PeopleList'
 
-type Tab = 'meals' | 'people' | 'activity' | 'versions'
+type Tab = 'plan' | 'people' | 'activity' | 'versions'
+type View = 'day' | 'week' | 'month' | 'custom'
 
-/** One saved plan: its meals, people, activity and versions. */
+const clamp = (d: ISODate, p: Pick<MealPlan, 'start_date' | 'end_date'>) => (d < p.start_date ? p.start_date : d > p.end_date ? p.end_date : d)
+
+function relative(iso: string | undefined): string {
+  if (!iso) return ''
+  const d = (Date.now() - new Date(iso).getTime()) / 1000
+  if (d < 60) return 'just now'
+  if (d < 3600) return `${Math.floor(d / 60)} min ago`
+  if (d < 86400) return `${Math.floor(d / 3600)} h ago`
+  return new Date(iso).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+}
+
+/**
+ * One plan's workspace: its own meals, dates and people. Everything here reads and writes
+ * this plan only (by its id). Live: other people's changes appear without a refresh.
+ */
 export function PlanDetail() {
   const { id } = useParams()
   const [params, setParams] = useSearchParams()
   const uid = useUserId()
-  const today = useToday()
   const currency = useCurrency()
   const toast = useToast()
   const nav = useNavigate()
-  const q = usePlan(id, { poll: true })
+  const q = usePlan(id)
   const plan = q.data?.plan
   const role = q.data?.role ?? null
-  const meals = usePlanMeals(id, plan?.version)
-  const people = usePlanPeople(plan ? id : undefined)
+  const people = usePlanPeople(plan && role ? id : undefined)
+  const live = usePlanLive(plan?.id, !!role)
   const setStatus = useSetPlanStatus()
-  const { fill, progress, running } = usePlanFill()
-  const [tab, setTab] = useState<Tab>('meals')
   const [menu, setMenu] = useState(false)
+  const [exportOpen, setExportOpen] = useState(false)
+  const [groceryOpen, setGroceryOpen] = useState(false)
+  const tab = (params.get('tab') as Tab) || 'plan'
+  const setTab = (t: Tab) => setParams((p) => (p.set('tab', t), p), { replace: true })
   const panel = params.get('panel')
   const closePanel = () => setParams((p) => (p.delete('panel'), p), { replace: true })
 
-  // someone else changed the plan while it was open: say so (the list already shows the latest)
-  const seen = useRef<{ version: number; mine: boolean } | null>(null)
+  // someone else changed the plan: say what, as it happens
+  const nameOf = (uidOf: string | null | undefined) => (uidOf === uid ? 'You' : people.data?.find((p) => p.user_id === uidOf)?.display_name.split(' ')[0] ?? 'Someone')
   useEffect(() => {
-    if (!plan?.version) return
-    const prev = seen.current
-    if (prev && plan.version > prev.version && !prev.mine && (people.data?.length ?? 0) > 1) toast.show('This plan was just updated by someone else. You’re seeing the latest version.')
-    seen.current = { version: plan.version, mine: false }
-  }, [plan?.version, people.data?.length, toast])
-  const markMine = () => {
-    if (seen.current) seen.current.mine = true
-  }
+    if (!live.remote) return
+    toast.show(`${nameOf(live.remote.actor)}: ${live.remote.summary}`)
+    live.clearRemote()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [live.remote])
 
   if (q.isPending) return <div className="pt-16"><LoadingBlock /></div>
   if (q.isError) return <div className="pt-16"><ErrorState message={friendlyError(q.error)} onRetry={() => q.refetch()} /></div>
-  if (!plan) return <EmptyState className="mt-16" title="Plan not found" message="It may have been deleted, or you no longer have access." action={<Button onClick={() => nav('/plans')}>My plans</Button>} />
+  if (!plan) return <EmptyState className="mt-16" title="Plan not found" message="It may have been deleted, or you no longer have access." action={<Button onClick={() => nav('/plans')}>Back to the Library</Button>} />
   if (!role) {
-    // published plans are previewed in the community, not here
     if (plan.visibility === 'published') return <Navigate to={`/community/${plan.id}`} replace />
-    return <EmptyState className="mt-16" title="You don't have access to this plan" action={<Button onClick={() => nav('/plans')}>My plans</Button>} />
+    return <EmptyState className="mt-16" title="You don't have access to this plan" message="Ask its owner to invite you." action={<Button onClick={() => nav('/plans')}>Back to the Library</Button>} />
   }
   const owner = role === 'owner'
   const canEdit = owner || role === 'contributor'
@@ -91,247 +111,278 @@ export function PlanDetail() {
     <div>
       <PageHeader
         back="/plans"
-        eyebrow={`${STATUS_LABEL[plan.status]} · ${PLAN_DURATION_LABEL[plan.duration]}${role !== 'owner' ? ` · You're a ${ROLE_LABEL[role].toLowerCase()}` : ''}`}
+        eyebrow={`${STATUS_LABEL[plan.status]} · ${PLAN_DURATION_LABEL[plan.duration]}${owner ? '' : ` · ${ROLE_LABEL[role]}`}`}
         title={plan.title}
-        actions={<IconButton icon="dots" label="Plan actions" onClick={() => setMenu(true)} />}
+        actions={
+          <>
+            {owner && <IconButton icon="users" label="Share" onClick={() => setParams((p) => (p.set('panel', 'share'), p))} />}
+            <IconButton icon="download" label="Export" onClick={() => setExportOpen(true)} />
+            <IconButton icon="cart" label="Shopping list for this plan" onClick={() => setGroceryOpen(true)} />
+            <IconButton icon="dots" label="Plan actions" onClick={() => setMenu(true)} />
+          </>
+        }
       />
-      <div className="flex flex-wrap items-center gap-1.5">
-        {plan.visibility === 'published' && <Tag tone="ink">Published</Tag>}
-        {plan.remix_attribution && <Tag>{plan.remix_attribution}</Tag>}
-        <span className="num text-footnote text-muted">{shortRange(plan.start_date, plan.end_date)}</span>
-        {plan.budget_amount != null && <span className="num text-footnote text-muted">· Budget {formatMoney(Number(plan.budget_amount), currency)}</span>}
-      </div>
-      {plan.description && <p className="mt-3 text-ink-2">{plan.description}</p>}
-      {plan.unpublished_reason && owner && <div className="mt-3"><Notice tone="warning">Removed from the community by a moderator: {plan.unpublished_reason}</Notice></div>}
-
-      {owner && (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {plan.status !== 'active' && (
-            <Button size="sm" icon="check" loading={setStatus.isPending} onClick={async () => {
-              try {
-                await setStatus.mutateAsync({ id: plan.id, status: 'active' })
-                toast.show('This is now your current plan. It’s on your calendar.', { tone: 'success', action: { label: 'View', onClick: () => nav(`/plan?date=${plan.start_date}`) } })
-              } catch (e) {
-                toast.error(friendlyError(e))
-              }
-            }}>Make it my current plan</Button>
-          )}
-          {!isComplete(plan) && (
-            <Button size="sm" variant="secondary" icon="sparkle" loading={running} onClick={async () => {
-              try {
-                const r = await fill(plan, today)
-                markMine()
-                toast.show(r.unfilled ? `Planned. ${r.unfilled} slot${r.unfilled > 1 ? 's' : ''} had no suitable meal.` : 'The rest of the plan is ready.', { tone: 'success' })
-                void q.refetch()
-              } catch (e) {
-                toast.error(friendlyError(e))
-              }
-            }}>{running && progress ? `Planning… ${progress.done} of ${progress.total} days` : 'Plan the remaining days'}</Button>
-          )}
-          <Button size="sm" variant="secondary" icon="users" onClick={() => setParams((p) => (p.set('panel', 'share'), p))}>Share</Button>
+      {(plan.cover_path || plan.description) && (
+        <div className="flex items-start gap-4">
+          {plan.cover_path && <div className="h-20 w-28 shrink-0 overflow-hidden rounded-[16px]"><PlanCover plan={plan} /></div>}
+          {plan.description && <p className="text-ink-2">{plan.description}</p>}
         </div>
       )}
+      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-footnote text-muted">
+        <span className="num">{shortRange(plan.start_date, plan.end_date)}</span>
+        {plan.budget_amount != null && <span className="num">Budget {formatMoney(Number(plan.budget_amount), currency)}</span>}
+        {plan.updated_by && <span>Last edited by {nameOf(plan.updated_by)} {relative(plan.updated_at)}</span>}
+        {plan.remix_attribution && <Tag>{plan.remix_attribution}</Tag>}
+        <span className="ml-auto flex items-center gap-2" aria-live="polite">
+          {live.present.length > 0 && (
+            <span className="flex -space-x-2" aria-label={`Also here now: ${live.present.map((p) => p.name).join(', ')}`}>
+              {live.present.slice(0, 4).map((p) => (
+                <span key={p.user_id} title={p.name} className="flex h-7 w-7 items-center justify-center rounded-full bg-accent text-micro font-bold text-accent-ink ring-2 ring-bg">{initials(p.name)}</span>
+              ))}
+            </span>
+          )}
+          {live.connected && <span className="inline-flex items-center gap-1 text-micro font-semibold text-ink-2"><span className="h-1.5 w-1.5 rounded-full bg-accent" />Live</span>}
+        </span>
+      </div>
+      {plan.unpublished_reason && owner && <div className="mt-3"><Notice tone="warning">Removed from the community by a moderator: {plan.unpublished_reason}</Notice></div>}
+      {plan.status === 'archived' && <div className="mt-3"><Notice icon="archive">This plan is archived. {owner ? 'Restore it from the menu to work on it again.' : ''}</Notice></div>}
+      {owner && plan.status !== 'active' && plan.status !== 'archived' && (
+        <Button className="mt-4" size="sm" variant="secondary" icon="check" loading={setStatus.isPending} onClick={async () => {
+          try {
+            await setStatus.mutateAsync({ id: plan.id, status: 'active' })
+            toast.show('This is now your current plan. It’s on your calendar.', { tone: 'success', action: { label: 'View', onClick: () => nav(`/plan?date=${plan.start_date}`) } })
+          } catch (e) {
+            toast.error(friendlyError(e))
+          }
+        }}>Make it my current plan</Button>
+      )}
 
-      <div role="tablist" aria-label="Plan sections" className="-mx-4 mt-6 flex gap-1.5 overflow-x-auto px-4 pb-1">
-        {(['meals', 'people', 'activity', 'versions'] as const).map((t) => (
-          <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={cn('press h-9 shrink-0 rounded-full px-4 text-sm font-semibold capitalize transition-colors', tab === t ? 'bg-accent-soft text-ink ring-1 ring-inset ring-accent-border' : 'bg-elevated text-ink-2 hover:text-ink')}>
-            {t}
+      <div role="tablist" aria-label="Plan sections" className="-mx-4 mt-5 flex gap-1.5 overflow-x-auto px-4 pb-1">
+        {(['plan', 'people', 'activity', 'versions'] as const).map((t) => (
+          <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={cn('press h-9 shrink-0 rounded-full px-4 text-sm font-semibold capitalize transition-colors', tab === t ? 'bg-ink text-on-ink' : 'bg-elevated text-ink-2 hover:text-ink')}>
+            {t === 'plan' ? 'Meals' : t}
           </button>
         ))}
       </div>
 
-      {tab === 'meals' && <MealsTab planId={plan.id} plan={plan} meals={meals.data} pending={meals.isPending} canEdit={canEdit} people={people.data ?? []} onEdited={markMine} />}
+      {tab === 'plan' && <PlanBoard plan={plan} role={role} canEdit={canEdit && plan.status !== 'archived'} />}
       {tab === 'people' && <PeopleTab planId={plan.id} owner={owner} people={people.data} me={uid} onInvite={() => setParams((p) => (p.set('panel', 'share'), p))} />}
-      {tab === 'activity' && <ActivityTab planId={plan.id} people={people.data ?? []} />}
-      {tab === 'versions' && <VersionsTab planId={plan.id} owner={owner} people={people.data ?? []} onRestored={markMine} />}
+      {tab === 'activity' && <ActivityTab planId={plan.id} nameOf={nameOf} />}
+      {tab === 'versions' && <VersionsTab planId={plan.id} owner={owner} nameOf={nameOf} />}
 
       <PlanActions plan={menu ? { ...plan, role } : null} onClose={() => setMenu(false)} from="detail" />
+      <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} anchorDate={plan.start_date} plan={plan} />
+      <PlanGrocerySheet plan={plan} open={groceryOpen} onClose={() => setGroceryOpen(false)} />
       {owner && <ShareSheet plan={plan} open={panel === 'share'} onClose={closePanel} />}
       {owner && <PublishSheet plan={plan} open={panel === 'publish'} onClose={closePanel} />}
     </div>
   )
 }
 
-function nameOf(people: PlanPerson[], id: string | null | undefined, me?: string) {
-  if (!id) return null
-  if (id === me) return 'You'
-  return people.find((p) => p.user_id === id)?.display_name.split(' ')[0] ?? null
-}
-
-function MealsTab({ planId, plan, meals, pending, canEdit, people, onEdited }: { planId: string; plan: { start_date: string; end_date: string; id: string; user_id: string }; meals: PlannedMeal[] | undefined; pending: boolean; canEdit: boolean; people: PlanPerson[]; onEdited: () => void }) {
+/** The plan's meals by day, week, month or a chosen range, inside the plan's own dates. */
+function PlanBoard({ plan, role, canEdit }: { plan: MealPlan; role: PlanRole; canEdit: boolean }) {
   const today = useToday()
-  const uid = useUserId()
   const toast = useToast()
-  const remove = useRemovePlanMeal(planId)
-  const [adding, setAdding] = useState<string | null>(null)
-  const [removing, setRemoving] = useState<PlannedMeal | null>(null)
+  const prefs = usePreferences()
+  const gen = useGeneratePlan()
+  const { fill, progress, running } = usePlanFill()
+  const [params, setParams] = useSearchParams()
+  const view = (params.get('view') as View) || 'week'
+  const date = clamp((params.get('date') as ISODate) || today, plan)
+  const set = (k: string, v: string) => setParams((p) => (p.set(k, v), p), { replace: true })
+  const [custom, setCustom] = useState<{ from: ISODate; to: ISODate }>({ from: plan.start_date, to: clamp(addDays(plan.start_date, 13), plan) })
+  const [actionsFor, setActionsFor] = useState<PlannedMeal | null>(null)
+  const [adding, setAdding] = useState<{ date: ISODate; slot?: MealSlot } | null>(null)
+  const [regen, setRegen] = useState<{ from: ISODate; to: ISODate; label: string } | null>(null)
+
+  const range = useMemo(() => {
+    if (view === 'custom') return custom
+    if (view === 'month') {
+      const from = startOfMonth(date)
+      return { from: clamp(from, plan), to: clamp(addDays(from, daysInMonth(from) - 1), plan) }
+    }
+    const from = startOfWeek(date)
+    return { from: clamp(from, plan), to: clamp(addDays(from, 6), plan) }
+  }, [view, date, custom, plan])
+  const meals = usePlanMeals(plan.id, plan.version, range)
   const byDate = useMemo(() => {
-    const m = new Map<string, PlannedMeal[]>()
-    for (const x of meals ?? []) m.set(x.date, [...(m.get(x.date) ?? []), x])
-    return [...m.entries()]
-  }, [meals])
-  if (pending) return <div className="mt-4"><LoadingBlock /></div>
+    const m: Record<string, PlannedMeal[]> = {}
+    for (const x of meals.data ?? []) (m[x.date] ??= []).push(x)
+    for (const k in m) m[k]!.sort(sortPlanned)
+    return m
+  }, [meals.data])
+  const states = useMemo(() => {
+    const s: Record<string, DayState> = {}
+    for (const [d, list] of Object.entries(byDate)) s[d] = list.every((x) => x.status !== 'planned') ? 'done' : 'planned'
+    return s
+  }, [byDate])
+  const slots: MealSlot[] = plan.meal_slots?.length ? plan.meal_slots : role === 'owner' && prefs.data?.meal_slots?.length ? prefs.data.meal_slots : ['breakfast', 'lunch', 'dinner']
+  const scope = { planId: plan.id, role, ownerId: plan.user_id }
+  const days = (from: ISODate, to: ISODate) => {
+    const out: ISODate[] = []
+    for (let d = from; d <= to && out.length < 62; d = addDays(d, 1)) out.push(d)
+    return out
+  }
+  const block = (d: ISODate, compact = false) => (
+    <DayBlock key={d} date={d} today={today} meals={byDate[d] ?? []} slots={slots} compact={compact} notGenerated={false} onActions={setActionsFor} onAdd={canEdit ? (s) => setAdding({ date: d, slot: s }) : undefined} />
+  )
+
+  async function doRegen() {
+    if (!regen) return
+    try {
+      const r = await gen.mutateAsync({ plan_id: plan.id, regenerate: { from: regen.from, to: regen.to }, today })
+      toast.show(r.kept_locked ? `Fresh picks are in. Kept ${r.kept_locked} locked meal${r.kept_locked > 1 ? 's' : ''}.` : 'Fresh picks are in.', { tone: 'success' })
+      void meals.refetch()
+    } catch (e) {
+      toast.error(friendlyError(e))
+    }
+    setRegen(null)
+  }
+
   return (
     <div className="mt-4">
-      {canEdit && <Button size="sm" variant="secondary" icon="plus" onClick={() => setAdding(plan.start_date > today ? plan.start_date : today <= plan.end_date ? today : plan.start_date)}>Add a meal</Button>}
-      {byDate.length === 0 ? (
-        <EmptyState className="mt-4" icon="plan" title="No meals in this plan yet" message={canEdit ? 'Add meals, or plan the remaining days.' : 'The owner hasn’t added meals yet.'} />
+      <Segmented label="View" hideLabel value={view} onChange={(v) => set('view', v)} options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'custom', label: 'Custom' }]} />
+      <div className="mt-4">
+        {view === 'month' ? (
+          <div className="rounded-[24px] bg-elevated p-4 sm:p-5">
+            <DishCalendar today={today} value={date} month={date} min={plan.start_date} max={plan.end_date} onMonthChange={(m) => set('date', clamp(m, plan))} onChange={(d) => set('date', d)} markers={states} />
+          </div>
+        ) : view === 'custom' ? (
+          <DateRangeField label="Dates" value={custom} min={plan.start_date} max={plan.end_date} onChange={(r) => setCustom(r)} hint="Any dates inside this plan, up to about two months." />
+        ) : (
+          <DateStrip selected={date} today={today} states={states} onSelect={(d) => set('date', clamp(d, plan))} onPrev={() => set('date', clamp(addDays(date, -7), plan))} onNext={() => set('date', clamp(addDays(date, 7), plan))} />
+        )}
+      </div>
+
+      {meals.isPending ? (
+        <div className="mt-6"><LoadingBlock /></div>
+      ) : meals.isError ? (
+        <ErrorState className="mt-6" message={friendlyError(meals.error)} onRetry={() => meals.refetch()} />
       ) : (
-        <div className="mt-4 flex flex-col gap-5">
-          {byDate.map(([date, list]) => (
-            <section key={date} aria-label={dayLabel(date, today)}>
-              <h3 className="label-caps mb-1">{dayLabel(date, today)}</h3>
-              <ul className="divide-y divide-line rounded-lg bg-elevated px-4">
-                {list.map((m) => {
-                  const by = nameOf(people, m.updated_by, uid)
-                  return (
-                    <li key={m.id} className="flex items-center gap-3 py-2.5">
-                      <span className="w-20 shrink-0 text-footnote text-muted">{SLOT_LABEL[m.slot]}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate font-semibold">{m.name}</span>
-                        <span className="block text-micro text-muted">{m.status !== 'planned' ? (m.status === 'eaten' ? 'Eaten' : 'Skipped') : by && people.length > 1 ? `Last changed by ${by}` : ''}</span>
-                      </span>
-                      {canEdit && m.status === 'planned' && <IconButton icon="trash" label={`Remove ${m.name}`} onClick={() => setRemoving(m)} />}
-                    </li>
-                  )
-                })}
-              </ul>
-            </section>
-          ))}
+        <div className="mt-4 flex flex-col">
+          {view === 'day' || view === 'month' ? block(date) : days(range.from, range.to).map((d) => block(d, true))}
         </div>
       )}
-      {adding && <AddMealSheet plan={plan} initialDate={adding} onClose={() => setAdding(null)} onAdded={onEdited} />}
+
+      {canEdit && (
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button size="sm" icon="plus" onClick={() => setAdding({ date })}>Add a meal</Button>
+          <Button size="sm" variant="secondary" icon="refresh" onClick={() => setRegen(view === 'day' || view === 'month' ? { from: date, to: date, label: dayLabel(date, today).toLowerCase() } : { from: range.from, to: range.to > addDays(range.from, 13) ? addDays(range.from, 13) : range.to, label: 'these days' })}>
+            Regenerate {view === 'day' || view === 'month' ? 'this day' : 'these days'}
+          </Button>
+        </div>
+      )}
+      {canEdit && !isComplete(plan) && (
+        <div className="mt-5 rounded-lg bg-elevated p-4" role="status" aria-live="polite">
+          <p className="font-semibold">{running ? 'Planning the remaining days.' : `${daysSaved(plan)} of ${planDays(plan)} days have generated meals.`}</p>
+          <p className="mt-1 text-footnote text-muted">{running && progress ? `${progress.done} of ${progress.total} days saved` : 'Add meals yourself, or let DISH plan the rest using the owner’s preferences.'}</p>
+          {!running && (
+            <Button size="sm" className="mt-3" icon="sparkle" onClick={() => void fill(plan, today).then((r) => toast.show(r.unfilled ? `Planned. ${r.unfilled} slot${r.unfilled > 1 ? 's' : ''} had no suitable meal.` : 'The rest of the plan is ready.', { tone: 'success' })).catch((e) => toast.error(friendlyError(e)))}>
+              Plan the remaining days
+            </Button>
+          )}
+        </div>
+      )}
+      {!canEdit && role === 'viewer' && <p className="mt-4 text-footnote text-muted">You can view and export this plan. Only its owner and editors can change it.</p>}
+
+      <MealActionsSheet meal={actionsFor} onClose={() => setActionsFor(null)} scope={scope} />
+      {adding && (
+        <AddMealSheet
+          key={`${adding.date}-${adding.slot}`}
+          open
+          onClose={() => setAdding(null)}
+          date={adding.date}
+          slot={adding.slot}
+          planId={plan.id}
+          ownerId={plan.user_id}
+          onCalendar={role === 'owner' && plan.status === 'active'}
+          minDate={plan.start_date}
+          maxDate={plan.end_date}
+        />
+      )}
       <ConfirmDialog
-        open={!!removing}
-        title={`Remove ${removing?.name ?? 'this meal'}?`}
-        message="It’s removed from the plan for everyone who can see it. The previous version is kept, so the owner can restore it."
-        confirmLabel="Remove"
-        loading={remove.isPending}
-        onConfirm={async () => {
-          try {
-            await remove.mutateAsync(removing!.id)
-            onEdited()
-          } catch (e) {
-            toast.error(friendlyError(e))
-          }
-          setRemoving(null)
-        }}
-        onCancel={() => setRemoving(null)}
+        open={!!regen}
+        title={`Regenerate ${regen?.label ?? ''}?`}
+        message="Planned meals in this plan are swapped for fresh picks. Locked meals and anything already eaten or skipped stay. Other plans aren't touched."
+        confirmLabel="Regenerate"
+        loading={gen.isPending}
+        onConfirm={() => void doRegen()}
+        onCancel={() => setRegen(null)}
       />
     </div>
   )
 }
 
-function AddMealSheet({ plan, initialDate, onClose, onAdded }: { plan: { id: string; user_id: string; start_date: string; end_date: string }; initialDate: string; onClose: () => void; onAdded: () => void }) {
-  const cat = useCatalogue()
-  const add = useAddPlanMeal()
+/** A shopping list made from this plan only (it records which plan it came from). */
+function PlanGrocerySheet({ plan, open, onClose }: { plan: MealPlan; open: boolean; onClose: () => void }) {
+  const nav = useNavigate()
   const toast = useToast()
-  const [date, setDate] = useState(initialDate)
-  const [foodId, setFoodId] = useState<string | null>(null)
-  const food = cat.data?.find((f) => f.id === foodId)
-  const slots = occasionsFor(food?.food_type)
-  const [slot, setSlot] = useState<MealSlot>('lunch')
-  const chosenSlot = slots.includes(slot) ? slot : (food?.meal_types[0] ?? slots[0] ?? 'lunch')
-  // only meals with a recorded recipe go into plans
-  const options = useMemo(() => (cat.data ?? []).filter((f) => !isIncomplete(f)).map((f) => ({ value: f.id, label: f.name, hint: f.cuisine })), [cat.data])
+  const today = useToday()
+  const catalogue = useCatalogue()
+  const gen = useGenerateGroceryList()
+  const total = Math.round((Date.parse(plan.end_date) - Date.parse(plan.start_date)) / 864e5) + 1
+  const weekFrom = clamp(today, plan)
+  const [which, setWhich] = useState<'week' | 'plan'>(total <= 31 ? 'plan' : 'week')
+  const [kitchen, setKitchen] = useState(true)
+  const range = which === 'plan' ? { from: plan.start_date, to: plan.end_date } : { from: weekFrom, to: clamp(addDays(weekFrom, 6), plan) }
   return (
-    <Sheet open onClose={onClose} title="Add a meal" footer={<Button block disabled={!food} loading={add.isPending} onClick={async () => {
-      try {
-        await add.mutateAsync({ plan, date, slot: chosenSlot, food: { ...food!, est_cost: midCost(food!.est_cost_min, food!.est_cost_max) } })
-        onAdded()
-        toast.show(`${food!.name} added.`, { tone: 'success' })
-        onClose()
-      } catch (e) {
-        toast.error(friendlyError(e))
-      }
-    }}>Add to plan</Button>}>
+    <Sheet open={open} onClose={onClose} title="Shopping list for this plan" description="Made from this plan's meals only. Your other plans and calendar aren't included." footer={
+      <Button block loading={gen.isPending} disabled={!catalogue.data} onClick={async () => {
+        try {
+          const r = await gen.mutateAsync({ ...range, planId: plan.id, name: `${plan.title}`.slice(0, 60), catalogue: catalogue.data!, excludeKitchen: kitchen })
+          toast.show(`${r.inserted} item${r.inserted === 1 ? '' : 's'} added.${r.mealsWithoutRecipe.length ? ` ${r.mealsWithoutRecipe.length} meal${r.mealsWithoutRecipe.length > 1 ? 's have' : ' has'} no recipe.` : ''}`, { tone: 'success' })
+          onClose()
+          nav(`/grocery/${r.list.id}`)
+        } catch (e) {
+          toast.error(friendlyError(e))
+        }
+      }}>Make the list</Button>
+    }>
       <div className="flex flex-col gap-4">
-        <SearchSelect label="Meal" value={foodId} options={options} onChange={setFoodId} placeholder="Choose a meal" searchPlaceholder="Search meals" />
-        <div className="grid grid-cols-2 gap-3">
-          <DateField label="Day" min={plan.start_date} max={plan.end_date} value={date} onChange={(d) => d && setDate(d)} />
-          <Select label="Meal time" value={chosenSlot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={slots.map((x) => ({ value: x, label: SLOT_LABEL[x] }))} />
-        </div>
+        <Segmented label="Which days" value={which} onChange={setWhich} options={[...(total <= 31 ? [{ value: 'plan' as const, label: `Whole plan (${total} days)` }] : []), { value: 'week' as const, label: 'The next 7 days' }]} />
+        <p className="num text-footnote text-muted">{shortRange(range.from, range.to)}</p>
+        <div className="rounded-[18px] bg-elevated px-4"><Toggle label="Skip what's in my kitchen" description="Uses your kitchen inventory" checked={kitchen} onChange={setKitchen} /></div>
       </div>
     </Sheet>
   )
 }
 
 function PeopleTab({ planId, owner, people, me, onInvite }: { planId: string; owner: boolean; people: PlanPerson[] | undefined; me: string; onInvite: () => void }) {
-  const change = useChangeMember(planId)
-  const toast = useToast()
-  const [removing, setRemoving] = useState<PlanPerson | null>(null)
   if (!people) return <div className="mt-4"><LoadingBlock /></div>
   return (
     <div className="mt-4">
-      <ul className="divide-y divide-line rounded-lg bg-elevated px-4" aria-label="People">
-        {people.map((p) => (
-          <li key={p.user_id} className="flex items-center gap-3 py-3">
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold">{p.display_name}{p.user_id === me ? ' (you)' : ''}</span>
-              <span className="block text-micro text-muted">{p.role === 'owner' ? 'Owner' : `Joined ${new Date(p.joined_at).toLocaleDateString()}`}</span>
-            </span>
-            {owner && p.role !== 'owner' ? (
-              <>
-                <select aria-label={`Role for ${p.display_name}`} value={p.role} onChange={(e) => change.mutate({ userId: p.user_id, role: e.target.value as 'contributor' | 'viewer' }, { onError: (err) => toast.error(friendlyError(err)) })} className="h-9 rounded-full bg-surface px-3 text-sm font-semibold ring-1 ring-inset ring-line">
-                  <option value="contributor">Contributor</option>
-                  <option value="viewer">Viewer</option>
-                </select>
-                <IconButton icon="x" label={`Remove ${p.display_name}`} onClick={() => setRemoving(p)} />
-              </>
-            ) : (
-              <Tag>{ROLE_LABEL[p.role]}</Tag>
-            )}
-          </li>
-        ))}
-      </ul>
-      <p className="mt-2 text-footnote text-muted">Contributors can add and remove meals. Viewers can only look. Only the owner can share, publish, restore versions or delete the plan.</p>
+      <PeopleList planId={planId} owner={owner} people={people} me={me} />
+      <p className="mt-2 text-footnote text-muted">Editors can add, change, replace and remove meals. Viewers can look and export. Only the owner can share, rename, restore versions or delete the plan.</p>
       {owner && <Button className="mt-4" size="sm" icon="users" onClick={onInvite}>Invite someone</Button>}
-      <ConfirmDialog
-        open={!!removing}
-        title={`Remove ${removing?.display_name ?? ''}?`}
-        message="They lose access to this plan straight away. Their earlier changes stay in the plan and its history."
-        confirmLabel="Remove"
-        danger
-        loading={change.isPending}
-        onConfirm={async () => {
-          try {
-            await change.mutateAsync({ userId: removing!.user_id, role: null })
-          } catch (e) {
-            toast.error(friendlyError(e))
-          }
-          setRemoving(null)
-        }}
-        onCancel={() => setRemoving(null)}
-      />
     </div>
   )
 }
 
-function ActivityTab({ planId, people }: { planId: string; people: PlanPerson[] }) {
-  const uid = useUserId()
+function ActivityTab({ planId, nameOf }: { planId: string; nameOf: (id: string | null) => string }) {
   const a = usePlanActivity(planId)
   if (a.isPending) return <div className="mt-4"><LoadingBlock /></div>
   if (!a.data?.length) return <EmptyState className="mt-4" icon="history" title="No activity yet" message="Changes to this plan show up here." />
   return (
-    <ol className="mt-4 flex flex-col gap-3" aria-label="Recent activity">
+    <ol className="mt-4 flex flex-col" aria-label="Activity">
       {a.data.map((x) => (
-        <li key={x.id} className="text-sm">
-          <span className="font-semibold">{nameOf(people, x.actor, uid) ?? 'Someone'}</span> <span className="text-ink-2">{x.summary.charAt(0).toLowerCase() + x.summary.slice(1)}</span>
-          <span className="block text-micro text-muted">{new Date(x.created_at).toLocaleString()}</span>
+        <li key={x.id} className="flex gap-3 border-l-2 border-line py-2 pl-4">
+          <span className="min-w-0 text-sm">
+            <span className="font-semibold">{nameOf(x.actor)}</span> <span className="text-ink-2">{x.summary.charAt(0).toLowerCase() + x.summary.slice(1)}</span>
+            <span className="block text-micro text-muted">{new Date(x.created_at).toLocaleString()}</span>
+          </span>
         </li>
       ))}
     </ol>
   )
 }
 
-function VersionsTab({ planId, owner, people, onRestored }: { planId: string; owner: boolean; people: PlanPerson[]; onRestored: () => void }) {
-  const uid = useUserId()
+function VersionsTab({ planId, owner, nameOf }: { planId: string; owner: boolean; nameOf: (id: string | null) => string }) {
   const toast = useToast()
   const v = usePlanRevisions(planId)
   const restore = useRestoreRevision(planId)
   const [pick, setPick] = useState<string | null>(null)
   if (v.isPending) return <div className="mt-4"><LoadingBlock /></div>
-  if (!v.data?.length) return <EmptyState className="mt-4" icon="history" title="No earlier versions yet" message="DISH keeps a copy of the plan before changes are made, at most every 30 minutes." />
+  if (!v.data?.length) return <EmptyState className="mt-4" icon="history" title="No earlier versions yet" message="DISH keeps a copy of the plan before a round of changes (at most every 30 minutes)." />
   const chosen = v.data.find((r) => r.id === pick)
   return (
     <Section title="Earlier versions" className="mt-4">
@@ -341,7 +392,7 @@ function VersionsTab({ planId, owner, people, onRestored }: { planId: string; ow
             <span className="min-w-0 flex-1">
               <span className="block font-semibold">{new Date(r.created_at).toLocaleString()}</span>
               <span className="block text-micro text-muted">
-                {r.meal_count} meal{r.meal_count === 1 ? '' : 's'} · {r.reason === 'before restore' ? 'saved before a restore' : `before changes by ${nameOf(people, r.created_by, uid) ?? 'someone'}`}
+                {r.meal_count} meal{r.meal_count === 1 ? '' : 's'} · {r.reason === 'before restore' ? 'saved before a restore' : `before changes by ${nameOf(r.created_by)}`}
               </span>
             </span>
             {owner && <Button size="sm" variant="secondary" onClick={() => setPick(r.id)}>Restore</Button>}
@@ -352,13 +403,12 @@ function VersionsTab({ planId, owner, people, onRestored }: { planId: string; ow
       <ConfirmDialog
         open={!!chosen}
         title="Restore this version?"
-        message={`The plan's planned meals go back to how they were on ${chosen ? new Date(chosen.created_at).toLocaleString() : ''}. Meals already eaten or skipped are kept. The current version is saved first, so you can undo this.`}
+        message={`The plan's planned meals go back to how they were on ${chosen ? new Date(chosen.created_at).toLocaleString() : ''}. Meals already eaten or skipped are kept, the current version is saved first, and the activity history is kept.`}
         confirmLabel="Restore"
         loading={restore.isPending}
         onConfirm={async () => {
           try {
             await restore.mutateAsync(pick!)
-            onRestored()
             toast.show('Version restored.', { tone: 'success' })
           } catch (e) {
             toast.error(friendlyError(e))

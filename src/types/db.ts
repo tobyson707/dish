@@ -208,6 +208,11 @@ export interface MealPlan {
   remix_attribution?: string | null
   allow_remix?: boolean
   unpublished_reason?: string | null
+  /** private cover image in the plan-covers bucket */
+  cover_path?: string | null
+  /** this plan's meal times (null: the owner's usual meals) */
+  meal_slots?: MealSlot[] | null
+  updated_by?: string | null
 }
 
 export type PlanStatus = 'draft' | 'active' | 'archived'

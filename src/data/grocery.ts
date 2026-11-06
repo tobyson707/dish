@@ -123,9 +123,9 @@ export function useGenerateGroceryList() {
   const uid = useUserId()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ from, to, listId, name, catalogue, excludeKitchen }: { from: string; to: string; listId?: string; name?: string; catalogue: FoodItem[]; excludeKitchen: boolean }): Promise<GenerateResult> => {
+    mutationFn: async ({ from, to, listId, name, catalogue, excludeKitchen, planId }: { from: string; to: string; listId?: string; name?: string; catalogue: FoodItem[]; excludeKitchen: boolean; /** one saved plan's meals only (any plan I can see) */ planId?: string }): Promise<GenerateResult> => {
       const [{ data: meals, error: e1 }, { data: kitchen, error: e2 }] = await Promise.all([
-        supabase.from('planned_meals').select('*').eq('user_id', uid).eq('on_calendar', true).gte('date', from).lte('date', to).neq('status', 'skipped'),
+        (planId ? supabase.from('planned_meals').select('*').eq('plan_id', planId) : supabase.from('planned_meals').select('*').eq('user_id', uid).eq('on_calendar', true)).gte('date', from).lte('date', to).neq('status', 'skipped'),
         supabase.from('kitchen_inventory').select('*').eq('user_id', uid).is('used_at', null),
       ])
       if (e1) throw e1
@@ -151,7 +151,7 @@ export function useGenerateGroceryList() {
         if (error) throw error
         list = data as GroceryList
       } else {
-        const { data, error } = await supabase.from('grocery_lists').insert({ id: uuid(), user_id: uid, name: name ?? 'Shopping list', range_start: from, range_end: to }).select('*').single()
+        const { data, error } = await supabase.from('grocery_lists').insert({ id: uuid(), user_id: uid, name: name ?? 'Shopping list', plan_id: planId ?? null, range_start: from, range_end: to }).select('*').single()
         if (error) throw error
         list = data as GroceryList
       }

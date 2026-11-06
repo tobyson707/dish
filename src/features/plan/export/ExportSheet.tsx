@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { addDays, startOfWeek } from '@domain/dates.ts'
 import { usePlannedMeals } from '@/data/plans'
-import { usePlanMeals, usePlanPeople } from '@/data/planbook'
+import { logPlanExport, usePlanMeals, usePlanPeople } from '@/data/planbook'
 import type { MealPlan } from '@/types/db'
 import { useProfile } from '@/data/profile'
 import { useToday } from '@/hooks/useToday'
@@ -79,7 +79,7 @@ export function ExportSheet({ open, onClose, anchorDate, plan }: { open: boolean
   const range = period === 'today' ? { from: today, to: today } : period === 'week' ? week : period === 'plan' && plan ? { from: plan.start_date, to: plan.end_date } : custom
   const rangeError = validateRange(range.from, range.to)
   const calendar = usePlannedMeals(range.from, range.to, { enabled: open && !rangeError && !plan })
-  const planMeals = usePlanMeals(open && plan ? plan.id : undefined)
+  const planMeals = usePlanMeals(open && plan && !rangeError ? plan.id : undefined, plan?.version, range)
   const people = usePlanPeople(open && plan ? plan.id : undefined)
   const meals = plan ? planMeals : calendar
   const attribution = useMemo(() => {
@@ -142,6 +142,7 @@ export function ExportSheet({ open, onClose, anchorDate, plan }: { open: boolean
         files = (await generate(model, await assetsFor(model), fmt, layout)).files
       }
       await downloadFiles(files)
+      if (plan) void logPlanExport(plan.id, `${fmt.toUpperCase()} (${layout === 'grid' ? 'table' : 'list'}) for ${model.shortRange}`).catch(() => undefined)
       toast.success(files.length > 1 ? `${files.length} images saved.` : `Saved ${files[0]!.name}`)
     } catch (e) {
       toast.error(friendlyError(e))
@@ -154,6 +155,7 @@ export function ExportSheet({ open, onClose, anchorDate, plan }: { open: boolean
     if (!output) return
     try {
       const r = await shareOrDownload(output.files, { title: model?.title ?? 'My Meal Plan', text: model ? `My meal plan · ${model.shortRange}` : undefined })
+      if (plan && model) void logPlanExport(plan.id, `${output.format.toUpperCase()} (${output.layout === 'grid' ? 'table' : 'list'}) for ${model.shortRange}`).catch(() => undefined)
       if (r === 'downloaded') toast.show("Sharing files isn't available in this browser, so we saved it to your device instead.")
     } catch (e) {
       toast.error(friendlyError(e))
