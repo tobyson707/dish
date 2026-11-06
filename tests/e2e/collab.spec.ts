@@ -102,9 +102,10 @@ test('collaboration: private invitation links, server-enforced roles, attributio
   const a = await person(browser, 'collab-owner', 'Ada Owner')
   const b = await person(browser, 'collab-contrib', 'Bola Helper')
   const c = await person(browser, 'collab-other', 'Chi Stranger')
-  await createWeek(a.page, 'Family week')
+  const title = `Family week ${Date.now() % 100000}` // unique: published plans from earlier runs stay in the community
+  await createWeek(a.page, title)
   await expect(a.page).toHaveURL(/\/plan\?date=/, { timeout: 60_000 })
-  const plan = (await rest<Plan[]>(`meal_plans?user_id=eq.${a.uid}&title=eq.Family%20week&select=*`))[0]!
+  const plan = (await rest<Plan[]>(`meal_plans?user_id=eq.${a.uid}&title=eq.${encodeURIComponent(title)}&select=*`))[0]!
 
   // a stranger can't see a private plan, even with its id
   expect(await (await as(c.token).get(`meal_plans?id=eq.${plan.id}&select=id`)).json()).toEqual([])
@@ -124,7 +125,7 @@ test('collaboration: private invitation links, server-enforced roles, attributio
 
   // contributor joins through the link
   await b.page.goto(`/invite/${token}`)
-  await expect(b.page.getByRole('heading', { name: 'Family week' })).toBeVisible()
+  await expect(b.page.getByRole('heading', { name: title })).toBeVisible()
   await expect(b.page.getByText('Ada Owner invited you')).toBeVisible()
   await b.page.getByRole('button', { name: 'Join the plan' }).click()
   await expect(b.page).toHaveURL(new RegExp(`/plans/${plan.id}$`))
@@ -152,7 +153,7 @@ test('collaboration: private invitation links, server-enforced roles, attributio
   expect((await as(b.token).patch(`planned_meals?id=eq.${oneMeal.id}`, { status: 'eaten' })).status).toBeGreaterThanOrEqual(400)
   const renamed = await as(b.token).patch(`meal_plans?id=eq.${plan.id}`, { title: 'Hijacked' })
   expect(await renamed.json()).toEqual([]) // RLS: no row is updatable
-  expect((await rest<Plan[]>(`meal_plans?id=eq.${plan.id}&select=title`))[0]!.title).toBe('Family week')
+  expect((await rest<Plan[]>(`meal_plans?id=eq.${plan.id}&select=title`))[0]!.title).toBe(title)
 
   // owner sees who changed what, and restores the earlier version (with confirmation)
   await a.page.goto(`/plans/${plan.id}`)
@@ -184,8 +185,8 @@ test('collaboration: private invitation links, server-enforced roles, attributio
 
   // anyone signed in finds it, sees only the creator's first name, saves and remixes it
   await c.page.goto('/community')
-  await c.page.getByRole('searchbox', { name: 'Search plans' }).fill('Family week')
-  await c.page.getByRole('link', { name: 'Preview Family week' }).click()
+  await c.page.getByRole('searchbox', { name: 'Search plans' }).fill(title)
+  await c.page.getByRole('link', { name: `Preview ${title}` }).click()
   await expect(c.page.getByText('by Ada', { exact: false }).first()).toBeVisible()
   await expect(c.page.getByText('Ada Owner')).toHaveCount(0)
   await c.page.getByRole('button', { name: 'Save', exact: true }).click()

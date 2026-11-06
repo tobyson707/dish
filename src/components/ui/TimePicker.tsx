@@ -27,7 +27,7 @@ function Wheel({ label, items, index, onSelect, className }: { label: string; it
   const settled = useRef(index) // the row the wheel last came to rest on
   const frame = useRef(0)
   const idle = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const drag = useRef<{ y: number; top: number; moved: boolean; samples: { t: number; y: number }[] } | null>(null)
+  const drag = useRef<{ y: number; top: number; moved: boolean; row: number | null; samples: { t: number; y: number }[] } | null>(null)
   const reduced = prefersReducedMotion()
   const clamp = useCallback((i: number) => Math.max(0, Math.min(items.length - 1, i)), [items.length])
 
@@ -85,6 +85,21 @@ function Wheel({ label, items, index, onSelect, className }: { label: string; it
     }
   }, [index, paint, scrollToIndex])
 
+  // a wheel inside a sheet has no layout until the sheet opens, and scrollTop set before
+  // then is lost: place it again as soon as it has a size
+  useEffect(() => {
+    const el = ref.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(() => {
+      if (el.clientHeight > 0 && !drag.current && Math.round(el.scrollTop / ITEM_H) !== settled.current) {
+        el.scrollTop = settled.current * ITEM_H
+        paint()
+      }
+    })
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [paint])
+
   useEffect(() => {
     const el = ref.current
     if (!el) return
@@ -110,7 +125,9 @@ function Wheel({ label, items, index, onSelect, className }: { label: string; it
   // mouse dragging (touch and pens use native scrolling)
   const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
     if (e.pointerType !== 'mouse' || e.button !== 0 || !ref.current) return
-    drag.current = { y: e.clientY, top: ref.current.scrollTop, moved: false, samples: [{ t: e.timeStamp, y: e.clientY }] }
+    // the row under the pointer now: once the pointer is captured, the release no longer says which row it was on
+    const row = (e.target as HTMLElement).closest<HTMLElement>('[data-row]')
+    drag.current = { y: e.clientY, top: ref.current.scrollTop, moved: false, row: row ? Number(row.dataset.row) : null, samples: [{ t: e.timeStamp, y: e.clientY }] }
     ref.current.style.scrollSnapType = 'none'
     e.currentTarget.setPointerCapture(e.pointerId)
   }
@@ -131,8 +148,7 @@ function Wheel({ label, items, index, onSelect, className }: { label: string; it
     el.style.scrollSnapType = ''
     if (!d.moved) {
       // a click on a row selects it
-      const row = (e.target as HTMLElement).closest<HTMLElement>('[data-row]')
-      if (row) scrollToIndex(Number(row.dataset.row), true)
+      if (d.row != null) scrollToIndex(d.row, true)
       return
     }
     // controlled inertia: project the release speed a short way, then snap to the nearest row
@@ -141,7 +157,10 @@ function Wheel({ label, items, index, onSelect, className }: { label: string; it
     // a wheel that was held still before release doesn't fling
     const v = e.timeStamp - last.t > 80 ? 0 : (last.y - first.y) / Math.max(16, last.t - first.t) // px per ms
     const projected = el.scrollTop - Math.max(-1.2, Math.min(1.2, v)) * 180
-    scrollToIndex(Math.round(projected / ITEM_H), true)
+    const target = clamp(Math.round(projected / ITEM_H))
+    // released exactly on a row: there's no scroll left to end, so settle now
+    if (Math.abs(el.scrollTop - target * ITEM_H) < 0.5) settle()
+    else scrollToIndex(target, true)
   }
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
