@@ -46,6 +46,7 @@ const AccountPage = L(() => import('@/features/profile/AccountPage'), 'AccountPa
 const SettingsPage = L(() => import('@/features/profile/SettingsPage'), 'SettingsPage')
 const SyncPage = L(() => import('@/features/profile/SyncPage'), 'SyncPage')
 const HistoryPage = L(() => import('@/features/profile/HistoryPage'), 'HistoryPage')
+const SavedPage = L(() => import('@/features/saved/SavedPage'), 'SavedPage')
 const Privacy = L(() => import('@/features/legal/Legal'), 'Privacy')
 const Terms = L(() => import('@/features/legal/Legal'), 'Terms')
 
@@ -110,6 +111,7 @@ const router = createBrowserRouter([
       { path: '/profile/settings', element: <SettingsPage /> },
       { path: '/profile/sync', element: <SyncPage /> },
       { path: '/history', element: <HistoryPage /> },
+      { path: '/saved', element: <SavedPage /> },
       { path: '/admin/images', element: <ImageStudio /> },
       { path: '*', element: <NotFound /> },
     ],

@@ -13,7 +13,7 @@ import { crossfade } from '@/lib/motion'
 import { Icon } from '@/components/ui/Icon'
 import { AddMealSheet } from '@/components/meal/AddMealSheet'
 import { FloatingToolbar } from '@/components/canvas/FloatingToolbar'
-import { FloatingCategorySelector } from '@/components/canvas/FloatingCategorySelector'
+import { FloatingCategorySelector, type SelectHow } from '@/components/canvas/FloatingCategorySelector'
 import { FeaturedMealCarousel, type Featured } from '@/components/canvas/FeaturedMealCarousel'
 import { CategoryWorkspace } from '@/components/canvas/CategoryWorkspace'
 import { SearchWorkspace } from '@/components/canvas/SearchWorkspace'
@@ -76,7 +76,7 @@ export function Home() {
       })
   }, [planned, suggestions.items, category, slots])
 
-  const select = (c: Category, how: 'pointer' | 'keyboard') => {
+  const select = (c: Category, how: SelectHow) => {
     setCategory(c)
     if (drawerOpen) {
       if (c === drawerCategory) return

@@ -52,7 +52,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
   const [busyId, setBusyId] = useState<string | null>(null)
   const [added, setAdded] = useState<Set<string>>(new Set())
   const { mounted, closing } = usePresence(open, MOTION.exit(MOTION.panel))
-  const drag = useDragDismiss('x', onClose, 90)
+  const drag = useDragDismiss('x', onClose, 90, open)
   const ranked = useRankedMeals(mounted ? category : null)
   const heading = useRef<HTMLHeadingElement>(null)
 

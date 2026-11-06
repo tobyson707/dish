@@ -20,8 +20,9 @@ import { EmptyState, ErrorState, LoadingBlock } from '@/components/ui/States'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { Icon } from '@/components/ui/Icon'
+import { SwipeToRemove } from '@/components/meal/SwipeToRemove'
 import { MealRow } from '@/components/meal/MealCard'
-import { MealActionsSheet } from '@/components/meal/MealActions'
+import { MealActionsSheet, useRemoveMeal } from '@/components/meal/MealActions'
 import { AddMealSheet } from '@/components/meal/AddMealSheet'
 import { ExportSheet } from './export/ExportSheet'
 import { useAutoExtendPlan } from '@/features/home/Home'
@@ -42,6 +43,7 @@ export function PlanPage() {
   const [exportOpen, setExportOpen] = useState(params.get('export') === '1')
   const [addSlot, setAddSlot] = useState<MealSlot | undefined>()
   const [actionsFor, setActionsFor] = useState<PlannedMeal | null>(null)
+  const remove = useRemoveMeal(null)
   const [regen, setRegen] = useState<null | { from: ISODate; to: ISODate; label: string }>(null)
   const plan = useActivePlan()
   const prefs = usePreferences()
@@ -131,7 +133,7 @@ export function PlanPage() {
           ) : view === 'week' ? (
             <div className="mt-4 flex flex-col">
               {Array.from({ length: 7 }, (_, i) => addDays(range.from, i)).map((d) => (
-                <DayBlock key={d} date={d} today={today} meals={byDate[d] ?? []} slots={prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']} onActions={setActionsFor} onAdd={(s) => { setDate(d); setAddSlot(s); setAddOpen(true) }} notGenerated={notGenerated(d)} compact />
+                <DayBlock key={d} date={d} today={today} meals={byDate[d] ?? []} slots={prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']} onActions={setActionsFor} onRemove={remove} onAdd={(s) => { setDate(d); setAddSlot(s); setAddOpen(true) }} notGenerated={notGenerated(d)} compact />
               ))}
               {p && (
                 <Button variant="secondary" icon="refresh" className="mt-4" onClick={() => setRegen({ from: range.from, to: range.to, label: 'this week' })}>
@@ -141,7 +143,7 @@ export function PlanPage() {
             </div>
           ) : (
             <div className="mt-4">
-              <DayBlock date={date} today={today} meals={byDate[date] ?? []} slots={prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']} onActions={setActionsFor} onAdd={(s) => { setAddSlot(s); setAddOpen(true) }} notGenerated={notGenerated(date)} />
+              <DayBlock date={date} today={today} meals={byDate[date] ?? []} slots={prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']} onActions={setActionsFor} onRemove={remove} onAdd={(s) => { setAddSlot(s); setAddOpen(true) }} notGenerated={notGenerated(date)} />
               <div className="mt-4 flex flex-wrap gap-2">
                 {p && date >= p.start_date && date <= p.end_date && (
                   <Button variant="ghost" icon="refresh" onClick={() => setRegen({ from: date, to: date, label: dayLabel(date, today).toLowerCase() })}>
@@ -191,16 +193,18 @@ export function PlanPage() {
 }
 
 /** One day of meals with an add button per empty meal time. Shared by the calendar and plan workspaces. */
-export function DayBlock({ date, today, meals, slots, onActions, onAdd, notGenerated, compact }: { date: ISODate; today: ISODate; meals: PlannedMeal[]; slots: MealSlot[]; onActions?: (m: PlannedMeal) => void; onAdd?: (s: MealSlot) => void; notGenerated: boolean; compact?: boolean }) {
+export function DayBlock({ date, today, meals, slots, onActions, onAdd, onRemove, removable, notGenerated, compact }: { date: ISODate; today: ISODate; meals: PlannedMeal[]; slots: MealSlot[]; onActions?: (m: PlannedMeal) => void; onAdd?: (s: MealSlot) => void; onRemove?: (m: PlannedMeal) => Promise<unknown>; removable?: (m: PlannedMeal) => boolean; notGenerated: boolean; compact?: boolean }) {
   const emptySlots = slots.filter((s) => !meals.some((m) => m.slot === s))
   return (
     <section aria-label={dayLabel(date, today)} className={compact ? 'border-b border-line py-3' : ''}>
       <h3 className={compact ? 'label-caps mb-1' : 'mb-2 text-title-3 font-bold'}>{dayLabel(date, today)}</h3>
       <ul className="flex flex-col">
         {meals.map((m) => (
-          <div key={`${m.id}-${m.food_item_id}`} className="animate-[swap-in_var(--dur-standard)_var(--ease-enter)_both]">
-            <MealRow meal={m} onActions={onActions ? () => onActions(m) : undefined} />
-          </div>
+          <li key={`${m.id}-${m.food_item_id}`} className="animate-[swap-in_var(--dur-standard)_var(--ease-enter)_both]">
+            <SwipeToRemove label={m.name} disabled={!onRemove || (removable ? !removable(m) : false)} onRemove={() => onRemove!(m)}>
+              <MealRow meal={m} onActions={onActions ? () => onActions(m) : undefined} />
+            </SwipeToRemove>
+          </li>
         ))}
         {!notGenerated && onAdd &&
           emptySlots.map((s) => (

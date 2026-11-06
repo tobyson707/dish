@@ -47,7 +47,7 @@ export function MealHeroCard({ meal, onActions, compact }: { meal: PlannedMeal; 
 /** Compact agenda row used in Plan views. */
 export function MealRow({ meal, onActions }: { meal: PlannedMeal; onActions?: () => void }) {
   return (
-    <li className="flex items-center gap-3 py-2.5">
+    <div className="flex items-center gap-3 py-2.5">
       <Link to={`/meal/${meal.id}`} className="press flex min-w-0 flex-1 items-center gap-3">
         <span className="relative shrink-0">
           <FoodImage path={meal.food_item?.image_path} alt={meal.food_item?.image_alt} name={meal.name} shape="circle" className="h-14 w-14" width={120} />
@@ -71,6 +71,6 @@ export function MealRow({ meal, onActions }: { meal: PlannedMeal; onActions?: ()
           <Icon name="dots" size={20} />
         </button>
       )}
-    </li>
+    </div>
   )
 }

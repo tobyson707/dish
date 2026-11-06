@@ -5,7 +5,7 @@
 import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
 import { useUserId } from '@/features/auth/AuthProvider'
-import type { MealPlan, PlanRole, PlanStatus, PlannedMeal } from '@/types/db'
+import type { CoverCrop, MealPlan, PlanRole, PlanStatus, PlannedMeal } from '@/types/db'
 import { qk } from './keys'
 
 export interface PlanListItem extends MealPlan {
@@ -79,6 +79,27 @@ export interface CommunityPlan {
   remixes: number
   remix_attribution: string | null
   allow_remix: boolean
+  cover_path: string | null
+  cover_crop: CoverCrop | null
+  /** dietary tags every meal in the plan carries */
+  diets: string[] | null
+}
+
+/** A saved community plan. When its owner has made it private again, only the save itself is visible. */
+export interface SavedPlan {
+  id: string
+  saved_at: string
+  available: boolean
+  title: string | null
+  description: string | null
+  duration: MealPlan['duration'] | null
+  days: number | null
+  meals: number | null
+  creator: string | null
+  cover_path: string | null
+  cover_crop: CoverCrop | null
+  remix_attribution: string | null
+  allow_remix: boolean
 }
 
 const PM_SELECT = '*, food_item:food_items(id, slug, food_type, image_path, image_alt, cuisine, prep_minutes, cook_minutes, allergens, ingredients_complete, description)'
@@ -93,6 +114,7 @@ export const planKeys = {
   invites: (id: string) => ['plan-detail', id, 'invites'] as const,
   community: (q: CommunityFilter) => ['community', q] as const,
   saved: (uid: string) => ['community', 'saved', uid] as const,
+  mySaved: (uid: string) => ['community', 'my-saved', uid] as const,
 }
 
 /** Everything that shows plan data: lists, details, the calendar. */
@@ -383,6 +405,16 @@ export function useSavedPlans() {
   })
 }
 
+/** Every plan I saved, newest first (the count is the number of saves, not a guess). */
+export function useMySavedPlans(enabled = true) {
+  const uid = useUserId()
+  return useQuery({
+    queryKey: planKeys.mySaved(uid),
+    enabled,
+    queryFn: () => rpc<SavedPlan[]>('my_saved_plans', {}),
+  })
+}
+
 export function useToggleSave() {
   const uid = useUserId()
   const qc = useQueryClient()
@@ -506,11 +538,22 @@ async function shrink(file: File): Promise<Blob> {
   return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej(new Error('Could not read that image.'))), 'image/jpeg', 0.85))
 }
 
+/**
+ * Set, reframe or remove a plan's cover. A new image is uploaded once (resized, no
+ * metadata); its framing is saved separately, so reframing never re-uploads or cuts
+ * the image. Every view reads the same cover_path + cover_crop.
+ */
 export function useSetCover() {
   const uid = useUserId()
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async ({ plan, file }: { plan: Pick<MealPlan, 'id' | 'cover_path'>; file: File | null }) => {
+    mutationFn: async ({ plan, file, crop }: { plan: Pick<MealPlan, 'id' | 'cover_path'>; file?: File | null; crop?: CoverCrop | null }) => {
+      if (file === undefined) {
+        // reframe only
+        const { error } = await supabase.from('meal_plans').update({ cover_crop: crop ?? null }).eq('id', plan.id)
+        if (error) throw error
+        return
+      }
       let path: string | null = null
       if (file) {
         if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error('Choose a JPEG, PNG or WebP image.')
@@ -519,11 +562,17 @@ export function useSetCover() {
         const { error } = await supabase.storage.from(COVER_BUCKET).upload(path, await shrink(file), { contentType: 'image/jpeg' })
         if (error) throw error
       }
-      const { error } = await supabase.from('meal_plans').update({ cover_path: path }).eq('id', plan.id)
-      if (error) throw error
+      const { error } = await supabase.from('meal_plans').update({ cover_path: path, cover_crop: path ? (crop ?? null) : null }).eq('id', plan.id)
+      if (error) {
+        if (path) await supabase.storage.from(COVER_BUCKET).remove([path]) // don't leave an orphan behind
+        throw error
+      }
       if (plan.cover_path) await supabase.storage.from(COVER_BUCKET).remove([plan.cover_path])
     },
-    onSuccess: (_d, v) => invalidatePlans(qc, uid, v.plan.id),
+    onSuccess: (_d, v) => {
+      invalidatePlans(qc, uid, v.plan.id)
+      void qc.invalidateQueries({ queryKey: ['community'] })
+    },
   })
 }
 

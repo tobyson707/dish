@@ -12,7 +12,7 @@ import { useDragDismiss, usePresence } from './usePresence'
 export function Workspace({ open, onClose, label, children, className }: { open: boolean; onClose: () => void; label: string; children: ReactNode; className?: string }) {
   const ref = useRef<HTMLDialogElement>(null)
   const { mounted, closing } = usePresence(open, MOTION.exit(MOTION.panel))
-  const drag = useDragDismiss('x', onClose, 120)
+  const drag = useDragDismiss('x', onClose, 120, open)
   useEffect(() => {
     const d = ref.current
     if (!d) return

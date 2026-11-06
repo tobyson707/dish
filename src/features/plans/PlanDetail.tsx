@@ -41,7 +41,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
-import { MealActionsSheet } from '@/components/meal/MealActions'
+import { MealActionsSheet, useRemoveMeal } from '@/components/meal/MealActions'
 import { AddMealSheet } from '@/components/meal/AddMealSheet'
 import { PlanActions } from './PlanActions'
 import { ShareSheet } from './ShareSheet'
@@ -116,7 +116,7 @@ export function PlanDetail() {
         actions={
           <>
             {owner && <IconButton icon="users" label="Share" onClick={() => setParams((p) => (p.set('panel', 'share'), p))} />}
-            <IconButton icon="download" label="Export" onClick={() => setExportOpen(true)} />
+            {!owner && <IconButton icon="download" label="Export" onClick={() => setExportOpen(true)} />}
             <IconButton icon="cart" label="Shopping list for this plan" onClick={() => setGroceryOpen(true)} />
             <IconButton icon="dots" label="Plan actions" onClick={() => setMenu(true)} />
           </>
@@ -173,7 +173,7 @@ export function PlanDetail() {
       <PlanActions plan={menu ? { ...plan, role } : null} onClose={() => setMenu(false)} from="detail" />
       <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} anchorDate={plan.start_date} plan={plan} />
       <PlanGrocerySheet plan={plan} open={groceryOpen} onClose={() => setGroceryOpen(false)} />
-      {owner && <ShareSheet plan={plan} open={panel === 'share'} onClose={closePanel} />}
+      {owner && <ShareSheet plan={plan} open={panel === 'share'} onClose={closePanel} onPublish={() => setParams((p) => (p.set('panel', 'publish'), p), { replace: true })} onExport={() => { closePanel(); setExportOpen(true) }} />}
       {owner && <PublishSheet plan={plan} open={panel === 'publish'} onClose={closePanel} />}
     </div>
   )
@@ -218,13 +218,14 @@ function PlanBoard({ plan, role, canEdit }: { plan: MealPlan; role: PlanRole; ca
   }, [byDate])
   const slots: MealSlot[] = plan.meal_slots?.length ? plan.meal_slots : role === 'owner' && prefs.data?.meal_slots?.length ? prefs.data.meal_slots : ['breakfast', 'lunch', 'dinner']
   const scope = { planId: plan.id, role, ownerId: plan.user_id }
+  const remove = useRemoveMeal(scope)
   const days = (from: ISODate, to: ISODate) => {
     const out: ISODate[] = []
     for (let d = from; d <= to && out.length < 62; d = addDays(d, 1)) out.push(d)
     return out
   }
   const block = (d: ISODate, compact = false) => (
-    <DayBlock key={d} date={d} today={today} meals={byDate[d] ?? []} slots={slots} compact={compact} notGenerated={false} onActions={setActionsFor} onAdd={canEdit ? (s) => setAdding({ date: d, slot: s }) : undefined} />
+    <DayBlock key={d} date={d} today={today} meals={byDate[d] ?? []} slots={slots} compact={compact} notGenerated={false} onActions={setActionsFor} onRemove={canEdit ? remove : undefined} removable={(m) => m.status === 'planned'} onAdd={canEdit ? (s) => setAdding({ date: d, slot: s }) : undefined} />
   )
 
   async function doRegen() {

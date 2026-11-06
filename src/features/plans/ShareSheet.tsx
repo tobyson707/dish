@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { cn } from '@/lib/cn'
+import { Icon, type IconName } from '@/components/ui/Icon'
 import type { MealPlan } from '@/types/db'
 import { inviteUrl, ROLE_LABEL, useCreateInvite, usePlanInvites, usePlanPeople, useRevokeInvite } from '@/data/planbook'
 import { useUserId } from '@/features/auth/AuthProvider'
@@ -11,11 +13,14 @@ import { Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 
 /**
+ * Sharing, in one place, with the three kinds kept apart: invite specific people
+ * (private), publish for everyone on DISH (public), or export a copy (a file).
+ *
  * Invite people to a plan. Each invitation is a private link with a random secret
  * (only its hash is stored), a role, an expiry and optionally an email it is
  * restricted to. Links can be revoked at any time.
  */
-export function ShareSheet({ plan, open, onClose }: { plan: MealPlan; open: boolean; onClose: () => void }) {
+export function ShareSheet({ plan, open, onClose, onPublish, onExport }: { plan: MealPlan; open: boolean; onClose: () => void; onPublish: () => void; onExport: () => void }) {
   const toast = useToast()
   const create = useCreateInvite(plan.id)
   const revoke = useRevokeInvite(plan.id)
@@ -52,8 +57,17 @@ export function ShareSheet({ plan, open, onClose }: { plan: MealPlan; open: bool
   const live = (invites.data ?? []).filter((i) => !i.revoked_at && !i.accepted_at && new Date(i.expires_at) > new Date())
 
   return (
-    <Sheet open={open} onClose={() => { setLink(null); onClose() }} title="Share this plan" description="People you invite see the plan’s meals and can collaborate. Your diary, profile and other plans stay private.">
+    <Sheet open={open} onClose={() => { setLink(null); onClose() }} title="Share">
       <div className="flex flex-col gap-4">
+        <ul className="grid grid-cols-3 gap-2" aria-label="Ways to share">
+          <Way icon="users" title="Invite people" sub="Private" active />
+          <Way icon="community" title={plan.visibility === 'published' ? 'Published' : 'Publish'} sub={plan.visibility === 'published' ? 'Anyone on DISH' : 'For everyone'} onClick={onPublish} />
+          <Way icon="download" title="Export" sub="PDF or image" onClick={onExport} />
+        </ul>
+        <div>
+          <h3 className="text-headline font-bold">Invite people</h3>
+          <p className="mt-0.5 text-footnote text-muted">Only people you invite can see it. Your diary, profile and other plans stay private.</p>
+        </div>
         {link ? (
           <>
             <Notice icon="link">
@@ -105,5 +119,25 @@ export function ShareSheet({ plan, open, onClose }: { plan: MealPlan; open: bool
         )}
       </div>
     </Sheet>
+  )
+}
+
+function Way({ icon, title, sub, active, onClick }: { icon: IconName; title: string; sub: string; active?: boolean; onClick?: () => void }) {
+  return (
+    <li>
+      <button
+        type="button"
+        aria-current={active || undefined}
+        onClick={onClick}
+        disabled={active}
+        className={cn('press flex h-full w-full flex-col items-start gap-2 rounded-[18px] p-3 text-left ring-1 ring-inset disabled:cursor-default', active ? 'bg-ink text-on-ink ring-transparent' : 'bg-elevated ring-line hover:ring-ink/30')}
+      >
+        <Icon name={icon} size={19} />
+        <span>
+          <span className="block text-sm font-bold leading-tight">{title}</span>
+          <span className={cn('block text-micro', active ? 'text-on-ink/70' : 'text-muted')}>{sub}</span>
+        </span>
+      </button>
+    </li>
   )
 }

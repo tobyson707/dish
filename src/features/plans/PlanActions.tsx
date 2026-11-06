@@ -1,7 +1,7 @@
 import { useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import type { MealPlan, PlanRole } from '@/types/db'
-import { useChangeMember, useCopyPlan, useDeletePlan, useSetCover, useSetPlanStatus, useUpdatePlan } from '@/data/planbook'
+import { useChangeMember, useCopyPlan, useCoverUrl, useDeletePlan, useSetCover, useSetPlanStatus, useUpdatePlan } from '@/data/planbook'
 import { useUserId } from '@/features/auth/AuthProvider'
 import { useToday } from '@/hooks/useToday'
 import { friendlyError } from '@/lib/errors'
@@ -13,9 +13,11 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
 import { ExportSheet } from '@/features/plan/export/ExportSheet'
+import { cn } from '@/lib/cn'
+import { CoverEditor } from './CoverEditor'
 
 export type ActionPlan = MealPlan & { role: PlanRole | null }
-type Dialog = 'menu' | 'edit' | 'copy' | 'delete' | 'archive' | 'leave' | 'export' | null
+type Dialog = 'menu' | 'edit' | 'copy' | 'delete' | 'archive' | 'leave' | 'export' | 'cover' | null
 
 /**
  * The actions for one plan, shown as a sheet. What appears depends on the person's
@@ -38,6 +40,10 @@ export function PlanActions({ plan, onClose, from = 'list', initial = 'menu' }: 
   const setCover = useSetCover()
   const file = useRef<HTMLInputElement>(null)
   const [focus, setFocus] = useState<'title' | 'description'>('title')
+  const [more, setMore] = useState(false)
+  // the cover being framed: a freshly chosen file (local preview), or the current cover
+  const [picked, setPicked] = useState<{ file: File; url: string } | null>(null)
+  const current = useCoverUrl(dialog === 'cover' && !picked ? plan?.cover_path : null)
   if (!plan) return null
   const owner = plan.role === 'owner'
   const close = () => {
@@ -57,24 +63,40 @@ export function PlanActions({ plan, onClose, from = 'list', initial = 'menu' }: 
   return (
     <>
       <Sheet open={dialog === 'menu'} onClose={close} title={plan.title}>
-        <ul className="-mx-2 flex flex-col">
-          {from === 'list' && <Action icon="plan" label="Open" onClick={() => nav(`/plans/${plan.id}`)} />}
-          {owner && plan.status !== 'active' && (
-            <Action icon="check" label="Make it my current plan" hint="It goes on your calendar. Your current plan becomes a draft." onClick={() => void run(() => setStatus.mutateAsync({ id: plan.id, status: 'active' }), `“${plan.title}” is now your current plan.`)} />
-          )}
-          {owner && <Action icon="edit" label="Rename" onClick={() => { setFocus('title'); setDialog('edit') }} />}
-          {owner && <Action icon="edit" label={plan.description ? 'Edit description' : 'Add a description'} onClick={() => { setFocus('description'); setDialog('edit') }} />}
-          {owner && <Action icon="image" label="Change cover image" hint={plan.cover_path ? undefined : 'Until then, the cover is a collage of its meals.'} onClick={() => file.current?.click()} />}
-          {owner && plan.cover_path && <Action icon="x" label="Remove cover image" onClick={() => void run(() => setCover.mutateAsync({ plan, file: null }), 'Cover removed.')} />}
-          <Action icon="copy" label="Duplicate" hint="A new draft you own. This plan isn't changed." onClick={() => setDialog('copy')} />
-          <Action icon="download" label="Export as PDF or image" onClick={() => setDialog('export')} />
-          {owner && <Action icon="users" label="Share and invite" onClick={() => nav(`/plans/${plan.id}?panel=share`)} />}
-          {owner && <Action icon="community" label={plan.visibility === 'published' ? 'Community settings' : 'Publish to the community'} onClick={() => nav(`/plans/${plan.id}?panel=publish`)} />}
-          {owner && plan.status !== 'archived' && <Action icon="archive" label="Archive" hint="Hidden from your plans list and calendar. Nothing is deleted." onClick={() => setDialog('archive')} />}
-          {owner && plan.status === 'archived' && <Action icon="refresh" label="Restore from the archive" hint="It comes back as a draft." onClick={() => void run(() => setStatus.mutateAsync({ id: plan.id, status: 'draft' }), 'Restored. It’s back in My plans as a draft.')} />}
-          {!owner && plan.role && <Action icon="logout" label="Leave this plan" onClick={() => setDialog('leave')} />}
-          {owner && <Action icon="trash" label="Delete" danger onClick={() => setDialog('delete')} />}
+        {owner && plan.status !== 'active' && plan.status !== 'archived' && (
+          <button type="button" onClick={() => void run(() => setStatus.mutateAsync({ id: plan.id, status: 'active' }), `“${plan.title}” is now your current plan.`)} className="press mb-3 flex w-full items-center gap-3 rounded-[18px] bg-accent-soft px-4 py-3 text-left ring-1 ring-inset ring-accent-border">
+            <Icon name="check" size={20} />
+            <span className="min-w-0">
+              <span className="block font-semibold">Make it my current plan</span>
+              <span className="block text-footnote text-ink-2">It goes on your calendar. Your current plan becomes a draft.</span>
+            </span>
+          </button>
+        )}
+        <ul className="grid grid-cols-2 gap-2" aria-label="Plan actions">
+          {from === 'list' && <Primary icon="plan" label="Open" onClick={() => nav(`/plans/${plan.id}`)} />}
+          {owner && <Primary icon="edit" label="Rename" onClick={() => { setFocus('title'); setDialog('edit') }} />}
+          {owner && <Primary icon="share" label="Share" onClick={() => { close(); nav(`/plans/${plan.id}?panel=share`) }} />}
+          <Primary icon="download" label="Export" onClick={() => setDialog('export')} />
+          {owner && plan.status !== 'archived' && <Primary icon="archive" label="Archive" onClick={() => setDialog('archive')} />}
+          {owner && plan.status === 'archived' && <Primary icon="refresh" label="Restore" onClick={() => void run(() => setStatus.mutateAsync({ id: plan.id, status: 'draft' }), 'Restored. It’s back in My plans as a draft.')} />}
+          {!owner && <Primary icon="copy" label="Duplicate" onClick={() => setDialog('copy')} />}
         </ul>
+        <button type="button" aria-expanded={more} onClick={() => setMore(!more)} className="press mt-3 flex w-full items-center justify-between rounded-[14px] px-2 py-3 text-left font-semibold text-ink-2 hover:text-ink">
+          More
+          <Icon name="down" size={18} className="chevron" />
+        </button>
+        {more && (
+          <ul className="stagger -mx-2 flex flex-col" aria-label="More plan actions">
+            {owner && <Action icon="copy" label="Duplicate" hint="A new draft you own. This plan isn't changed." onClick={() => setDialog('copy')} />}
+            {owner && <Action icon="edit" label={plan.description ? 'Edit description' : 'Add a description'} onClick={() => { setFocus('description'); setDialog('edit') }} />}
+            {owner && <Action icon="image" label={plan.cover_path ? 'Change cover image' : 'Add a cover image'} hint={plan.cover_path ? undefined : 'Until then, the cover is a collage of its meals.'} onClick={() => file.current?.click()} />}
+            {owner && plan.cover_path && <Action icon="move" label="Adjust cover" hint="Move or zoom the current image." onClick={() => setDialog('cover')} />}
+            {owner && plan.cover_path && <Action icon="x" label="Remove cover image" onClick={() => void run(() => setCover.mutateAsync({ plan, file: null }), 'Cover removed.')} />}
+            <Action icon="history" label="View activity" onClick={() => { close(); nav(`/plans/${plan.id}?tab=activity`) }} />
+            {!owner && plan.role && <Action icon="logout" label="Leave this plan" onClick={() => setDialog('leave')} />}
+            {owner && <Action icon="trash" label="Delete" hint="Permanently, for everyone." danger onClick={() => setDialog('delete')} />}
+          </ul>
+        )}
         <input
           ref={file}
           type="file"
@@ -84,10 +106,33 @@ export function PlanActions({ plan, onClose, from = 'list', initial = 'menu' }: 
           onChange={(e) => {
             const f = e.target.files?.[0]
             e.target.value = ''
-            if (f) void run(() => setCover.mutateAsync({ plan, file: f }), 'Cover updated.')
+            if (!f) return
+            if (!/^image\/(jpeg|png|webp)$/.test(f.type)) return toast.error('Choose a JPEG, PNG or WebP image.')
+            setPicked({ file: f, url: URL.createObjectURL(f) })
+            setDialog('cover')
           }}
         />
       </Sheet>
+      {owner && (
+        <CoverEditor
+          open={dialog === 'cover'}
+          src={picked?.url ?? current.data ?? null}
+          initial={picked ? null : plan.cover_crop}
+          saving={setCover.isPending}
+          onCancel={() => {
+            if (picked) URL.revokeObjectURL(picked.url) // the local preview never outlives the editor
+            setPicked(null)
+            setDialog('menu')
+          }}
+          onConfirm={(crop) =>
+            void run(async () => {
+              await setCover.mutateAsync(picked ? { plan, file: picked.file, crop } : { plan, crop })
+              if (picked) URL.revokeObjectURL(picked.url)
+              setPicked(null)
+            }, picked ? 'Cover updated.' : 'Cover adjusted.')
+          }
+        />
+      )}
       {owner && <EditDetails key={`${plan.id}-${focus}`} plan={plan} focus={focus} open={dialog === 'edit'} onClose={close} />}
       <CopyPlan key={plan.id} plan={plan} open={dialog === 'copy'} onClose={close} mode="duplicate" />
       <ExportSheet open={dialog === 'export'} onClose={close} anchorDate={plan.start_date} plan={plan} />
@@ -133,10 +178,21 @@ export function PlanActions({ plan, onClose, from = 'list', initial = 'menu' }: 
   )
 }
 
+function Primary({ icon, label, onClick }: { icon: IconName; label: string; onClick: () => void }) {
+  return (
+    <li>
+      <button type="button" onClick={onClick} className="press flex h-full min-h-[76px] w-full flex-col items-start justify-between gap-2 rounded-[20px] bg-elevated p-3.5 text-left ring-1 ring-inset ring-line hover:ring-ink/30">
+        <Icon name={icon} size={20} />
+        <span className="font-semibold leading-tight">{label}</span>
+      </button>
+    </li>
+  )
+}
+
 function Action({ icon, label, hint, onClick, danger }: { icon: IconName; label: string; hint?: string; onClick: () => void; danger?: boolean }) {
   return (
     <li>
-      <button type="button" onClick={onClick} className={`press flex w-full items-start gap-3 rounded-[14px] px-2 py-3 text-left hover:bg-elevated ${danger ? 'text-error' : ''}`}>
+      <button type="button" onClick={onClick} className={cn('press flex w-full items-start gap-3 rounded-[14px] px-2 py-3 text-left hover:bg-elevated', danger && 'text-error')}>
         <Icon name={icon} size={20} className="mt-0.5 shrink-0" />
         <span className="min-w-0">
           <span className="block font-semibold">{label}</span>

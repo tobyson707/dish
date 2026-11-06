@@ -14,7 +14,7 @@ export function Sheet({ open, onClose, title, children, footer, size = 'md', des
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId() // unique, so a sheet opened from another sheet keeps its own name
   const { mounted, closing } = usePresence(open, MOTION.exit(MOTION.panel))
-  const drag = useDragDismiss('y', onClose)
+  const drag = useDragDismiss('y', onClose, 110, open)
   useEffect(() => {
     const d = ref.current
     if (!d) return
