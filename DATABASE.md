@@ -93,3 +93,20 @@ The starter catalogue is **sample / reference data**:
 - `food_image_jobs` — queue and review history: status, variant, provider/model/prompt version, the exact prompt, size, candidate `storage_path`, bytes/width/height, attempts (max 3), error, latency, reviewer, QC checklist, notes. Unique partial index: one queued/running/awaiting-review job per recipe. RLS: admins read; nobody writes except the service role.
 - `claim_food_image_job()` (service role only) — atomically claims the next job (`FOR UPDATE SKIP LOCKED`, featured first) and requeues jobs stuck in `running` for 10+ minutes. `food_images_generated_today()` (service role only) — attempts in the last 24 h for the daily cap.
 - Re-seeding never touches image columns, so approved photos survive `seed.sql` re-runs.
+
+## World profile and celebrations (migration `20261107000100_profile_world_and_celebrations.sql`)
+- `profiles.country_code` (ISO 3166-1 alpha-2), `profiles.currency_source` ('suggested' | 'manual'); currency must be a 3-letter ISO code, default USD.
+- `user_preferences.planning_goals text[]`, `allergy_status` ('listed' | 'none' | 'unsure' | 'undisclosed'), `spice_pref` 0..4.
+- `planned_meals.est_cost_currency` (existing rows backfilled to NGN, the catalogue's currency).
+- `user_achievements.celebrated_at` + RPC `mark_achievements_celebrated(p_ids)`; new achievements (two weeks, a month, full week planned, 10/50 logged, planner month).
+
+## Snacks and drinks (migration `20261108000100_snacks_and_drinks.sql`)
+- `drink` added to the allowed slots of `food_items.meal_types`, `user_preferences.meal_slots`, `planned_meals.slot`, `food_diary_entries.slot`.
+- `food_items.food_type` ('food' | 'beverage', default 'food') with `food_items_type_occasion_check`: a beverage's only occasion is drink; food never has drink.
+- Catalogue audit (by hand): Zobo and the banana and berry smoothie are beverages. The smoothie bowl, akara and pap, custard and the soups stay food. Nothing was ambiguous enough to need a review flag.
+- Existing planned meals and diary entries for those two move to the drink slot (same rows and IDs; the streak trigger is paused for this correction).
+- `enforce_meal_occasion()` trigger keeps every future write consistent, whatever the client.
+- `xp_transactions.event_type` also allows `dev_adjustment`: XP added by the Developer Mode simulator on test accounts, so simulated XP is labelled as such and the real level-up path runs.
+
+## Developer Mode (`supabase/functions/dev-tools`)
+No tables of its own. Disabled unless the function's environment has `DISH_DEV_TOOLS=enabled` (set by `scripts/local-stack.sh`; never set it on a hosted project you use for real people). Test accounts carry `app_metadata.dish_test = true` (set with the service role; users can't change app metadata), and every state-changing action refuses any other account.

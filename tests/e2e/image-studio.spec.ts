@@ -20,7 +20,7 @@ test('admin generates, reviews and publishes a catalogue photo; it then shows in
   await completeOnboardingFor(uid)
   await fetch(`${API}/rest/v1/app_admins`, { method: 'POST', headers: h, body: JSON.stringify({ user_id: uid, note: 'e2e' }) })
   await signIn(page, email)
-  await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
 
   await page.goto('/profile')
   await page.getByRole('link', { name: /Image studio/ }).click()
@@ -43,7 +43,7 @@ test('admin generates, reviews and publishes a catalogue photo; it then shows in
   await expect(approve).toBeDisabled() // QC checklist first
   for (const box of await sheet.getByRole('checkbox').all()) await box.check()
   await approve.click()
-  await expect(page.getByText(/Approved — the photo is now live/)).toBeVisible()
+  await expect(page.getByText(/Approved. The photo is now live/)).toBeVisible()
 
   // Published once, reused everywhere (recipe detail reads the same stored image)
   await page.goto(`/recipes/${SLUG}`)
@@ -61,7 +61,7 @@ test('the studio is invisible and unusable for ordinary users', async ({ page })
   const uid = await createUser(email)
   await completeOnboardingFor(uid)
   await signIn(page, email)
-  await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
   await page.goto('/profile')
   await expect(page.getByRole('link', { name: /Food preferences/ })).toBeVisible()
   await expect(page.getByRole('link', { name: /Image studio/ })).toHaveCount(0)

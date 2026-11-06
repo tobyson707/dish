@@ -65,7 +65,7 @@ export function GroceryPage() {
       ) : !listId ? (
         <EmptyState
           title="No shopping list yet"
-          message="Build one from your meal plan — we'll combine ingredients and skip what's already in your kitchen."
+          message="Build one from your meal plan. We'll combine ingredients and skip what's already in your kitchen."
           action={
             <Button size="lg" icon="cart" onClick={() => setGenOpen(true)}>
               Build from my plan
@@ -143,16 +143,16 @@ function Row({ item, listId, onEdit }: { item: GroceryItem; listId: string; onEd
           tap()
           void m.toggle(item)
         }}
-        className={cn('press flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-2 ring-inset transition-colors duration-200', item.purchased ? 'bg-accent text-accent-ink ring-accent' : 'ring-dot')}
+        className={cn('press flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-2 ring-inset transition-colors duration-200', item.purchased ? 'pulse-once bg-accent text-accent-ink ring-accent' : 'ring-dot')}
       >
-        {item.purchased && <Icon name="check" size={16} className="animate-[pop_160ms_var(--ease-out)]" />}
+        {item.purchased && <span className="icon-swap flex"><Icon name="check" size={16} /></span>}
       </button>
       <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left">
         <span className={cn('block font-semibold transition-colors', item.purchased && 'text-muted line-through')}>
           {item.name}
           {item.quantity != null && <span className="num ml-2 font-normal text-muted">{formatQuantity(item.quantity, item.unit)}</span>}
         </span>
-        <span className="block truncate text-[12px] text-muted">
+        <span className="block truncate text-caption text-muted">
           {item.source === 'manual'
             ? 'Added by you'
             : item.source_meal_names.length
@@ -294,7 +294,7 @@ function GenerateSheet({ open, onClose, listId, onDone }: { open: boolean; onClo
           </p>
           {result.keptStale > 0 && (
             <Notice>
-              {result.keptStale} item{result.keptStale > 1 ? 's' : ''} you'd ticked off or edited aren't needed any more — we kept them and marked them “no longer in your plan”.
+              {result.keptStale} item{result.keptStale > 1 ? 's' : ''} you'd ticked off or edited aren't needed any more. We kept them and marked them “no longer in your plan”.
             </Notice>
           )}
           {result.coveredByKitchen.length > 0 && <Notice icon="fridge">Already in your kitchen: {result.coveredByKitchen.join(', ')}.</Notice>}

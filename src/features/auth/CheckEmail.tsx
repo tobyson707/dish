@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, useLocation } from 'react-router'
+import { useLocation, useNavigate } from 'react-router'
 import { supabase } from '@/lib/supabase'
 import { friendlyError } from '@/lib/errors'
 import { Button } from '@/components/ui/Button'
@@ -12,6 +12,23 @@ export function CheckEmail() {
   const [email, setEmail] = useState((loc.state as { email?: string } | null)?.email ?? '')
   const [status, setStatus] = useState<{ tone: 'info' | 'error'; text: string } | null>(null)
   const [busy, setBusy] = useState(false)
+  const [checking, setChecking] = useState(false)
+  const nav = useNavigate()
+
+  /**
+   * "I've confirmed my email": ask the auth server for the real state. If the
+   * link was opened on this device we're already signed in and verified; if not,
+   * signing in is what proves it (unverified accounts can't sign in).
+   */
+  async function confirmed() {
+    setChecking(true)
+    setStatus(null)
+    const { data } = await supabase.auth.getUser() // server round-trip, not the cached session
+    setChecking(false)
+    if (data.user?.email_confirmed_at) return nav('/onboarding', { replace: true })
+    nav('/sign-in', { state: { email, verifyCheck: true } })
+  }
+
   async function resend() {
     if (!email) return setStatus({ tone: 'error', text: 'Enter the email you signed up with.' })
     setBusy(true)
@@ -27,9 +44,9 @@ export function CheckEmail() {
         <Button variant="secondary" block loading={busy} onClick={resend}>
           Resend confirmation email
         </Button>
-        <Link to="/sign-in" className="text-center text-sm font-semibold underline">
-          I've confirmed — sign in
-        </Link>
+        <Button block loading={checking} onClick={confirmed}>
+          I've confirmed my email
+        </Button>
       </div>
     </AuthLayout>
   )

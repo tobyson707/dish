@@ -23,7 +23,7 @@ export function friendlyError(e: unknown, fallback = 'Something went wrong. Plea
   const err = e as { message?: string; code?: string; status?: number; context?: { status?: number } }
   const msg = err?.message ?? ''
   if (/Invalid login credentials/i.test(msg)) return 'That email and password combination did not work.'
-  if (/Email not confirmed/i.test(msg)) return 'Please confirm your email first — check your inbox for the link.'
+  if (/Email not confirmed/i.test(msg)) return 'Please confirm your email first. Check your inbox for the link.'
   if (/User already registered/i.test(msg)) return 'An account with this email already exists. Try signing in.'
   if (/Password should be/i.test(msg)) return msg
   if (/rate limit|too many/i.test(msg) || err?.status === 429) return "You've done that a lot in a short time. Please wait a moment and try again."

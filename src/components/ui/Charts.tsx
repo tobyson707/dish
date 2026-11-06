@@ -27,7 +27,7 @@ export function WeekBars({ title, data, target, unit, format = (v) => Math.round
         <div className="absolute inset-x-0 border-t border-line" style={{ top: H }} aria-hidden="true" />
         {target ? (
           <div className="absolute inset-x-0 border-t border-dashed border-ink-2/60" style={{ top: H - (target / max) * H }} aria-hidden="true">
-            <span className="num absolute -top-4 right-0 text-[10px] font-semibold text-ink-2">
+            <span className="num absolute -top-4 right-0 text-micro font-semibold text-ink-2">
               Target {format(target)}
             </span>
           </div>
@@ -57,7 +57,7 @@ export function WeekBars({ title, data, target, unit, format = (v) => Math.round
         </div>
         <div className="absolute inset-x-0 grid grid-cols-7 gap-0.5 text-center" style={{ top: H + 6 }} aria-hidden="true">
           {data.map((d) => (
-            <span key={d.key} className={cn('text-[11px] font-semibold', d.highlight ? 'text-ink' : 'text-muted')}>
+            <span key={d.key} className={cn('text-micro font-semibold', d.highlight ? 'text-ink' : 'text-muted')}>
               {d.label}
             </span>
           ))}
@@ -80,7 +80,7 @@ export function WeekBars({ title, data, target, unit, format = (v) => Math.round
           {data.map((d) => (
             <tr key={d.key}>
               <th scope="row">{d.fullLabel}</th>
-              <td>{d.value == null ? '—' : format(d.value)}</td>
+              <td>{d.value == null ? '–' : format(d.value)}</td>
             </tr>
           ))}
         </tbody>

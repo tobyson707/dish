@@ -19,7 +19,7 @@ export const CATALOGUE: CatalogueMeal[] = (MEALS as Meal[]).map((m) => {
   return {
     id: m.slug, slug: m.slug, name: m.name, cuisine: m.cuisine, meal_types: m.types, dietary_tags: m.tags, allergens: [...allergens],
     ingredients_complete: m.complete, spice_level: m.spice, richness: m.rich, prep_minutes: m.prep, cook_minutes: m.cook,
-    can_cook: m.cook_ok, can_buy: m.buy, est_cost_min: m.cost[0], est_cost_max: m.cost[1], cost_currency: 'NGN',
+    can_cook: m.cook_ok, can_buy: m.buy, food_type: m.kind ?? 'food', est_cost_min: m.cost[0], est_cost_max: m.cost[1], cost_currency: 'NGN',
     calories: m.n[0], protein_g: m.n[1], carbs_g: m.n[2], fat_g: m.n[3], nutrition_source: 'reference_estimate', ingredients,
   }
 })

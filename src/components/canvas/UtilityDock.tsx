@@ -20,10 +20,10 @@ export function UtilityDock({ onSearch, onAdd, className }: { onSearch: () => vo
           onKeyDown={(e) => {
             if (e.key.length === 1 || e.key === 'Enter') onSearch()
           }}
-          className="h-12 w-full cursor-text rounded-full bg-white/8 pl-12 pr-4 text-[15px] text-on-glass-dark placeholder:text-on-glass-dark-muted ring-1 ring-inset ring-white/10 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+          className="h-12 w-full cursor-text rounded-full bg-white/8 pl-12 pr-4 text-callout text-on-glass-dark placeholder:text-on-glass-dark-muted ring-1 ring-inset ring-white/10 outline-none focus-visible:ring-2 focus-visible:ring-accent"
         />
       </label>
-      <button type="button" onClick={onAdd} className="press flex h-12 shrink-0 items-center gap-1.5 rounded-full bg-on-glass-dark px-5 text-[15px] font-bold text-on-glass-dark-ink ">
+      <button type="button" onClick={onAdd} className="press flex h-12 shrink-0 items-center gap-1.5 rounded-full bg-on-glass-dark px-5 text-callout font-bold text-on-glass-dark-ink ">
         <Icon name="plus" size={18} /> Add
       </button>
     </div>

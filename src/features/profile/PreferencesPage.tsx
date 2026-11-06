@@ -5,7 +5,7 @@ import { useCatalogue, useIngredients } from '@/data/catalogue'
 import { qk } from '@/data/keys'
 import { useUserId } from '@/features/auth/AuthProvider'
 import { draftFrom, persistDraft, type Draft } from '@/features/onboarding/draft'
-import { StepAvoid, StepBasics, StepBudget, StepCooking, StepLoves, StepPlanning, StepTaste, validateStep } from '@/features/onboarding/Steps'
+import { StepAvoid, StepBudget, StepCooking, StepCuisines, StepName, StepPlace, StepPlanning, StepTaste, validateStep } from '@/features/onboarding/Steps'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/Layout'
 import { ErrorState, LoadingBlock } from '@/components/ui/States'
@@ -14,9 +14,10 @@ import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
 
 const SECTIONS = [
-  ['basics', 'Name, units & currency', StepBasics],
-  ['avoid', 'Allergies & foods to avoid', StepAvoid],
-  ['loves', 'Food you love', StepLoves],
+  ['name', 'Name', StepName],
+  ['place', 'Country, currency and units', StepPlace],
+  ['avoid', 'Allergies and restrictions', StepAvoid],
+  ['cuisines', 'Cuisines and favourites', StepCuisines],
   ['taste', 'Taste', StepTaste],
   ['cooking', 'Cooking', StepCooking],
   ['budget', 'Budget', StepBudget],
@@ -39,7 +40,8 @@ function Editor({ initial }: { initial: Draft }) {
   const cat = useCatalogue()
   const ing = useIngredients()
   const [d, setD] = useState(initial)
-  const [open, setOpen] = useState<string>('avoid')
+  // ?section=budget (etc.) opens that section, e.g. from the budget page's Edit budget
+  const [open, setOpen] = useState<string>(() => new URLSearchParams(location.search).get('section') ?? 'avoid')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const dirty = JSON.stringify(d) !== JSON.stringify(initial)
@@ -78,7 +80,7 @@ function Editor({ initial }: { initial: Draft }) {
                 <Icon name="down" size={18} className={`transition-transform ${open === key ? 'rotate-180' : ''}`} />
               </button>
             </h2>
-            {open === key && <div className="px-4 pb-5 animate-[rise_200ms_var(--ease-out)]"><Step d={d} set={(p) => setD((x) => ({ ...x, ...p }))} errors={errors} mealNames={mealNames} ingredientNames={ingredientNames} /></div>}
+            {open === key && <div className="px-4 pb-5 animate-[rise_var(--dur-fast)_var(--ease-enter)]"><Step d={d} set={(p) => setD((x) => ({ ...x, ...p }))} errors={errors} mealNames={mealNames} ingredientNames={ingredientNames} /></div>}
           </section>
         ))}
       </div>

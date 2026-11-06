@@ -2,7 +2,7 @@ import type { SVGProps } from 'react'
 
 // Simple 1.75px line icons on a 24px grid. Decorative by default (aria-hidden);
 // pair with visible text or an aria-label on the parent control.
-const P: Record<string, string> = {
+export const ICON_PATHS: Record<string, string> = {
   home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
   plan: 'M4 5h16v15H4zM4 9h16M8 3v4M16 3v4',
   diary: 'M5 4h11a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h11M9 8h6',
@@ -57,10 +57,13 @@ const P: Record<string, string> = {
   lunch: 'M4 13h16a8 8 0 0 1-16 0zM5.5 13c0-3.8 2.9-6 6.5-6s6.5 2.2 6.5 6M12 5v2',
   cloche: 'M3 18h18M5 18a7 7 0 0 1 14 0M12 11V9M10.5 9h3',
   apple: 'M12 7.5c-1.6-1.1-5.2-1.4-6.6 1.6S5.3 16.5 7.7 19c1.6 1.6 3.2 1.3 4.3.8 1.1.5 2.7.8 4.3-.8 2.4-2.5 3.7-6.9 2.3-9.9S13.6 6.4 12 7.5zM12 7.5c0-2 1-3.4 3-4',
+  glass: 'M7 4h10l-1.4 15.2a2 2 0 0 1-2 1.8h-3.2a2 2 0 0 1-2-1.8zM7.6 10h8.8M13.5 4l1.8-2.5',
+  eye: 'M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z',
+  eyeOff: 'M3 3l18 18M10.6 5.1A10.6 10.6 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6A17.5 17.5 0 0 0 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6M9.9 9.9a3 3 0 0 0 4.2 4.2',
   medal: 'M12 21a6 6 0 1 0 0-12 6 6 0 0 0 0 12zM8.5 9.8 6 3h4l2 4 2-4h4l-2.5 6.8M12 12.5l1 2 2.2.3-1.6 1.5.4 2.2-2-1-2 1 .4-2.2-1.6-1.5 2.2-.3z',
 }
 
-export type IconName = keyof typeof P
+export type IconName = keyof typeof ICON_PATHS
 
 export function Icon({ name, size = 22, filled = false, ...rest }: { name: IconName; size?: number; filled?: boolean } & SVGProps<SVGSVGElement>) {
   return (
@@ -77,7 +80,7 @@ export function Icon({ name, size = 22, filled = false, ...rest }: { name: IconN
       focusable="false"
       {...rest}
     >
-      <path d={P[name]} />
+      <path d={ICON_PATHS[name]} />
     </svg>
   )
 }

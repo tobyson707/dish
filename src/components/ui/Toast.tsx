@@ -46,7 +46,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             role={t.tone === 'error' ? 'alert' : 'status'}
             className={cn(
               'pointer-events-auto flex w-full max-w-md items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium shadow-lg',
-              'animate-[rise_220ms_var(--ease-out)]',
+              'animate-[rise_var(--dur-standard)_var(--ease-enter)]',
               t.tone === 'error' ? 'bg-error text-on-error' : 'bg-ink text-on-ink',
             )}
           >

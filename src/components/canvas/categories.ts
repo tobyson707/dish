@@ -9,6 +9,7 @@ export const CATEGORIES: { id: Category; label: string; icon: IconName }[] = [
   { id: 'lunch', label: 'Lunch', icon: 'lunch' },
   { id: 'dinner', label: 'Dinner', icon: 'cloche' },
   { id: 'snack', label: 'Snacks', icon: 'apple' },
+  { id: 'drink', label: 'Drinks', icon: 'glass' },
 ]
 
 export const categoryLabel = (c: Category) => CATEGORIES.find((x) => x.id === c)!.label

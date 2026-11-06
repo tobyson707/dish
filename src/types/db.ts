@@ -1,6 +1,6 @@
 // Row types mirroring supabase/migrations. Kept hand-written and minimal;
 // regenerate with `supabase gen types typescript` if you prefer generated types.
-import type { Allergen, CookTime, CookingMode, DietPattern, Goal, GroceryCategory, MealSlot, NutritionSource, PlanDuration } from '@domain/types.ts'
+import type { Allergen, CookTime, CookingMode, DietPattern, Goal, GroceryCategory, MealSlot, NutritionSource, PlanDuration, PlanningGoal, FoodType } from '@domain/types.ts'
 import type { ISODate } from '@domain/dates.ts'
 
 export interface Profile {
@@ -13,7 +13,9 @@ export interface Profile {
   activity_level: 'low' | 'light' | 'moderate' | 'high' | null
   units: 'metric' | 'imperial'
   timezone: string
-  currency: string
+  currency: string // ISO 4217
+  country_code?: string | null // ISO 3166-1 alpha-2
+  currency_source?: 'suggested' | 'manual' | null
   onboarding_step: number
   onboarding_draft: Record<string, unknown>
   onboarding_completed_at: string | null
@@ -44,6 +46,8 @@ export interface UserPreferences {
   plan_days: number[]
   variety: 'low' | 'medium' | 'high'
   leftovers_ok: boolean
+  planning_goals?: PlanningGoal[]
+  allergy_status?: AllergyStatus
   updated_at: string
 }
 
@@ -96,6 +100,8 @@ export interface FoodItem {
   description: string
   cuisine: string
   meal_types: MealSlot[]
+  /** food or beverage; a beverage is only ever scheduled as a drink */
+  food_type?: FoodType
   dietary_tags: string[]
   allergens: string[]
   ingredients_complete: boolean
@@ -190,13 +196,14 @@ export interface PlannedMeal {
   fat_g: number | null
   nutrition_source: NutritionSource | null
   est_cost: number | null
+  est_cost_currency?: string | null
   method: 'cook' | 'buy'
   status: PlannedStatus
   locked: boolean
   rationale: string | null
   client_updated_at: string | null
   updated_at: string
-  food_item?: Pick<FoodItem, 'id' | 'slug' | 'image_path' | 'image_alt' | 'cuisine' | 'prep_minutes' | 'cook_minutes' | 'allergens' | 'ingredients_complete' | 'description'> | null
+  food_item?: Pick<FoodItem, 'id' | 'slug' | 'food_type' | 'image_path' | 'image_alt' | 'cuisine' | 'prep_minutes' | 'cook_minutes' | 'allergens' | 'ingredients_complete' | 'description'> | null
 }
 
 export interface NutritionEntry {
@@ -319,3 +326,7 @@ export interface AIJob {
   uses_ai: boolean
   created_at: string
 }
+
+export type AllergyStatus = 'listed' | 'none' | 'unsure' | 'undisclosed'
+
+export { PLANNING_GOALS, PLANNING_GOAL_LABEL, type PlanningGoal } from '@domain/types.ts'

@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router'
 import { midCost } from '@domain/budget.ts'
-import { SLOT_LABEL, type MealSlot } from '@domain/types.ts'
+import { SLOT_LABEL, occasionFor, type MealSlot } from '@domain/types.ts'
 import type { FoodItem } from '@/types/db'
 import { useActivePlan, useCreatePlannedMeal, usePlannedMeals } from '@/data/plans'
 import { useReplaceMeal } from '@/data/ai'
@@ -22,7 +22,8 @@ export function useAddToToday() {
   const create = useCreatePlannedMeal()
   const replace = useReplaceMeal()
 
-  async function add(food: FoodItem, slot: MealSlot): Promise<boolean> {
+  async function add(food: FoodItem, wanted: MealSlot): Promise<boolean> {
+    const slot = occasionFor(food, wanted) // a drink goes to Drinks, never to a meal or snack
     const existing = todays.data?.find((m) => m.slot === slot && m.status === 'planned' && !m.locked)
     try {
       if (existing && existing.food_item_id !== food.id) {
@@ -42,6 +43,7 @@ export function useAddToToday() {
           fat_g: food.fat_g,
           nutrition_source: food.nutrition_source,
           est_cost: midCost(food.est_cost_min, food.est_cost_max),
+          est_cost_currency: food.cost_currency,
           method: food.can_cook ? 'cook' : 'buy',
         })
         toast.show(`Added ${food.name} to today's ${SLOT_LABEL[slot].toLowerCase()}.`, { tone: 'success', action: { label: 'View', onClick: () => nav(`/plan?date=${today}`) } })

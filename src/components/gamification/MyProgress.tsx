@@ -33,7 +33,7 @@ export function MyProgress() {
               return (
                 <>
                   <p className="label-caps">Level {p.current.level} of 6</p>
-                  <p className="display mt-1 text-[clamp(1.9rem,8vw,2.5rem)]">{p.current.title}</p>
+                  <p className="mt-1 text-title-1 font-extrabold">{p.current.title}</p>
                   <div className="mt-4">
                     <LevelProgress totalXp={g.data.total_xp} size="md" />
                   </div>
@@ -47,8 +47,8 @@ export function MyProgress() {
                 ['Best streak', `${g.data.best_streak} day${g.data.best_streak === 1 ? '' : 's'}`],
               ].map(([k, v]) => (
                 <div key={k} className="flex flex-col justify-between">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wider text-muted">{k}</dt>
-                  <dd className="num mt-1 text-lg font-extrabold">{v}</dd>
+                  <dt className="text-micro font-semibold uppercase tracking-wider text-muted">{k}</dt>
+                  <dd className="num mt-1 text-title-3 font-extrabold">{v}</dd>
                 </div>
               ))}
             </dl>

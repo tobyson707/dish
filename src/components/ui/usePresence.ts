@@ -1,6 +1,7 @@
+import { prefersReducedMotion } from '@/styles/motion'
 import { useEffect, useState } from 'react'
 
-const reduced = () => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+const reduced = prefersReducedMotion
 
 /**
  * Keeps an element mounted while it animates out.
@@ -28,6 +29,16 @@ export function usePresence(open: boolean, exitMs = 280): { mounted: boolean; cl
   return { mounted, closing }
 }
 
+/**
+ * Resistance beyond a boundary: movement in the allowed direction is 1:1;
+ * pulling the wrong way gives way less and less, to at most `limit` px.
+ */
+export function rubberBand(d: number, limit = 48): number {
+  if (d >= 0) return d
+  const x = -d
+  return -(limit * x) / (x + limit * 1.8)
+}
+
 /** Vertical/horizontal drag-to-dismiss for sheets and side panels (pointer events, no library). */
 export function useDragDismiss(axis: 'y' | 'x', onDismiss: () => void, threshold = 110) {
   const [offset, setOffset] = useState(0)
@@ -44,7 +55,8 @@ export function useDragDismiss(axis: 'y' | 'x', onDismiss: () => void, threshold
       },
       onPointerMove: (e: React.PointerEvent) => {
         if (!start) return
-        setOffset(Math.max(0, pos(e) - start.p))
+        // past the closed position: rubber-band resistance, never free movement
+        setOffset(rubberBand(pos(e) - start.p))
       },
       onPointerUp: (e: React.PointerEvent) => {
         if (!start) return

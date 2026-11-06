@@ -21,6 +21,9 @@ function publicSupabaseEnv(mode: string): Record<string, string> {
   const out: Record<string, string> = {}
   if (url) out['import.meta.env.VITE_SUPABASE_URL'] = JSON.stringify(url)
   if (key) out['import.meta.env.VITE_SUPABASE_ANON_KEY'] = JSON.stringify(key)
+  // which deployment this is (Vercel sets VERCEL_ENV: production | preview | development);
+  // used only to decide what Developer Mode may offer, never for secrets
+  out['import.meta.env.VITE_DISH_ENV'] = JSON.stringify(pick('VITE_DISH_ENV', 'VERCEL_ENV'))
   return out
 }
 

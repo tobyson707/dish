@@ -1,7 +1,11 @@
 // Shared domain types. Pure TypeScript — no runtime imports — so the same code
 // runs in the browser (Vite) and in Supabase Edge Functions (Deno).
 
-export const MEAL_SLOTS = ['breakfast', 'lunch', 'dinner', 'snack'] as const
+/**
+ * Eating occasions. A drink is its own occasion: beverages are never snacks
+ * or main meals (see FOOD_TYPES and the food_items constraint).
+ */
+export const MEAL_SLOTS = ['breakfast', 'lunch', 'dinner', 'snack', 'drink'] as const
 export type MealSlot = (typeof MEAL_SLOTS)[number]
 
 export const SLOT_LABEL: Record<MealSlot, string> = {
@@ -9,7 +13,19 @@ export const SLOT_LABEL: Record<MealSlot, string> = {
   lunch: 'Lunch',
   dinner: 'Dinner',
   snack: 'Snack',
+  drink: 'Drink',
 }
+
+/** What a catalogue item is, separate from when it's eaten. */
+export const FOOD_TYPES = ['food', 'beverage'] as const
+export type FoodType = (typeof FOOD_TYPES)[number]
+/** Occasions a food type may fill: beverages only as drinks, food never as a drink. */
+/** The occasions a catalogue item may be scheduled for. */
+export const occasionsFor = (type: FoodType | undefined): MealSlot[] => MEAL_SLOTS.filter((s) => fitsOccasion(type, s))
+/** A valid occasion for this item: the one asked for if it fits, otherwise its own. */
+export const occasionFor = (item: { food_type?: FoodType; meal_types: MealSlot[] }, wanted: MealSlot): MealSlot =>
+  fitsOccasion(item.food_type, wanted) ? wanted : (item.meal_types.find((t) => fitsOccasion(item.food_type, t)) ?? (item.food_type === 'beverage' ? 'drink' : 'lunch'))
+export const fitsOccasion = (type: FoodType | undefined, slot: MealSlot) => ((type ?? 'food') === 'beverage' ? slot === 'drink' : slot !== 'drink')
 
 /** Standard allergen codes. Custom allergies are stored separately as free text. */
 export const ALLERGENS = [
@@ -62,6 +78,21 @@ export const GOAL_LABEL: Record<Goal, string> = {
   muscle: 'Build muscle',
   balanced: 'Eat more balanced meals',
   explore: 'Explore new foods',
+}
+
+/** What the person wants from meal planning (several allowed). Only some change scoring; see planner.ts. */
+export const PLANNING_GOALS = ['easier_decisions', 'plan_ahead', 'balanced', 'regular', 'substantial', 'discover', 'less_time', 'budget', 'routine'] as const
+export type PlanningGoal = (typeof PLANNING_GOALS)[number]
+export const PLANNING_GOAL_LABEL: Record<PlanningGoal, string> = {
+  easier_decisions: 'Make everyday meal decisions easier',
+  plan_ahead: 'Plan my meals ahead',
+  balanced: 'Eat more balanced meals',
+  regular: 'Eat more regularly',
+  substantial: 'Enjoy more substantial meals',
+  discover: 'Discover new foods and cuisines',
+  less_time: 'Spend less time deciding what to eat',
+  budget: 'Manage my food budget',
+  routine: 'Keep a consistent eating routine',
 }
 
 export const COOKING_MODES = ['cook', 'buy', 'mix', 'quick'] as const
@@ -165,6 +196,7 @@ export interface CatalogueMeal extends Macros {
   cost_currency: string
   ingredients: IngredientLine[]
   nutrition_source: NutritionSource
+  food_type?: FoodType
 }
 
 export interface PreferenceSnapshot {
@@ -176,7 +208,7 @@ export interface PreferenceSnapshot {
   favourite_ingredients: string[]
   cuisines: string[] // empty = anything
   diet_pattern: DietPattern
-  spice_pref: number // 0..3
+  spice_pref: number // 0 no spice, 1 mild, 2 medium, 3 hot, 4 very hot
   richness_pref: number // 0..3
   cooking_mode: CookingMode
   cook_time: CookTime
@@ -184,6 +216,7 @@ export interface PreferenceSnapshot {
   budget_period: 'meal' | 'day'
   currency: string
   goal: Goal | null
+  planning_goals?: PlanningGoal[]
   variety: 'low' | 'medium' | 'high'
   leftovers_ok: boolean
 }

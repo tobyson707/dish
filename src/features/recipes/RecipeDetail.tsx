@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router'
-import { ALLERGEN_LABEL, MEAL_SLOTS, SLOT_LABEL, type Allergen, type MealSlot } from '@domain/types.ts'
+import { ALLERGEN_LABEL, SLOT_LABEL, occasionsFor, type Allergen, type MealSlot } from '@domain/types.ts'
 import { checkAllergy } from '@domain/allergens.ts'
 import { formatQuantity } from '@domain/units.ts'
 import { midCost } from '@domain/budget.ts'
@@ -22,6 +22,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { Select, TextField } from '@/components/ui/Field'
 import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
+import { DateField } from '@/components/ui/DateField'
 
 export function RecipeDetail() {
   const { slug } = useParams()
@@ -66,7 +67,7 @@ export function RecipeDetail() {
     <div>
       <PageHeader back eyebrow={`${food.cuisine}${food.is_sample ? ' · sample recipe' : ''}`} title={food.name} actions={<IconButton icon="heart" label={isFav ? 'Remove from favourites' : 'Save to favourites'} className={isFav ? 'text-accent-strong' : undefined} onClick={() => fav.mutate({ foodItemId: food.id, on: !isFav })} />} />
       <FoodImage path={food.image_path} alt={food.image_alt} name={food.name} className="aspect-[4/5] max-h-[62dvh] w-full rounded-xl sm:aspect-[16/10] sm:max-h-none" width={960} priority />
-      {food.image_credit && <p className="mt-1 text-[11px] text-muted">Photo: {food.image_credit}</p>}
+      {food.image_credit && <p className="mt-1 text-micro text-muted">Photo: {food.image_credit}</p>}
       <p className="mt-4 text-ink-2">{food.description}</p>
       <div className="mt-4 flex flex-wrap gap-2">
         {food.can_cook && <Tag>{formatMinutes(food.prep_minutes + food.cook_minutes)}</Tag>}
@@ -84,22 +85,22 @@ export function RecipeDetail() {
       <div className="mt-4">
         <Notice tone={food.ingredients_complete ? 'info' : 'warning'} icon="shield">
           {food.allergens.length ? <>Listed ingredients include <strong>{food.allergens.map((a) => ALLERGEN_LABEL[a as Allergen] ?? a).join(', ')}</strong>. </> : 'No common allergens in the listed ingredients. '}
-          {food.ingredients_complete ? 'Brands and cooks vary — check labels.' : "Versions vary a lot, so allergens can't be ruled out."}
+          {food.ingredients_complete ? 'Brands and cooks vary, so check labels.' : "Versions vary a lot, so allergens can't be ruled out."}
         </Notice>
       </div>
 
       <Section title={`Nutrition · per ${food.serving_qty} ${food.serving_unit}`} action={<ProvenanceBadge source={food.nutrition_source} isEstimate={food.nutrition_is_estimate} />}>
         <dl className="grid grid-cols-4 gap-2 rounded-lg bg-elevated p-4 text-center">
-          {[['Energy', food.calories == null ? '—' : formatKcal(food.calories).replace(' kcal', '')], ['Protein', food.protein_g == null ? '—' : `${food.protein_g}g`], ['Carbs', food.carbs_g == null ? '—' : `${food.carbs_g}g`], ['Fat', food.fat_g == null ? '—' : `${food.fat_g}g`]].map(([k, v]) => (
-            <div key={k}><dt className="text-[11px] font-semibold uppercase tracking-wider text-muted">{k}</dt><dd className="num mt-1 text-xl font-extrabold">{v}</dd></div>
+          {[['Energy', food.calories == null ? '–' : formatKcal(food.calories).replace(' kcal', '')], ['Protein', food.protein_g == null ? '–' : `${food.protein_g}g`], ['Carbs', food.carbs_g == null ? '–' : `${food.carbs_g}g`], ['Fat', food.fat_g == null ? '–' : `${food.fat_g}g`]].map(([k, v]) => (
+            <div key={k}><dt className="text-micro font-semibold uppercase tracking-wider text-muted">{k}</dt><dd className="num mt-1 text-title-3 font-extrabold">{v}</dd></div>
           ))}
         </dl>
         {food.nutrition_notes && <p className="mt-2 text-xs text-muted">{food.nutrition_notes}</p>}
       </Section>
 
       <Section title="Cost per serving" action={<button type="button" className="text-sm font-semibold underline" onClick={() => setPriceOpen(true)}>Edit my price</button>}>
-        <p className="num text-lg font-bold">{myPrice ? formatMoney(myPrice.amount, myPrice.currency) : formatCostRange(food.est_cost_min, food.est_cost_max, food.cost_currency)}</p>
-        <p className="text-xs text-muted">{myPrice ? 'Your price — used in your plans and budget.' : 'Rough estimate only. Prices vary by city, vendor and season.'}</p>
+        <p className="num text-title-3 font-bold">{myPrice ? formatMoney(myPrice.amount, myPrice.currency) : formatCostRange(food.est_cost_min, food.est_cost_max, food.cost_currency)}</p>
+        <p className="text-xs text-muted">{myPrice ? 'Your price, used in your plans and budget.' : 'Rough estimate only. Prices vary by city, vendor and season.'}</p>
       </Section>
 
       {recipe && recipe.recipe_ingredients.length > 0 && (
@@ -143,18 +144,18 @@ function AddToPlanSheet({ open, onClose, foodId }: { open: boolean; onClose: () 
   const toast = useToast()
   const food = cat.data?.find((f) => f.id === foodId)
   const [date, setDate] = useState(today)
-  const [slot, setSlot] = useState<MealSlot>(food?.meal_types[0] ?? 'lunch')
+  const [slot, setSlot] = useState<MealSlot>(food?.meal_types[0] ?? (food?.food_type === 'beverage' ? 'drink' : 'lunch'))
   if (!food) return null
   return (
     <Sheet open={open} onClose={onClose} title="Add to your plan" footer={<Button block loading={create.isPending} onClick={async () => {
       const p = plan.data
-      await create.mutateAsync({ date, slot, plan_id: p && date >= p.start_date && date <= p.end_date ? p.id : null, name: food.name, food_item_id: food.id, calories: food.calories, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g, nutrition_source: food.nutrition_source, est_cost: midCost(food.est_cost_min, food.est_cost_max), method: food.can_cook ? 'cook' : 'buy' })
+      await create.mutateAsync({ date, slot, plan_id: p && date >= p.start_date && date <= p.end_date ? p.id : null, name: food.name, food_item_id: food.id, calories: food.calories, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g, nutrition_source: food.nutrition_source, est_cost: midCost(food.est_cost_min, food.est_cost_max), est_cost_currency: food.cost_currency, method: food.can_cook ? 'cook' : 'buy' })
       toast.success(`Added to ${SLOT_LABEL[slot].toLowerCase()}.`)
       onClose()
     }}>Add</Button>}>
       <div className="grid grid-cols-2 gap-3">
-        <TextField label="Day" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={MEAL_SLOTS.map((x) => ({ value: x, label: SLOT_LABEL[x] }))} />
+        <DateField label="Day" value={date} onChange={(d) => d && setDate(d)} />
+        <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={occasionsFor(food?.food_type).map((x) => ({ value: x, label: SLOT_LABEL[x] }))} />
       </div>
     </Sheet>
   )

@@ -52,6 +52,7 @@ export const XP_EVENT_LABEL: Record<string, string> = {
   kitchen_cook: 'Cooked with what you had',
   grocery_complete: 'Shopping list completed',
   streak_milestone: 'Streak milestone',
+  dev_adjustment: 'Developer Mode adjustment (test account)',
 }
 
 export function streakMessage(current: number, best: number): string {

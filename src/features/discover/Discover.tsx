@@ -1,192 +1,198 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import { MEAL_SLOTS, SLOT_LABEL, type MealSlot } from '@domain/types.ts'
-import { checkAllergy } from '@domain/allergens.ts'
-import { fitsDiet } from '@domain/planner.ts'
-import { useCatalogue, toCatalogueMeal, CUISINES } from '@/data/catalogue'
-import { useFavourites } from '@/data/favourites'
+import { SLOT_LABEL } from '@domain/types.ts'
+import type { FoodItem } from '@/types/db'
+import { useFavourites, useToggleFavourite } from '@/data/favourites'
 import { usePreferences } from '@/data/profile'
-import { useCurrency } from '@/hooks/useToday'
-import { formatCostRange, formatKcal, formatMinutes } from '@/lib/format'
+import { useCatalogue } from '@/data/catalogue'
 import { friendlyError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
-import { PageHeader, Section } from '@/components/ui/Layout'
-import { SearchInput, Select } from '@/components/ui/Field'
-import { Chip } from '@/components/ui/Chip'
-import { FoodImage, HeroFood } from '@/components/ui/FoodImage'
+import { PageHeader } from '@/components/ui/Layout'
+import { SearchInput } from '@/components/ui/Field'
+import { FoodImage } from '@/components/ui/FoodImage'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
+import { useToast } from '@/components/ui/Toast'
 import { RecipePreviewWorkspace } from '@/components/canvas/RecipePreviewWorkspace'
-import { slotForNow, useRankedMeals } from '@/components/canvas/useRankedMeals'
-import type { FoodItem } from '@/types/db'
+import { CATEGORIES, type Category } from '@/components/canvas/categories'
+import { useAddToToday } from '@/components/canvas/useAddToToday'
+import { slotFor, useRankedMeals } from '@/components/canvas/useRankedMeals'
 
-const TIME = [
-  { value: '', label: 'Any time' },
-  { value: '15', label: '15 min or less' },
-  { value: '30', label: '30 min or less' },
-  { value: '60', label: 'An hour or less' },
-]
+const PAGE = 8
 
+/** Deterministic shuffle so a session's order is stable but not alphabetical. */
+function shuffled<T extends { id: string }>(items: T[], seed: number): T[] {
+  const score = (id: string) => {
+    let h = seed >>> 0
+    for (const c of id) h = Math.imul(h ^ c.charCodeAt(0), 2654435761) >>> 0
+    return h
+  }
+  return [...items].sort((a, b) => score(a.id) - score(b.id))
+}
+
+/**
+ * Discover: an endless-feeling feed of food inspiration. Photo first, minimal
+ * text, personalised by the shared planner (allergies, diet and exclusions are
+ * hard filters). Loads incrementally as you scroll; each meal appears once per
+ * session. Detail lives in the meal preview, not in the feed.
+ */
 export function Discover() {
-  const cat = useCatalogue()
-  const favs = useFavourites()
-  const prefs = usePreferences()
-  const currency = useCurrency()
+  const [category, setCategory] = useState<Category>('all')
   const [q, setQ] = useState('')
-  const [cuisine, setCuisine] = useState('')
-  const [slot, setSlot] = useState<MealSlot | ''>('')
-  const [time, setTime] = useState('')
-  const [suitable, setSuitable] = useState(true)
   const [onlyFavs, setOnlyFavs] = useState(false)
-
-  const list = useMemo(() => {
-    const t = q.trim().toLowerCase()
-    return (cat.data ?? []).filter((f) => {
-      if (t && !`${f.name} ${f.description} ${f.cuisine}`.toLowerCase().includes(t)) return false
-      if (cuisine && f.cuisine !== cuisine) return false
-      if (slot && !f.meal_types.includes(slot)) return false
-      if (time && f.prep_minutes + f.cook_minutes > Number(time)) return false
-      if (onlyFavs && !favs.data?.includes(f.id)) return false
-      if (suitable && prefs.data) {
-        const m = toCatalogueMeal(f)
-        if (!fitsDiet(m, prefs.data.diet_pattern)) return false
-        if (checkAllergy(m, prefs.data).status === 'conflict') return false
-      }
-      return true
-    })
-  }, [cat.data, q, cuisine, slot, time, onlyFavs, favs.data, suitable, prefs.data])
-
-  const featureSlot = slotForNow()
-  const ranked = useRankedMeals(featureSlot)
-  const feature = ranked.items[0] ?? null
+  const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1e9))
+  const [shown, setShown] = useState(PAGE)
   const [preview, setPreview] = useState<FoodItem | null>(null)
+  const cat = useCatalogue()
+  const ranked = useRankedMeals(category)
+  const favs = useFavourites()
+  const sentinel = useRef<HTMLDivElement>(null)
+
+  const feed = useMemo(() => {
+    const t = q.trim().toLowerCase()
+    let list = ranked.items
+    if (t) list = list.filter((f) => `${f.name} ${f.cuisine} ${f.description}`.toLowerCase().includes(t))
+    if (onlyFavs) list = list.filter((f) => favs.data?.includes(f.id))
+    // keep the best matches near the top, but vary the order between sessions
+    const head = list.slice(0, 6)
+    const unique = new Map<string, FoodItem>()
+    for (const f of [...shuffled(head, seed), ...shuffled(list.slice(6), seed)]) unique.set(f.id, f)
+    return [...unique.values()]
+  }, [ranked.items, q, onlyFavs, favs.data, seed])
+
+  // reset paging when the feed's inputs change
+  const key = `${category}|${q}|${onlyFavs}|${seed}`
+  const [pagedFor, setPagedFor] = useState(key)
+  if (pagedFor !== key) {
+    setPagedFor(key)
+    setShown(PAGE)
+  }
+
+  useEffect(() => {
+    const el = sentinel.current
+    if (!el) return
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) setShown((n) => n + PAGE)
+    }, { rootMargin: '600px 0px' })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [feed.length])
+
+  const visible = feed.slice(0, shown)
+  const done = shown >= feed.length
 
   return (
     <div>
-      <div className="recede-target">
-        <PageHeader eyebrow="Recipes & ideas" title="Discover" large />
-        {feature ? <FeatureHero food={feature} slot={featureSlot} onOpen={() => setPreview(feature)} /> : ranked.pending ? <Skeleton className="mb-5 h-64 rounded-[32px]" /> : null}
-        <div className="grid grid-cols-2 gap-3">
-          <Tile to="/surprise" icon="sparkle" title="Surprise me" sub="A few ideas, right now" dark />
-          <Tile to="/kitchen" icon="fridge" title="What's in my kitchen?" sub="Cook with what you have" />
-          <Tile to="/budget" icon="wallet" title="Food budget" sub="Estimated vs actual" />
-          <Tile to="/history" icon="history" title="History" sub="Eaten, favourites, leftovers" />
-        </div>
+      <PageHeader title="Discover" large />
+      <nav aria-label="More ideas" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
+        <Shortcut to="/surprise" icon="sparkle" label="Surprise me" />
+        <Shortcut to="/kitchen" icon="fridge" label="My kitchen" />
+        <Shortcut to="/budget" icon="wallet" label="Budget" />
+        <Shortcut to="/history" icon="history" label="History" />
+      </nav>
 
-        <Section title="Recipe library">
-          <div className="flex flex-col gap-3">
-            <SearchInput value={q} onChange={setQ} placeholder="Search recipes" label="Search recipes" />
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-              <Select label="Cuisine" hint={undefined} value={cuisine} onChange={(e) => setCuisine(e.target.value)} options={[{ value: '', label: 'All cuisines' }, ...CUISINES.map((c) => ({ value: c, label: c }))]} />
-              <Select
-                label="Meal"
-                value={slot}
-                onChange={(e) => setSlot(e.target.value as MealSlot | '')}
-                options={[
-                  { value: '', label: 'Any meal' },
-                  ...MEAL_SLOTS.map((s) => ({
-                    value: s,
-                    label: SLOT_LABEL[s],
-                  })),
-                ]}
-              />
-              <Select label="Time" value={time} onChange={(e) => setTime(e.target.value)} options={TIME} className="col-span-2 sm:col-span-1" />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Chip selected={suitable} onClick={() => setSuitable(!suitable)}>
-                Suits my diet & allergies
-              </Chip>
-              <Chip selected={onlyFavs} onClick={() => setOnlyFavs(!onlyFavs)}>
-                Favourites
-              </Chip>
-            </div>
+      <div className="sticky top-0 z-20 -mx-4 mt-4 bg-bg/95 px-4 pb-3 pt-2 backdrop-blur" style={{ top: 'var(--safe-top)' }}>
+        <SearchInput value={q} onChange={setQ} placeholder="Search meals" label="Search meals" />
+        <div className="mt-3 flex items-center gap-1.5">
+          <div role="tablist" aria-label="Meal category" className="-mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1">
+            {CATEGORIES.map((c) => (
+              <button key={c.id} type="button" role="tab" aria-selected={category === c.id} onClick={() => setCategory(c.id)} className={cn('press h-9 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors', category === c.id ? 'bg-accent-soft text-ink ring-1 ring-inset ring-accent-border' : 'bg-elevated text-ink-2 hover:text-ink')}>
+                {c.label}
+              </button>
+            ))}
           </div>
-          <div className="mt-5">
-            {cat.isPending ? (
-              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="aspect-[3/4] rounded-lg" />
-                ))}
+          <button type="button" aria-pressed={onlyFavs} aria-label="Favourites only" title="Favourites only" onClick={() => setOnlyFavs(!onlyFavs)} className={cn('press flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors', onlyFavs ? 'bg-accent text-accent-ink' : 'bg-elevated text-ink-2')}>
+            <Icon name="heart" size={17} filled={onlyFavs} />
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3">
+        {cat.isPending || ranked.pending ? (
+          <div className="grid gap-6 sm:grid-cols-2">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="aspect-[4/3] rounded-[28px]" />)}</div>
+        ) : cat.isError && !cat.data ? (
+          <ErrorState message={friendlyError(cat.error)} onRetry={() => cat.refetch()} />
+        ) : feed.length === 0 ? (
+          <EmptyState title={onlyFavs ? 'No favourites here yet' : 'Nothing matches'} message={onlyFavs ? 'Tap the heart on any meal to save it.' : q ? 'Try another word.' : 'Try another category.'} />
+        ) : (
+          <>
+            <ul className="grid gap-x-5 gap-y-7 sm:grid-cols-2" aria-label="Meal ideas">
+              {visible.map((f, i) => (
+                <FeedItem key={f.id} index={i % PAGE} food={f} category={category} favourite={!!favs.data?.includes(f.id)} onOpen={() => setPreview(f)} />
+              ))}
+            </ul>
+            <div ref={sentinel} aria-hidden="true" className="h-4" />
+            {done ? (
+              <div className="py-10 text-center">
+                <p className="text-sm text-muted">That's every idea that fits you right now.</p>
+                <button type="button" onClick={() => { setSeed((s) => s + 1); window.scrollTo({ top: 0, behavior: 'smooth' }) }} className="press mt-3 inline-flex h-10 items-center gap-2 rounded-full bg-elevated px-4 text-sm font-semibold ring-1 ring-inset ring-line">
+                  <Icon name="refresh" size={16} /> Shuffle
+                </button>
               </div>
-            ) : cat.isError && !cat.data ? (
-              <ErrorState message={friendlyError(cat.error)} onRetry={() => cat.refetch()} />
-            ) : list.length === 0 ? (
-              <EmptyState title="No recipes match" message="Try fewer filters." />
             ) : (
-              <ul className="grid grid-cols-2 gap-x-3 gap-y-5 sm:grid-cols-3">
-                {list.map((f) => (
-                  <li key={f.id}>
-                    <button type="button" onClick={() => setPreview(f)} className="press group block w-full text-left">
-                      <div className="relative">
-                        <FoodImage path={f.image_path} alt={f.image_alt} name={f.name} className="aspect-square w-full rounded-lg" width={400} />
-                        {favs.data?.includes(f.id) && (
-                          <span className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-elevated text-accent-strong">
-                            <Icon name="heart" size={16} filled />
-                          </span>
-                        )}
-                      </div>
-                      <p className="label-caps mt-2">{f.cuisine}</p>
-                      <h3 className="mt-0.5 font-serif text-[1.1rem] leading-snug">{f.name}</h3>
-                      <p className="num mt-1 text-[12px] text-muted">
-                        {f.can_cook ? formatMinutes(f.prep_minutes + f.cook_minutes) : 'Buy'} · {f.calories != null ? `≈ ${formatKcal(f.calories)}` : '—'}
-                      </p>
-                      <p className="num text-[12px] text-muted">{formatCostRange(f.est_cost_min, f.est_cost_max, f.cost_currency || currency)}</p>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+              <div className="grid gap-6 pt-2 sm:grid-cols-2" aria-hidden="true">
+                <Skeleton className="aspect-[4/3] rounded-[28px]" />
+              </div>
             )}
-          </div>
-        </Section>
+          </>
+        )}
       </div>
       <RecipePreviewWorkspace food={preview} onClose={() => setPreview(null)} />
     </div>
   )
 }
 
-/** Editorial feature: today's top match for the current meal time, from the real catalogue. */
-function FeatureHero({ food, slot, onOpen }: { food: FoodItem; slot: MealSlot; onOpen: () => void }) {
-  const mins = food.can_cook ? food.prep_minutes + food.cook_minutes : null
+function FeedItem({ food: f, index, category, favourite, onOpen }: { food: FoodItem; index: number; category: Category; favourite: boolean; onOpen: () => void }) {
+  const toggle = useToggleFavourite()
+  const prefs = usePreferences()
+  const toast = useToast()
+  const { add, busy } = useAddToToday()
+  const [added, setAdded] = useState(false)
+  const mins = f.can_cook ? f.prep_minutes + f.cook_minutes : null
+  const slot = category === 'all' ? slotFor(f, prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']) : category
   return (
-    <section
-      aria-label="Featured for you"
-      className="relative mb-5 min-h-[260px] overflow-hidden rounded-[32px] p-6 sm:p-8"
-      style={{
-        background: 'var(--c-elevated)',
-      }}
-    >
-      <div className="relative z-10 max-w-[58%] sm:max-w-[55%]">
-        <p className="label-caps">For your {SLOT_LABEL[slot].toLowerCase()}</p>
-        <h2 className="mt-2 font-serif text-[2rem] leading-[1.02] sm:text-[2.6rem]">{food.name}</h2>
-        <p className="num mt-3 flex flex-wrap gap-x-3 gap-y-1 text-[13px] text-ink-2">
-          <span className="inline-flex items-center gap-1">
-            <Icon name="clock" size={14} /> {mins != null ? `${mins} min` : 'Buy'}
-          </span>
-          {food.calories != null && (
-            <span className="inline-flex items-center gap-1">
-              <Icon name="flame" size={14} /> ≈ {food.calories} kcal
-            </span>
-          )}
-        </p>
-        <button type="button" onClick={onOpen} className="press mt-5 inline-flex h-11 items-center gap-2 rounded-full bg-ink px-5 text-sm font-semibold text-on-ink">
-          Take a look <Icon name="arrow" size={16} />
+    <li className="enter-item" style={{ ['--i' as string]: index }}>
+      <div className="relative">
+        <button type="button" onClick={onOpen} className="press block w-full" aria-label={`Open ${f.name}`}>
+          <FoodImage path={f.image_path} alt={f.image_alt} name={f.name} slug={f.slug} className="aspect-[4/3] w-full rounded-[28px]" width={720} />
+        </button>
+        <button
+          type="button"
+          aria-pressed={favourite}
+          aria-label={favourite ? `Remove ${f.name} from favourites` : `Save ${f.name} to favourites`}
+          onClick={() => toggle.mutate({ foodItemId: f.id, on: !favourite }, { onError: (e) => toast.error(friendlyError(e)) })}
+          className={cn('press absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-full bg-glass ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-md', favourite ? 'text-accent-strong' : 'text-ink')}
+        >
+          <Icon name="heart" size={18} filled={favourite} />
         </button>
       </div>
-      <div aria-hidden="true" className="pointer-events-none absolute -right-12 top-1/2 aspect-square w-[60%] max-w-[320px] -translate-y-1/2 sm:right-6">
-        <HeroFood path={food.image_path} name={food.name} slug={food.slug} className="h-full w-full" />
+      <div className="mt-3 flex items-start gap-3">
+        <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
+          <h3 className="text-title-3 leading-snug">{f.name}</h3>
+          <p className="num mt-0.5 text-footnote text-muted">
+            {mins != null ? `${mins} min` : 'Ready to buy'} · {SLOT_LABEL[slot]}
+          </p>
+        </button>
+        <button
+          type="button"
+          disabled={busy || added}
+          aria-label={added ? `${f.name} added` : `Add ${f.name} to today's ${SLOT_LABEL[slot].toLowerCase()}`}
+          onClick={async () => {
+            if (await add(f, slot)) setAdded(true)
+          }}
+          className={cn('press flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors', added ? 'pulse-once bg-accent text-accent-ink' : 'bg-ink text-on-ink')}
+        >
+          <span key={added ? 'done' : 'add'} className="icon-swap flex"><Icon name={added ? 'check' : 'plus'} size={18} /></span>
+        </button>
       </div>
-    </section>
+    </li>
   )
 }
 
-function Tile({ to, icon, title, sub, dark }: { to: string; icon: IconName; title: string; sub: string; dark?: boolean }) {
+function Shortcut({ to, icon, label }: { to: string; icon: IconName; label: string }) {
   return (
-    <Link to={to} className={cn('press flex min-h-32 flex-col justify-between rounded-lg p-4', dark ? 'bg-ink text-on-ink' : 'bg-elevated')}>
-      <Icon name={icon} size={24} className={dark ? 'text-accent-on-ink' : undefined} />
-      <span>
-        <span className="block font-bold leading-tight">{title}</span>
-        <span className={cn('mt-0.5 block text-[12px]', dark ? 'opacity-70' : 'text-muted')}>{sub}</span>
-      </span>
+    <Link to={to} className="press inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-elevated px-4 text-sm font-semibold ring-1 ring-inset ring-line">
+      <Icon name={icon} size={16} /> {label}
     </Link>
   )
 }

@@ -1,7 +1,5 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/manrope';
-@import '@fontsource/dm-serif-display/latin-400.css';
-@import '@fontsource/dm-serif-display/latin-400-italic.css';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    DISH design tokens — the ONLY place literal colours live.
@@ -10,7 +8,10 @@
    progress, streaks, achievements and focus. No decorative gradients.
 
    Core palette: #111111 black · #FFFFFF white · #F4F4F4 secondary surface ·
-   #EAEAEA muted surface · #E5E5E5 border · #FF6B35 accent · #777777 grey.
+   #EAEAEA muted surface · #E5E5E5 border · #777777 grey, plus one orange
+   tonal scale (50-900) with Orange 400 #FF6B35 as the brand accent.
+   Components use the semantic tokens below, never the scale directly, so
+   black and white stay dominant and orange stays deliberate.
 
    Theming: <html data-theme="light|dark"> is set by a pre-paint script in
    index.html (no flash) and kept in sync by ThemeProvider. Dark redefines the
@@ -19,6 +20,18 @@
    pure #FF6B35 is for fills and for dark surfaces (6.8:1 on #111111).
    ───────────────────────────────────────────────────────────────────────────── */
 :root {
+  /* ── primitives: the orange tonal scale (theme-independent) ── */
+  --o-50: #fff0e8;
+  --o-100: #ffd9c5;
+  --o-200: #ffb895;
+  --o-300: #ff9366;
+  --o-400: #ff6b35; /* brand accent */
+  --o-500: #ed5526;
+  --o-600: #d9471e;
+  --o-700: #b93819;
+  --o-800: #8e2d18;
+  --o-900: #622316;
+
   /* surfaces */
   --c-bg: #ffffff; /* application background */
   --c-elevated: #f4f4f4; /* primary surface: cards and panels on white */
@@ -38,15 +51,18 @@
   --c-line: #e5e5e5; /* borders and dividers */
   --c-dot: #d4d4d4;
   --c-dot-soft: #eaeaea;
-  /* accent — electric orange */
-  --c-accent: #ff6b35; /* fills: selected, active, progress, streak */
-  --c-accent-ink: #111111; /* text on orange: 6.8:1 */
-  --c-accent-soft: #ffe8df; /* quiet selected background */
-  --c-accent-strong: #c4450f; /* orange text/icons on light surfaces: 5.0:1 */
-  --c-accent-on-ink: #ff6b35; /* orange on ink surfaces (black in light) */
+  /* accent — semantic roles on the orange scale */
+  --c-accent: var(--o-400); /* fills: primary accent, active nav, selected chips, streak */
+  --c-accent-ink: #111111; /* text on orange 400: 6.8:1 */
+  --c-accent-pressed: var(--o-600); /* pressed / hover on orange fills */
+  --c-accent-soft: var(--o-50); /* selected background, small notices */
+  --c-accent-tint: var(--o-100); /* subtle highlights, achievement backgrounds */
+  --c-accent-border: var(--o-300); /* selected border */
+  --c-accent-strong: var(--o-700); /* orange text/icons on light surfaces: 5.6:1 on white */
+  --c-accent-on-ink: var(--o-400); /* orange on ink surfaces (black in light) */
+  --c-progress: var(--o-400); /* progress fills */
+  --c-progress-track: var(--o-50);
   --c-selected: var(--c-accent);
-  --c-accent-2: var(--c-ink); /* legacy alias: no second accent colour */
-  --c-sage: #eaeaea; /* legacy alias: neutral */
   /* glass — neutral translucent surfaces */
   --c-glass: rgb(255 255 255 / 0.78);
   --c-glass-line: rgb(17 17 17 / 0.08);
@@ -54,13 +70,13 @@
   --c-on-glass-dark: #ffffff;
   --c-on-glass-dark-muted: #a3a3a3; /* 7.4:1 on #111 */
   --c-on-glass-dark-ink: #111111; /* text on white buttons inside dark glass */
-  /* canvas tones (legacy names) — neutral greys only */
-  --g-peach: #f4f4f4;
-  --g-cream: #fafafa;
-  --g-sage: #eeeeee;
-  --g-leaf: #e2e2e2;
+  /* neutral tones for image placeholders */
+  --c-tile-1: #f4f4f4;
+  --c-tile-2: #fafafa;
+  --c-tile-3: #eeeeee;
+  --c-tile-4: #e2e2e2;
   /* states */
-  --c-focus: #c4450f; /* orange focus ring, 5.0:1 on white */
+  --c-focus: var(--o-700); /* orange focus ring, 5.6:1 on white */
   --c-success: #1e7a46;
   --c-warning: #8a5a00;
   --c-error: #c62828;
@@ -73,15 +89,31 @@
   --radius-lg: 20px;
   --radius-xl: 32px;
 
-  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  /* spring-like: slight settle without bounce-back */
-  --ease-spring: cubic-bezier(0.22, 1.12, 0.36, 1);
-  --t-micro: 150ms;
-  --t-small: 220ms;
-  --t-page: 280ms;
-  --t-reveal: 400ms;
-  --t-panel: 460ms;
+  /* ── Motion tokens: every animation in DISH draws from these (mirrored in
+     src/styles/motion.ts for JS-timed exits). Entrances ease out, movement
+     eases in and out, exits accelerate away and run ~20% shorter. No overshoot. */
+  --dur-micro: 120ms; /* press feedback, toggles, icon swaps */
+  --dur-fast: 180ms; /* dropdowns, popovers, tooltips */
+  --dur-standard: 240ms; /* state changes, page entrances, list items */
+  --dur-panel: 380ms; /* drawers, sheets, side panels */
+  --dur-celebrate: 520ms; /* celebrations, editorial reveals */
+  --dur-fast-exit: calc(var(--dur-fast) * 0.8);
+  --dur-standard-exit: calc(var(--dur-standard) * 0.8);
+  --dur-panel-exit: calc(var(--dur-panel) * 0.8);
+  --ease-enter: cubic-bezier(0.16, 1, 0.3, 1); /* ease-out: arrives softly */
+  --ease-move: cubic-bezier(0.65, 0, 0.35, 1); /* ease-in-out: moving between places */
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1); /* ease-in: leaves directly */
+  --stagger: 30ms; /* between list items (capped, see .enter-item) */
+  --press-scale: 0.97;
+  /* legacy names, kept as aliases so older call sites follow the same system */
+  --ease-out: var(--ease-enter);
+  --ease-in-out: var(--ease-move);
+  --ease-spring: var(--ease-enter);
+  --t-micro: var(--dur-micro);
+  --t-small: var(--dur-standard);
+  --t-page: var(--dur-standard);
+  --t-reveal: var(--dur-celebrate);
+  --t-panel: var(--dur-panel);
 
   --safe-top: env(safe-area-inset-top, 0px);
   --safe-bottom: env(safe-area-inset-bottom, 0px);
@@ -108,22 +140,26 @@
   --c-line: #2e2e2e;
   --c-dot: #3d3d3d;
   --c-dot-soft: #262626;
-  --c-accent: #ff6b35;
+  --c-accent: var(--o-400);
   --c-accent-ink: #111111;
-  --c-accent-soft: #3a1d12;
-  --c-accent-strong: #ff6b35; /* 6.8:1 on #111 */
-  --c-accent-on-ink: #c4450f; /* ink is white in dark */
-  --c-sage: #262626;
+  --c-accent-pressed: var(--o-300); /* lighter on press: stays visible on near-black */
+  --c-accent-soft: #2a1610; /* orange 900 at low strength over #111: quiet selected background */
+  --c-accent-tint: var(--o-900); /* subtle highlights */
+  --c-accent-border: var(--o-700);
+  --c-accent-strong: var(--o-300); /* orange text on dark: 8.0:1 on #111 */
+  --c-accent-on-ink: var(--o-700); /* ink is white in dark */
+  --c-progress: var(--o-400);
+  --c-progress-track: #2a1610;
   --c-glass: rgb(38 38 38 / 0.7);
   --c-glass-line: rgb(255 255 255 / 0.08);
   --c-glass-dark: rgb(22 22 22 / 0.9);
   --c-on-glass-dark: #ffffff;
   --c-on-glass-dark-muted: #a3a3a3;
-  --g-peach: #1a1a1a;
-  --g-cream: #161616;
-  --g-sage: #1e1e1e;
-  --g-leaf: #242424;
-  --c-focus: #ff6b35;
+  --c-tile-1: #1a1a1a;
+  --c-tile-2: #161616;
+  --c-tile-3: #1e1e1e;
+  --c-tile-4: #242424;
+  --c-focus: var(--o-300);
   --c-success: #5cc98a;
   --c-warning: #f2b544;
   --c-error: #ff6b6b;
@@ -135,8 +171,47 @@
 
 @theme inline {
   --font-sans: 'Manrope Variable', 'Manrope', ui-sans-serif, system-ui, sans-serif;
-  --font-serif: 'DM Serif Display', 'Iowan Old Style', Georgia, serif;
-  --color-sage: var(--c-sage);
+  /* Type scale: one family (Manrope), weight carries the hierarchy. Every size in
+     the app comes from here; each heading token sets its own weight and tracking,
+     so a heading needs only its size class.
+       display  36-48px  ExtraBold   hero greetings, wordmark moments
+       title-1  28-36px  Bold        page headings
+       title-2  22-28px  Bold        section headings
+       title-3  18-22px  Semibold    subsection and card headings
+       headline 17px     Semibold    emphasised body
+       base     16px     Regular     body
+       callout  15px     Regular     body (dense)
+       sm       14px     Regular     supporting
+       footnote 13px     Medium      supporting, metadata
+       caption  12px     Medium      labels, metadata
+       micro    11px     Semibold    tiny labels (nav, badges) */
+  --text-display: clamp(2.25rem, 1.6rem + 3vw, 3rem);
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: -0.035em;
+  --text-display--font-weight: 800;
+  --text-title-1: clamp(1.75rem, 1.4rem + 1.6vw, 2.25rem);
+  --text-title-1--line-height: 1.08;
+  --text-title-1--letter-spacing: -0.03em;
+  --text-title-1--font-weight: 700;
+  --text-title-2: clamp(1.375rem, 1.2rem + 0.8vw, 1.75rem);
+  --text-title-2--line-height: 1.15;
+  --text-title-2--letter-spacing: -0.02em;
+  --text-title-2--font-weight: 700;
+  --text-title-3: clamp(1.125rem, 1.05rem + 0.4vw, 1.375rem);
+  --text-title-3--line-height: 1.25;
+  --text-title-3--letter-spacing: -0.012em;
+  --text-title-3--font-weight: 600;
+  --text-headline: 1.0625rem;
+  --text-headline--line-height: 1.4;
+  --text-headline--font-weight: 600;
+  --text-callout: 0.9375rem;
+  --text-callout--line-height: 1.5;
+  --text-footnote: 0.8125rem;
+  --text-footnote--line-height: 1.45;
+  --text-caption: 0.75rem;
+  --text-caption--line-height: 1.35;
+  --text-micro: 0.6875rem;
+  --text-micro--line-height: 1.3;
   --color-glass: var(--c-glass);
   --color-glass-dark: var(--c-glass-dark);
   --color-on-glass-dark: var(--c-on-glass-dark);
@@ -157,8 +232,23 @@
   --color-accent: var(--c-accent);
   --color-accent-ink: var(--c-accent-ink);
   --color-accent-soft: var(--c-accent-soft);
-  --color-accent-2: var(--c-accent-2);
   --color-accent-strong: var(--c-accent-strong);
+  --color-accent-pressed: var(--c-accent-pressed);
+  --color-accent-tint: var(--c-accent-tint);
+  --color-accent-border: var(--c-accent-border);
+  --color-progress: var(--c-progress);
+  --color-progress-track: var(--c-progress-track);
+  /* the brand scale (Tailwind's own orange is replaced, so there is only one orange) */
+  --color-orange-50: var(--o-50);
+  --color-orange-100: var(--o-100);
+  --color-orange-200: var(--o-200);
+  --color-orange-300: var(--o-300);
+  --color-orange-400: var(--o-400);
+  --color-orange-500: var(--o-500);
+  --color-orange-600: var(--o-600);
+  --color-orange-700: var(--o-700);
+  --color-orange-800: var(--o-800);
+  --color-orange-900: var(--o-900);
   --color-accent-on-ink: var(--c-accent-on-ink);
   --color-selected: var(--c-selected);
   --color-disabled: var(--c-disabled);
@@ -222,39 +312,59 @@
 }
 
 @layer components {
+  /* small label above a heading or value: sentence case, no shouting */
   .label-caps {
-    font-size: 11px;
-    line-height: 1.2;
+    font-size: var(--text-footnote);
+    line-height: 1.3;
     font-weight: 600;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    letter-spacing: 0;
     color: var(--c-muted);
   }
+  /* wordmark and oversized numerals */
   .display {
     font-weight: 800;
-    letter-spacing: -0.045em;
-    line-height: 0.88;
+    letter-spacing: -0.04em;
+    line-height: 0.92;
   }
   .num {
     font-variant-numeric: tabular-nums;
   }
+  /* press: a firm 0.97 dip on press, released smoothly (no elastic rebound) */
   .press {
-    transition: transform var(--t-micro) var(--ease-out), background-color var(--t-micro) var(--ease-out), opacity var(--t-micro);
+    transition: transform var(--dur-standard) var(--ease-enter), background-color var(--dur-micro) var(--ease-move), color var(--dur-micro) var(--ease-move), opacity var(--dur-micro);
   }
   .press:active:not(:disabled) {
-    transform: scale(0.97);
+    transform: scale(var(--press-scale));
+    transition-duration: var(--dur-micro);
   }
   .page-enter {
-    animation: rise var(--t-page) var(--ease-out) both;
+    animation: rise var(--dur-standard) var(--ease-enter) both;
+  }
+  /* list items: each new item rises in, 30ms after the previous, capped at ten steps */
+  .enter-item {
+    animation: rise var(--dur-standard) var(--ease-enter) both;
+    animation-delay: calc(min(var(--i, 0), 10) * var(--stagger));
   }
   .stagger > * {
-    animation: rise var(--t-small) var(--ease-out) both;
+    animation: rise var(--dur-standard) var(--ease-enter) both;
   }
-  .stagger > *:nth-child(2) { animation-delay: 40ms; }
-  .stagger > *:nth-child(3) { animation-delay: 80ms; }
-  .stagger > *:nth-child(4) { animation-delay: 120ms; }
-  .stagger > *:nth-child(5) { animation-delay: 160ms; }
-  .stagger > *:nth-child(n + 6) { animation-delay: 200ms; }
+  .stagger > *:nth-child(2) { animation-delay: calc(1 * var(--stagger)); }
+  .stagger > *:nth-child(3) { animation-delay: calc(2 * var(--stagger)); }
+  .stagger > *:nth-child(4) { animation-delay: calc(3 * var(--stagger)); }
+  .stagger > *:nth-child(5) { animation-delay: calc(4 * var(--stagger)); }
+  .stagger > *:nth-child(n + 6) { animation-delay: calc(5 * var(--stagger)); }
+  /* popovers and dropdowns grow from their trigger (set --origin) */
+  .motion-pop {
+    animation: pop-in var(--dur-fast) var(--ease-enter) both;
+    transform-origin: var(--origin, top center);
+  }
+  .motion-pop[data-closing] { animation: pop-out var(--dur-fast-exit) var(--ease-exit) forwards; }
+  /* success: one brief pulse alongside the visible state change, never looping */
+  .pulse-once { animation: pulse-once 420ms var(--ease-move); }
+  /* editorial reveal for featured food photography */
+  .reveal-mask { animation: reveal-mask var(--dur-celebrate) var(--ease-enter) both; }
+  /* icon changes cross-fade through a soft blur (key the element to replay) */
+  .icon-swap { animation: icon-swap var(--dur-fast) var(--ease-enter) both; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { scrollbar-width: none; }
   .skeleton {
@@ -268,23 +378,25 @@
 .sheet-dialog::backdrop {
   background: var(--c-scrim);
   backdrop-filter: blur(6px);
-  animation: fade var(--t-small) var(--ease-out);
+  animation: fade var(--dur-standard) var(--ease-enter);
 }
-.sheet-dialog[data-closing]::backdrop { animation: fade-out 240ms var(--ease-out) forwards; }
-.sheet-panel { animation: sheet-up var(--t-panel) var(--ease-spring); transition: transform 240ms var(--ease-out); }
-.sheet-dialog[data-closing] .sheet-panel { animation: sheet-down 240ms var(--ease-in-out) forwards; }
+.sheet-dialog[data-closing]::backdrop { animation: fade-out var(--dur-panel-exit) var(--ease-exit) forwards; }
+/* phones: a bottom sheet slides up; it follows the finger while dragged */
+.sheet-panel { animation: sheet-up var(--dur-panel) var(--ease-enter); transition: transform var(--dur-standard) var(--ease-enter); }
+.sheet-dialog[data-closing] .sheet-panel { animation: sheet-down var(--dur-panel-exit) var(--ease-exit) forwards; }
+/* larger screens: a centred dialog grows in from 0.95 and settles */
 @media (min-width: 640px) {
-  .sheet-panel { animation: rise var(--t-small) var(--ease-out); }
-  .sheet-dialog[data-closing] .sheet-panel { animation: fade-out 200ms var(--ease-out) forwards; }
+  .sheet-panel { animation: pop-in var(--dur-standard) var(--ease-enter); transform-origin: 50% 40%; }
+  .sheet-dialog[data-closing] .sheet-panel { animation: pop-out var(--dur-standard-exit) var(--ease-exit) forwards; }
 }
 
 .workspace-dialog::backdrop { background: transparent; }
-.workspace-panel { animation: ws-in var(--t-panel) var(--ease-spring); transition: transform 260ms var(--ease-out); }
-.workspace-dialog[data-closing] .workspace-panel { animation: ws-out 340ms var(--ease-in-out) forwards; }
+.workspace-panel { animation: ws-in var(--dur-panel) var(--ease-enter); transition: transform var(--dur-standard) var(--ease-enter); }
+.workspace-dialog[data-closing] .workspace-panel { animation: ws-out var(--dur-panel-exit) var(--ease-exit) forwards; }
 
 /* The page behind a workspace recedes but stays recognisable. */
 .recede-target {
-  transition: transform var(--t-panel) var(--ease-spring), filter var(--t-panel) var(--ease-out), border-radius var(--t-panel) var(--ease-out);
+  transition: transform var(--dur-panel) var(--ease-move), filter var(--dur-panel) var(--ease-move), border-radius var(--dur-panel) var(--ease-move);
   transform-origin: 0% 50%;
 }
 html[data-workspace] .recede-target {
@@ -298,8 +410,8 @@ html[data-workspace] .recede-target {
 /* Theme change: one root cross-fade via the View Transitions API (no per-component animation). */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-  animation-duration: 220ms;
-  animation-timing-function: var(--ease-out);
+  animation-duration: var(--dur-standard);
+  animation-timing-function: var(--ease-move);
 }
 
 @keyframes rise {
@@ -317,8 +429,14 @@ html[data-workspace] .recede-target {
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes fade-out { to { opacity: 0; } }
 @keyframes sheet-down { to { transform: translateY(105%); } }
-@keyframes ws-in { from { transform: translateX(104%); opacity: 0.6; } to { transform: none; opacity: 1; } }
-@keyframes ws-out { to { transform: translateX(104%); opacity: 0.4; } }
+@keyframes ws-in { from { transform: translateX(104%); } to { transform: none; } }
+@keyframes ws-out { to { transform: translateX(104%); } }
+@keyframes pop-in { from { opacity: 0; transform: scale(0.95) translateY(4px); } to { opacity: 1; transform: none; } }
+@keyframes pop-out { to { opacity: 0; transform: scale(0.95) translateY(4px); } }
+@keyframes pulse-once { 0% { transform: scale(1); box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-accent) 45%, transparent); } 35% { transform: scale(1.06); } 100% { transform: scale(1); box-shadow: 0 0 0 10px transparent; } }
+@keyframes reveal-mask { from { clip-path: inset(10% 10% 10% 10% round 28px); opacity: 0.4; transform: scale(1.04); } to { clip-path: inset(0 0 0 0 round 0); opacity: 1; transform: none; } }
+@keyframes icon-swap { from { opacity: 0; filter: blur(4px); transform: scale(0.8); } to { opacity: 1; filter: none; transform: none; } }
+@keyframes xfade-out { to { opacity: 0; transform: translateY(calc(var(--swap-dir, 1) * -10px)); } }
 @keyframes hero-in { from { opacity: 0; transform: scale(1.03); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
 /* No visible scrollbar indicators anywhere (scrolling itself is untouched:
    wheel, trackpad, touch and keyboard all still work; hidden bars take no width). */
@@ -335,30 +453,43 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
   --cat-ws-gap: 6px; /* space between the drawer and the dial (no overlap) */
   /* centred in the space between the top safe area and the mobile bottom nav */
   --rotary-top: calc(var(--safe-top) + (100dvh - var(--safe-top) - var(--nav-h) - var(--safe-bottom) - 26px) / 2);
-  --cat-ws-w: 75vw;
+  /* phones: nearly everything left of the dial; a 16px strip of Home stays visible
+     (and tappable to close), so the drawer still reads as a layer over Home */
+  --cat-ws-w: calc(100vw - var(--rotary-w) - var(--cat-ws-gap) - 16px);
 }
 @media (min-width: 380px) { :root { --rotary-w: 78px; } }
-@media (min-width: 640px) { :root { --cat-ws-w: 60vw; } }
-@media (min-width: 768px) { :root { --rotary-top: 50dvh; --cat-ws-w: min(46vw, 520px); } }
+@media (min-width: 640px) { :root { --cat-ws-w: 76vw; } }
+@media (min-width: 768px) { :root { --rotary-top: 50dvh; --cat-ws-w: min(60vw, 680px); } }
+@media (min-width: 1280px) { :root { --cat-ws-w: min(50vw, 760px); } }
 
-/* Partial category workspace: sits flush beside the dial, slides in from the right */
+/* Category drawer: a full-height application panel anchored to the right,
+   immediately left of the dial (never under it), sliding in from beyond the edge */
 .cat-ws {
-  /* anchored to the viewport's right edge, immediately left of the dial */
   right: calc(var(--rotary-right) + var(--rotary-w) + var(--cat-ws-gap));
-  width: min(var(--cat-ws-w), calc(100vw - var(--rotary-right) - var(--rotary-w) - var(--cat-ws-gap) - 12px));
-  top: calc(var(--safe-top) + 10px);
-  bottom: calc(var(--safe-bottom) + 10px);
-  animation: cat-in 520ms var(--ease-spring) both;
+  width: min(var(--cat-ws-w), calc(100vw - var(--rotary-right) - var(--rotary-w) - var(--cat-ws-gap)));
+  top: 0;
+  bottom: 0;
+  animation: cat-in var(--dur-panel) var(--ease-enter) both;
 }
-.cat-ws[data-closing] { animation: cat-out 320ms var(--ease-in-out) forwards; }
-.cat-scrim { animation: fade 260ms var(--ease-out) both; }
-.cat-scrim[data-closing] { animation: fade-out 300ms var(--ease-out) forwards; }
+/* closes back towards the right edge, ~20% faster than it opened */
+.cat-ws[data-closing] { animation: cat-out var(--dur-panel-exit) var(--ease-exit) forwards; }
+.cat-scrim { animation: fade var(--dur-standard) var(--ease-enter) both; }
+.cat-scrim[data-closing] { animation: fade-out var(--dur-panel-exit) var(--ease-exit) forwards; }
 /* a physical slide from beyond the right edge (no fade as the entrance) */
 @keyframes cat-in { from { transform: translateX(calc(100% + var(--rotary-right) + var(--rotary-w) + var(--cat-ws-gap))); } to { transform: none; } }
 @keyframes cat-out { to { transform: translateX(calc(100% + var(--rotary-right) + var(--rotary-w) + var(--cat-ws-gap))); } }
 
+/* achievement celebration: restrained pop, a soft glow and a few sparks */
+.celebration[open] .celebration-card { animation: celebrate-in var(--dur-celebrate) var(--ease-enter) both; }
+.celebration .celebration-badge { animation: badge-pop var(--dur-celebrate) var(--ease-enter) 120ms both; }
+.celebration .celebration-glow { animation: fade 900ms var(--ease-out) both; }
+.celebration .celebration-spark { animation: spark 900ms var(--ease-out) calc(220ms + var(--i) * 40ms) both; transform: rotate(calc(var(--i) * 60deg)) translateY(-62px); }
+@keyframes celebrate-in { from { opacity: 0; transform: translateY(24px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes badge-pop { from { transform: scale(0.6); } to { transform: scale(1); } }
+@keyframes spark { from { opacity: 0; transform: rotate(calc(var(--i) * 60deg)) translateY(-30px) scale(0.4); } 40% { opacity: 1; } to { opacity: 0; transform: rotate(calc(var(--i) * 60deg)) translateY(-78px) scale(1); } }
+
 /* workspace content swap when the category dial turns (direction-aware) */
-.ws-swap { animation: ws-swap 340ms var(--ease-out) both; }
+.ws-swap { animation: ws-swap var(--dur-standard) var(--ease-enter) both; }
 @keyframes ws-swap { from { opacity: 0; transform: translateY(calc(var(--swap-dir, 1) * 16px)); } to { opacity: 1; transform: none; } }
 @keyframes info-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 @keyframes xp-rise { from { opacity: 0; transform: translateY(10px) scale(0.98); } to { opacity: 1; transform: none; } }
@@ -377,3 +508,13 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
     scroll-behavior: auto !important;
   }
 }
+
+/* ── Overlapping content swaps (category drawer, filters): the outgoing copy
+   fades and drifts away while the new content rises in beneath it ── */
+.xfade-ghost { animation: xfade-out var(--dur-standard-exit) var(--ease-exit) forwards !important; }
+/* the theme cross-fade (View Transitions) must never swallow input */
+::view-transition { pointer-events: none; }
+
+/* Developer Mode console: slides in from the right edge, leaves faster */
+.dev-console { animation: ws-in var(--dur-panel) var(--ease-enter) both; }
+.dev-console[data-closing] { animation: ws-out var(--dur-panel-exit) var(--ease-exit) forwards; }

@@ -14,6 +14,8 @@ import { ButtonLink, IconButton } from '@/components/ui/Button'
 import { FloatingActions, FloatingLink } from '@/components/ui/FloatingAction'
 import { PageHeader, Section } from '@/components/ui/Layout'
 import { DateStrip } from '@/components/ui/Calendar'
+import { DishCalendar } from '@/components/ui/DishCalendar'
+import { Sheet } from '@/components/ui/Sheet'
 import { NutritionSummary } from '@/components/ui/Nutrition'
 import { WeekBars } from '@/components/ui/Charts'
 import { ProvenanceBadge } from '@/components/ui/Badges'
@@ -29,6 +31,7 @@ export function DiaryPage() {
   const [params, setParams] = useSearchParams()
   const date = params.get('date') || today
   const setDate = (d: string) => setParams({ date: d }, { replace: true })
+  const [picking, setPicking] = useState(false)
   const weekFrom = startOfWeek(date)
   const weekTo = addDays(weekFrom, 6)
   const week = useDiary(weekFrom, weekTo)
@@ -47,10 +50,10 @@ export function DiaryPage() {
 
   return (
     <div>
-      <PageHeader
-        eyebrow={dayLabel(date, today)}
-        title="Food diary"
-      />
+      <PageHeader eyebrow={dayLabel(date, today)} title="Food diary" actions={<IconButton icon="plan" label="Choose a date" onClick={() => setPicking(true)} />} />
+      <Sheet open={picking} onClose={() => setPicking(false)} title="Choose a date">
+        <DishCalendar today={today} value={date} max={today} onChange={(d) => { setDate(d); setPicking(false) }} />
+      </Sheet>
       <DateStrip selected={date} today={today} onSelect={setDate} onPrev={() => setDate(addDays(date, -7))} onNext={() => setDate(addDays(date, 7))} />
 
       {week.isPending ? (
@@ -89,7 +92,7 @@ export function DiaryPage() {
                     <li key={e.id} className="flex items-center gap-3 py-3">
                       <Link to={`/diary/edit/${e.id}?date=${e.local_date}`} className="min-w-0 flex-1">
                         <span className="block truncate font-semibold">{e.name}</span>
-                        <span className="num mt-0.5 flex flex-wrap items-center gap-2 text-[13px] text-muted">
+                        <span className="num mt-0.5 flex flex-wrap items-center gap-2 text-footnote text-muted">
                           {e.nutrition?.calories != null ? formatKcal(Math.round(e.nutrition.calories * e.servings)) : 'No calories'}
                           {e.servings !== 1 && <span>×{e.servings}</span>}
                           <ProvenanceBadge source={e.nutrition?.source} isEstimate={e.nutrition?.is_estimate} />

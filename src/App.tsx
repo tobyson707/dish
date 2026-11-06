@@ -1,5 +1,6 @@
 import { lazy, Suspense, type ComponentType } from 'react'
 import { createBrowserRouter, Outlet, RouterProvider } from 'react-router'
+import { DevMode } from '@/dev/DevMode'
 import { AppShell } from '@/app/AppShell'
 import { RedirectIfAuthed, RequireAuth, RequireOnboarded } from '@/app/Guards'
 import { NotFound } from '@/app/NotFound'
@@ -20,6 +21,7 @@ const Onboarding = L(() => import('@/features/onboarding/Onboarding'), 'Onboardi
 const Home = L(() => import('@/features/home/Home'), 'Home')
 const PlanPage = L(() => import('@/features/plan/PlanPage'), 'PlanPage')
 const NewPlan = L(() => import('@/features/plan/NewPlan'), 'NewPlan')
+const FirstPlan = L(() => import('@/features/plan/FirstPlan'), 'FirstPlan')
 const PlannedMealPage = L(() => import('@/features/plan/PlannedMealPage'), 'PlannedMealPage')
 const GroceryPage = L(() => import('@/features/grocery/GroceryPage'), 'GroceryPage')
 const DiaryPage = L(() => import('@/features/diary/DiaryPage'), 'DiaryPage')
@@ -45,6 +47,7 @@ const Terms = L(() => import('@/features/legal/Legal'), 'Terms')
 const Bare = () => (
   <Suspense fallback={<Splash />}>
     <Outlet />
+    <DevMode />
   </Suspense>
 )
 
@@ -62,6 +65,7 @@ const router = createBrowserRouter([
       { path: '/privacy', element: <Privacy /> },
       { path: '/terms', element: <Terms /> },
       { path: '/onboarding', element: <RequireAuth><Onboarding /></RequireAuth> },
+      { path: '/plan/first', element: <RequireAuth><RequireOnboarded><FirstPlan /></RequireOnboarded></RequireAuth> },
     ],
   },
   {

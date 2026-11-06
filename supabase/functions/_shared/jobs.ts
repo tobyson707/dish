@@ -48,5 +48,5 @@ export async function checkAiQuota(db: SupabaseClient, throwIfNone = true): Prom
 export async function checkRequestBurst(userId: string, kind: JobKind, perMinute = 20) {
   const since = new Date(Date.now() - 60_000).toISOString()
   const { count } = await admin().from('ai_generation_jobs').select('id', { count: 'exact', head: true }).eq('user_id', userId).eq('kind', kind).gte('created_at', since)
-  if ((count ?? 0) >= perMinute) throw new HttpError(429, 'Slow down a little — please try again in a minute.', 'rate_limited')
+  if ((count ?? 0) >= perMinute) throw new HttpError(429, 'Slow down a little. Please try again in a minute.', 'rate_limited')
 }

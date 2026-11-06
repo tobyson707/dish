@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router'
-import { addDays, addMonths, daysInMonth, startOfMonth, startOfWeek, type ISODate } from '@domain/dates.ts'
+import { useNavigate, useSearchParams } from 'react-router'
+import { addDays, daysInMonth, startOfMonth, startOfWeek, type ISODate } from '@domain/dates.ts'
 import { SLOT_LABEL, type MealSlot } from '@domain/types.ts'
 import { PLAN_DURATION_LABEL } from '@domain/types.ts'
 import type { PlannedMeal } from '@/types/db'
@@ -8,14 +8,15 @@ import { useActivePlan, usePlannedMeals, sortPlanned } from '@/data/plans'
 import { usePreferences } from '@/data/profile'
 import { useGeneratePlan } from '@/data/ai'
 import { useToday } from '@/hooks/useToday'
-import { dayLabel, monthName } from '@/lib/format'
+import { dayLabel } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { Button, ButtonLink, IconButton } from '@/components/ui/Button'
 import { FloatingActions, FloatingButton } from '@/components/ui/FloatingAction'
 import { PageHeader } from '@/components/ui/Layout'
 import { Segmented } from '@/components/ui/Inputs'
-import { DateStrip, DotMonth, type DayState } from '@/components/ui/Calendar'
-import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
+import { DateStrip, type DayState } from '@/components/ui/Calendar'
+import { DishCalendar } from '@/components/ui/DishCalendar'
+import { EmptyState, ErrorState, LoadingBlock } from '@/components/ui/States'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { Icon } from '@/components/ui/Icon'
@@ -24,6 +25,9 @@ import { MealActionsSheet } from '@/components/meal/MealActions'
 import { AddMealSheet } from '@/components/meal/AddMealSheet'
 import { ExportSheet } from './export/ExportSheet'
 import { useAutoExtendPlan } from '@/features/home/Home'
+import { useUserId } from '@/features/auth/AuthProvider'
+import { PlanWalkthrough, walkthroughSeen } from './PlanWalkthrough'
+import { daysSaved, isComplete, planDays, usePlanFill } from './usePlanFill'
 
 type View = 'day' | 'week' | 'month'
 
@@ -35,7 +39,7 @@ export function PlanPage() {
   const setView = (v: View) => setParams((p) => (p.set('view', v), p), { replace: true })
   const setDate = (d: ISODate) => setParams((p) => (p.set('date', d), p), { replace: true })
   const [addOpen, setAddOpen] = useState(params.get('add') === '1')
-  const [exportOpen, setExportOpen] = useState(false)
+  const [exportOpen, setExportOpen] = useState(params.get('export') === '1')
   const [addSlot, setAddSlot] = useState<MealSlot | undefined>()
   const [actionsFor, setActionsFor] = useState<PlannedMeal | null>(null)
   const [regen, setRegen] = useState<null | { from: ISODate; to: ISODate; label: string }>(null)
@@ -44,7 +48,10 @@ export function PlanPage() {
   const gen = useGeneratePlan()
   const toast = useToast()
   const nav = useNavigate()
+  const uid = useUserId()
+  const [tour, setTour] = useState(() => params.get('welcome') === '1' && !walkthroughSeen(uid))
   useAutoExtendPlan()
+  const { fill, progress: fillProgress, running: fillRunning } = usePlanFill()
 
   const range = useMemo(() => {
     if (view === 'month') {
@@ -100,6 +107,7 @@ export function PlanPage() {
           </>
         }
       />
+      {tour && <PlanWalkthrough uid={uid} onDone={() => { setTour(false); setParams((x) => (x.delete('welcome'), x), { replace: true }) }} />}
       <Segmented label="Calendar view" hideLabel value={view} onChange={setView} options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }]} />
 
       {plan.isSuccess && !p && !(meals.data ?? []).length ? (
@@ -108,16 +116,8 @@ export function PlanPage() {
         <>
           <div className="mt-5">
             {view === 'month' ? (
-              <div>
-                <div className="mb-3 flex items-center justify-between">
-                  <IconButton icon="left" label="Previous month" onClick={() => setDate(addMonths(startOfMonth(date), -1))} size={40} />
-                  <h2 className="text-lg font-bold" aria-live="polite">
-                    {monthName(date)} {date.slice(0, 4)}
-                  </h2>
-                  <IconButton icon="right" label="Next month" onClick={() => setDate(addMonths(startOfMonth(date), 1))} size={40} />
-                </div>
-                <DotMonth month={date} today={today} selected={date} states={states} onSelect={setDate} />
-                <Legend />
+              <div className="rounded-[24px] bg-elevated p-4 sm:p-5">
+                <DishCalendar today={today} value={date} month={date} onMonthChange={(m) => setDate(m.slice(0, 7) === today.slice(0, 7) ? today : m)} onChange={setDate} markers={states} />
               </div>
             ) : (
               <DateStrip selected={date} today={today} states={states} onSelect={setDate} onPrev={() => setDate(addDays(date, -7))} onNext={() => setDate(addDays(date, 7))} />
@@ -151,14 +151,20 @@ export function PlanPage() {
               </div>
             </div>
           )}
-          {notGenerated(date) && (
-            <Notice>
-              Long plans are prepared a week at a time so they stay fresh. This week will be filled in automatically as it gets closer — or{' '}
-              <button type="button" className="font-semibold underline" disabled={gen.isPending} onClick={() => p && gen.mutate({ plan_id: p.id, next_block: true, today }, { onError: (e) => toast.error(friendlyError(e)) })}>
-                {gen.isPending ? 'generating…' : 'generate the next week now'}
-              </button>
-              .
-            </Notice>
+          {p && !isComplete(p) && (
+            <div className="mt-5 rounded-lg bg-elevated p-4 ring-1 ring-inset ring-line" role="status" aria-live="polite">
+              <p className="font-semibold">{fillRunning ? 'Building your schedule.' : `${daysSaved(p)} of ${planDays(p)} days are planned.`}</p>
+              {fillRunning && fillProgress ? (
+                <p className="num mt-1 text-footnote text-muted">{fillProgress.done} of {fillProgress.total} days saved</p>
+              ) : (
+                <p className="mt-1 text-footnote text-muted">The rest of your plan isn't filled in yet. Finishing picks up where it stopped.</p>
+              )}
+              {!fillRunning && (
+                <Button size="sm" className="mt-3" icon="refresh" onClick={() => void fill(p, today).then((r) => !isComplete(r.plan) ? toast.error('Part of the plan could not be saved. Try again.') : toast.show('Your plan is complete.', { tone: 'success' })).catch((e) => toast.error(friendlyError(e)))}>
+                  Finish planning
+                </Button>
+              )}
+            </div>
           )}
         </>
       )}
@@ -188,10 +194,10 @@ function DayBlock({ date, today, meals, slots, onActions, onAdd, notGenerated, c
   const emptySlots = slots.filter((s) => !meals.some((m) => m.slot === s))
   return (
     <section aria-label={dayLabel(date, today)} className={compact ? 'border-b border-line py-3' : ''}>
-      <h3 className={compact ? 'label-caps mb-1' : 'mb-2 text-xl font-bold'}>{dayLabel(date, today)}</h3>
+      <h3 className={compact ? 'label-caps mb-1' : 'mb-2 text-title-3 font-bold'}>{dayLabel(date, today)}</h3>
       <ul className="flex flex-col">
         {meals.map((m) => (
-          <div key={`${m.id}-${m.food_item_id}`} className="animate-[swap-in_240ms_var(--ease-out)_both]">
+          <div key={`${m.id}-${m.food_item_id}`} className="animate-[swap-in_var(--dur-standard)_var(--ease-enter)_both]">
             <MealRow meal={m} onActions={() => onActions(m)} />
           </div>
         ))}
@@ -211,26 +217,5 @@ function DayBlock({ date, today, meals, slots, onActions, onAdd, notGenerated, c
           ))}
       </ul>
     </section>
-  )
-}
-
-function Legend() {
-  const items = [
-    ['bg-accent', 'Today'],
-    ['bg-ink', 'All done'],
-    ['bg-dot', 'Planned'],
-    ['bg-dot-soft', 'Nothing planned'],
-  ] as const
-  return (
-    <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-2 text-xs text-muted" aria-label="Legend">
-      {items.map(([c, l]) => (
-        <li key={l} className="flex items-center gap-1.5">
-          <span className={`h-2.5 w-2.5 rounded-full ${c}`} aria-hidden="true" /> {l}
-        </li>
-      ))}
-      <li>
-        <Link to="/grocery" className="font-semibold text-ink underline">Shopping list</Link>
-      </li>
-    </ul>
   )
 }

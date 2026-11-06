@@ -25,7 +25,7 @@ export function TagInput({ label, hint, value, onChange, placeholder = 'Type and
       <label htmlFor={id} className="text-sm font-semibold">
         {label}
       </label>
-      {hint && <p className="-mt-1 text-[13px] text-muted">{hint}</p>}
+      {hint && <p className="-mt-1 text-footnote text-muted">{hint}</p>}
       {value.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {value.map((v) => (
@@ -77,7 +77,7 @@ export function Segmented<T extends string | number>({ label, options, value, on
             role="radio"
             aria-checked={o.value === value}
             onClick={() => onChange(o.value)}
-            className={cn('press min-h-10 flex-1 rounded-full px-2 text-sm font-semibold transition-colors duration-200', o.value === value ? 'bg-accent text-accent-ink' : 'text-ink-2')}
+            className={cn('press min-h-10 flex-1 rounded-full px-2 text-sm font-semibold transition-colors duration-200', o.value === value ? 'bg-accent-soft text-ink ring-1 ring-inset ring-accent-border' : 'text-ink-2')}
           >
             {o.label}
           </button>
@@ -118,7 +118,7 @@ export function Stepper({ label, value, onChange, min = 0.25, max = 10, step = 0
         <button type="button" aria-label={`Decrease ${label}`} disabled={value <= min} onClick={() => onChange(Math.max(min, Math.round((value - step) * 100) / 100))} className="press flex h-11 w-11 items-center justify-center rounded-full bg-elevated ring-1 ring-inset ring-line disabled:opacity-30">
           <Icon name="minus" size={18} />
         </button>
-        <output aria-live="polite" className="num min-w-14 text-center text-lg font-bold">
+        <output aria-live="polite" className="num min-w-14 text-center text-title-3 font-bold">
           {format ? format(value) : value}
         </output>
         <button type="button" aria-label={`Increase ${label}`} disabled={value >= max} onClick={() => onChange(Math.min(max, Math.round((value + step) * 100) / 100))} className="press flex h-11 w-11 items-center justify-center rounded-full bg-elevated ring-1 ring-inset ring-line disabled:opacity-30">

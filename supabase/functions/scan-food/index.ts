@@ -55,7 +55,7 @@ Deno.serve(
       const r = await provider.structured({
         task: 'scan_food',
         system: scanSystem,
-        user: `Catalogue (id | name) — use an id only if it clearly matches:\n${names}\n\nIdentify the food in this photo and estimate the visible portion.`,
+        user: `Catalogue (id | name). Use an id only if it clearly matches:\n${names}\n\nIdentify the food in this photo and estimate the visible portion.`,
         schema: ScanSchema,
         image: { mediaType, base64: encodeBase64(bytes) },
         maxTokens: 4000,
@@ -75,7 +75,7 @@ Deno.serve(
           fat_g: clamp(it.fat_g, 400),
           possible_ingredients: it.possible_ingredients.slice(0, 15),
         }
-        if (macrosInconsistent(item)) notes.push(`The calorie and macro estimates for ${item.name} don't fully agree — treat them as rough.`)
+        if (macrosInconsistent(item)) notes.push(`The calorie and macro estimates for ${item.name} don't fully agree, so treat them as rough.`)
         return item
       })
       const needs = r.data.needs_user_input || r.data.overall_confidence === 'low' || items.length === 0

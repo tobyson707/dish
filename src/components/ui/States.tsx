@@ -12,7 +12,7 @@ export function EmptyState({ icon = 'leaf', title, message, action, className }:
         ))}
       </div>
       <Icon name={icon} className="sr-only" />
-      <h2 className="text-xl font-bold tracking-tight">{title}</h2>
+      <h2 className="text-title-3 font-bold tracking-tight">{title}</h2>
       {message && <p className="mt-2 max-w-sm text-ink-2">{message}</p>}
       {action && <div className="mt-6">{action}</div>}
     </div>
@@ -23,7 +23,7 @@ export function ErrorState({ title = "That didn't load", message, onRetry, class
   return (
     <div role="alert" className={cn('flex flex-col items-center rounded-lg bg-error-soft px-6 py-8 text-center', className)}>
       <Icon name="alert" size={28} className="text-error" />
-      <h2 className="mt-3 text-lg font-bold">{title}</h2>
+      <h2 className="mt-3 text-title-3 font-bold">{title}</h2>
       {message && <p className="mt-1 max-w-sm text-sm text-ink-2">{message}</p>}
       {onRetry && (
         <Button variant="secondary" size="sm" icon="refresh" className="mt-4" onClick={onRetry}>

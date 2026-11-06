@@ -1,13 +1,21 @@
 import { parseISODate, type ISODate } from '@domain/dates.ts'
+import { currencyByCode } from './geo'
 
-export function formatMoney(amount: number | null | undefined, currency = 'NGN', opts: { compact?: boolean } = {}): string {
-  if (amount == null || !Number.isFinite(amount)) return '—'
+/**
+ * The one money formatter: locale-aware (Intl.NumberFormat), ISO 4217 code in,
+ * never a hardcoded symbol. Always pass the currency the amount is actually in;
+ * DISH never converts between currencies (no invented exchange rates).
+ */
+export function formatMoney(amount: number | null | undefined, currency: string, opts: { compact?: boolean } = {}): string {
+  if (amount == null || !Number.isFinite(amount)) return '–'
+  const digits = currencyByCode(currency)?.digits ?? 2
   try {
     return new Intl.NumberFormat(undefined, {
       style: 'currency',
       currency,
       currencyDisplay: 'narrowSymbol',
-      maximumFractionDigits: amount >= 100 || currency === 'NGN' ? 0 : 2,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: amount >= 100 ? 0 : digits, // estimates: whole units once they're large
       notation: opts.compact && amount >= 100_000 ? 'compact' : 'standard',
     }).format(amount)
   } catch {
@@ -15,18 +23,24 @@ export function formatMoney(amount: number | null | undefined, currency = 'NGN',
   }
 }
 
-export function formatCostRange(min: number | null, max: number | null, currency = 'NGN'): string {
+/** Range of rough estimates in the currency they were estimated in. */
+export function formatCostRange(min: number | null, max: number | null, currency: string): string {
   if (min == null && max == null) return 'No cost estimate'
   if (min != null && max != null && min !== max) return `${formatMoney(min, currency)}–${formatMoney(max, currency).replace(/^[^\d]*/, '')}`
   return formatMoney(min ?? max, currency)
 }
 
+/** Symbol for input adornments, e.g. "₦", "£", "$"; falls back to the code. */
+export function currencySymbol(currency: string): string {
+  return currencyByCode(currency)?.symbol ?? currency
+}
+
 export function formatKcal(n: number | null | undefined): string {
-  return n == null ? '—' : `${Math.round(n).toLocaleString()} kcal`
+  return n == null ? '–' : `${Math.round(n).toLocaleString()} kcal`
 }
 
 export function formatGrams(n: number | null | undefined): string {
-  return n == null ? '—' : `${Math.round(n)}g`
+  return n == null ? '–' : `${Math.round(n)}g`
 }
 
 export function formatMinutes(min: number): string {
@@ -47,6 +61,17 @@ export function dayLabel(d: ISODate, today: ISODate): string {
 
 export function longDate(d: ISODate): string {
   return parseISODate(d).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+}
+
+/** "2 Nov 2026"-style date for ranges (calendar date, no time-zone shift). */
+export function shortDate(d: ISODate, withYear = true): string {
+  return parseISODate(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', ...(withYear ? { year: 'numeric' } : {}), timeZone: 'UTC' })
+}
+
+/** An inclusive date range: "2 – 8 Nov 2026", "28 Nov – 4 Dec 2026", or one date. */
+export function dateRange(from: ISODate, to: ISODate): string {
+  if (from === to) return shortDate(from)
+  return from.slice(0, 4) === to.slice(0, 4) ? `${shortDate(from, false)} – ${shortDate(to)}` : `${shortDate(from)} – ${shortDate(to)}`
 }
 
 export function monthName(d: ISODate): string {

@@ -12,12 +12,12 @@ export function NextMealPanel({ meal, label, className }: { meal: PlannedMeal; l
       to={`/meal/${meal.id}`}
       key={meal.id}
       aria-label={`${label}: ${meal.name}. Open meal`}
-      className={cn('press group flex items-center gap-3 rounded-[26px] bg-[var(--c-glass)] p-4 pl-5 shadow-[0_18px_40px_-20px_var(--c-shadow)] ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-xl animate-[info-in_380ms_var(--ease-out)_both]', className)}
+      className={cn('press group flex items-center gap-3 rounded-[26px] bg-[var(--c-glass)] p-4 pl-5 shadow-[0_18px_40px_-20px_var(--c-shadow)] ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-xl animate-[info-in_var(--dur-standard)_var(--ease-enter)_both]', className)}
     >
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-2">{label}</p>
-        <p className="mt-1 truncate text-[17px] font-bold leading-snug text-ink">{meal.name}</p>
-        <p className="num mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-ink-2">
+        <p className="text-micro font-semibold uppercase tracking-[0.14em] text-ink-2">{label}</p>
+        <p className="mt-1 truncate text-headline font-bold leading-snug text-ink">{meal.name}</p>
+        <p className="num mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-footnote text-ink-2">
           <span className="inline-flex items-center gap-1.5">
             <Icon name="clock" size={15} /> {mins != null ? `${mins} min` : meal.method === 'buy' ? 'Ready to buy' : SLOT_LABEL[meal.slot]}
           </span>

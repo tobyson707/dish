@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
-import { MEAL_SLOTS, SLOT_LABEL, type MealSlot } from '@domain/types.ts'
+import { MEAL_SLOTS, SLOT_LABEL, occasionsFor, type MealSlot } from '@domain/types.ts'
 import type { PlannedMeal } from '@/types/db'
 import { useDeletePlannedMeal, useSetMealStatus, useUpdatePlannedMeal } from '@/data/plans'
 import { invokeFn, useReplaceMeal, type Suggestion } from '@/data/ai'
@@ -19,9 +19,9 @@ import { FoodImage } from '@/components/ui/FoodImage'
 import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
 import { formatCostRange, formatKcal, formatMinutes } from '@/lib/format'
-import { useCurrency } from '@/hooks/useToday'
 import { tap } from '@/platform/haptics'
 import { cn } from '@/lib/cn'
+import { DateField } from '@/components/ui/DateField'
 
 type Panel = 'menu' | 'replace' | 'move' | 'portion' | null
 
@@ -61,7 +61,7 @@ function Action({ icon, label, hint, onClick, tone, disabled }: { icon: IconName
         </span>
         <span className="flex flex-col">
           <span className="font-semibold">{label}</span>
-          {hint && <span className="text-[13px] text-muted">{hint}</span>}
+          {hint && <span className="text-footnote text-muted">{hint}</span>}
         </span>
       </button>
     </li>
@@ -83,7 +83,7 @@ function Menu({ meal, onPanel, onClose, onDelete }: { meal: PlannedMeal; onPanel
   const setStatus = async (s: PlannedMeal['status']) => {
     tap()
     await status.mutateAsync({ meal, status: s })
-    toast.show(s === 'eaten' ? `Nice — ${meal.name} added to your diary.` : s === 'skipped' ? 'No worries. Marked as skipped.' : 'Back on the plan.', { tone: s === 'eaten' ? 'success' : 'info' })
+    toast.show(s === 'eaten' ? `Nice. ${meal.name} added to your diary.` : s === 'skipped' ? 'No worries. Marked as skipped.' : 'Back on the plan.', { tone: s === 'eaten' ? 'success' : 'info' })
     onClose()
   }
 
@@ -101,7 +101,7 @@ function Menu({ meal, onPanel, onClose, onDelete }: { meal: PlannedMeal; onPanel
         hint={meal.locked ? undefined : "Keeps it when you regenerate"}
         onClick={() => {
           void update.mutateAsync({ id: meal.id, patch: { locked: !meal.locked }, label: `${meal.locked ? 'Unlock' : 'Lock'} ${meal.name}` })
-          toast.show(meal.locked ? 'Unlocked' : 'Locked — regenerating will keep this meal.')
+          toast.show(meal.locked ? 'Unlocked' : 'Locked. Regenerating will keep this meal.')
           onClose()
         }}
       />
@@ -134,7 +134,6 @@ function Menu({ meal, onPanel, onClose, onDelete }: { meal: PlannedMeal; onPanel
 function ReplacePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void }) {
   const replace = useReplaceMeal()
   const toast = useToast()
-  const currency = useCurrency()
   const [exclude, setExclude] = useState<string[]>([])
   const [choosing, setChoosing] = useState<string | null>(null)
   const q = useQuery({
@@ -177,11 +176,11 @@ function ReplacePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void 
                 <FoodImage path={s.image_path} name={s.name} shape="circle" className="h-16 w-16 shrink-0" width={140} />
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold">{s.name}</span>
-                  <span className="num block text-[13px] text-muted">
+                  <span className="num block text-footnote text-muted">
                     {s.calories != null ? `≈ ${formatKcal(s.calories)} · ` : ''}
-                    {formatCostRange(s.est_cost_min, s.est_cost_max, currency)} · {s.method === 'cook' ? formatMinutes(s.prep_minutes + s.cook_minutes) : 'Buy'}
+                    {formatCostRange(s.est_cost_min, s.est_cost_max, s.cost_currency ?? 'NGN')} · {s.method === 'cook' ? formatMinutes(s.prep_minutes + s.cook_minutes) : 'Buy'}
                   </span>
-                  {s.reasons[0] && <span className="mt-1 block text-[13px] text-ink-2">{s.reasons[0]}</span>}
+                  {s.reasons[0] && <span className="mt-1 block text-footnote text-ink-2">{s.reasons[0]}</span>}
                 </span>
                 {choosing === s.food_item_id ? <span className="text-sm">…</span> : <Icon name="arrow" size={18} />}
               </button>
@@ -205,8 +204,8 @@ function MovePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void }) 
   const [time, setTime] = useState(meal.scheduled_time?.slice(0, 5) ?? '')
   return (
     <div className="flex flex-col gap-4">
-      <TextField label="Day" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-      <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={MEAL_SLOTS.map((s) => ({ value: s, label: SLOT_LABEL[s] }))} />
+      <DateField label="Day" value={date} onChange={(d) => d && setDate(d)} />
+      <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={(meal.food_item ? occasionsFor(meal.food_item.food_type) : MEAL_SLOTS).map((s) => ({ value: s, label: SLOT_LABEL[s] }))} />
       <TextField label="Time (optional)" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
       <Button
         block

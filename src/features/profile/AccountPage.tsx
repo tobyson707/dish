@@ -63,7 +63,7 @@ export function AccountPage() {
       </Section>
       <Section title="Your data">
         <div className="rounded-lg bg-elevated p-4">
-          <p className="text-sm text-ink-2">Download everything DISH stores about you — profile, preferences, plans, diary, lists and budget — as a JSON file.</p>
+          <p className="text-sm text-ink-2">Download everything DISH stores about you (profile, preferences, plans, diary, lists and budget) as a JSON file.</p>
           <Button size="sm" variant="secondary" icon="download" className="mt-3" loading={busy === 'export'} onClick={async () => {
             setBusy('export')
             try { await exportData(uid); toast.success('Export downloaded.') } catch (e) { toast.error(friendlyError(e)) }

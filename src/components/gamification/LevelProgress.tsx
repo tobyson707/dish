@@ -14,14 +14,14 @@ export function LevelProgress({ totalXp, size = 'sm', highlight }: { totalXp: nu
         aria-valuemax={p.isMax ? 1 : p.next!.min}
         aria-valuenow={p.isMax ? 1 : p.totalXp}
         aria-valuetext={label}
-        className={cn('overflow-hidden rounded-full bg-dot-soft', size === 'md' ? 'h-2' : 'h-1.5')}
+        className={cn('overflow-hidden rounded-full bg-progress-track', size === 'md' ? 'h-2' : 'h-1.5')}
       >
         <div
-          className={cn('h-full rounded-full transition-[width] duration-700 ease-out', p.isMax ? 'bg-accent' : 'bg-ink', highlight && 'animate-[pulse-bar_900ms_var(--ease-out)]')}
+          className={cn('h-full rounded-full transition-[width] duration-700 ease-out', 'bg-progress', highlight && 'animate-[pulse-bar_var(--dur-celebrate)_var(--ease-enter)]')}
           style={{ width: `${Math.round(p.fraction * 1000) / 10}%` }}
         />
       </div>
-      <p className="num text-[13px] text-ink-2">
+      <p className="num text-footnote text-ink-2">
         {p.isMax ? (
           <>Top level reached · {p.totalXp.toLocaleString()} XP</>
         ) : (

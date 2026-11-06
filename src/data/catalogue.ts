@@ -43,6 +43,7 @@ export function toCatalogueMeal(f: FoodItem): CatalogueMeal {
     name: f.name,
     cuisine: f.cuisine,
     meal_types: f.meal_types,
+    food_type: f.food_type ?? 'food',
     dietary_tags: f.dietary_tags,
     allergens: f.allergens,
     ingredients_complete: f.ingredients_complete,
@@ -72,4 +73,4 @@ export function toCatalogueMeal(f: FoodItem): CatalogueMeal {
   }
 }
 
-export const CUISINES = ['Nigerian', 'West African', 'International', 'British', 'Italian', 'Mediterranean', 'Asian', 'Indian', 'Mexican', 'American']
+export const CUISINES = ['Nigerian', 'West African', 'British', 'American', 'Italian', 'Spanish', 'Mediterranean', 'Indian', 'Asian', 'Mexican', 'International']

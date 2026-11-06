@@ -19,12 +19,13 @@ export interface RerankOutcome<T> {
 
 /** Non-identifying preference summary — no free text, no names, no health data. */
 export function prefSummary(p: PreferenceSnapshot): string {
-  const spice = ['no heat', 'mild', 'medium', 'hot'][p.spice_pref] ?? 'medium'
+  const spice = ['no heat', 'mild', 'medium', 'hot', 'very hot'][p.spice_pref] ?? 'medium'
   return [
     `Preferred cuisines: ${p.cuisines.length ? p.cuisines.join(', ') : 'anything'}`,
     `Spice: ${spice}`,
     `Diet pattern: ${p.diet_pattern}`,
     `Goal: ${p.goal ?? 'none given'}`,
+    `Planning goals: ${p.planning_goals?.length ? p.planning_goals.join(', ') : 'none given'}`,
     `Variety preference: ${p.variety}`,
     `Cooking: ${p.cooking_mode}`,
   ].join('\n')

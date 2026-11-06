@@ -1,4 +1,4 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, type Locator, type Page } from '@playwright/test'
 import { readFileSync } from 'node:fs'
 
 export const API = 'http://localhost:54321'
@@ -40,10 +40,21 @@ export async function createUser(email: string, password = 'test-pass-123'): Pro
   return j.id
 }
 
+/**
+ * Achievement celebrations are modal; when one would block a test's next action,
+ * dismiss it (assertions can still see it — handlers only run on blocked actions).
+ */
+export async function autoDismissCelebrations(page: Page) {
+  await page.addLocatorHandler(page.locator('dialog[data-celebration][open]'), async (d) => {
+    await d.getByRole('button', { name: 'Done' }).click()
+  })
+}
+
 export async function signIn(page: Page, email: string, password = 'test-pass-123') {
+  await autoDismissCelebrations(page)
   await page.goto('/sign-in')
   await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill(password)
+  await page.getByLabel('Password', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'Sign in' }).click()
 }
 
@@ -66,4 +77,28 @@ export function collectConsoleErrors(page: Page): string[] {
   })
   page.on('pageerror', (e) => errors.push(String(e)))
   return errors
+}
+
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+/** In an open DISH calendar, move to the month of `iso` and press that day. */
+export async function calendarPick(scope: Locator, iso: string) {
+  const [y, m, d] = iso.split('-').map(Number) as [number, number, number]
+  for (let i = 0; i < 36; i++) {
+    const heading = (await scope.getByRole('heading', { level: 3 }).first().textContent())!.trim() // "November 2026"
+    const [mn, yr] = heading.split(' ')
+    const cur = Number(yr) * 12 + MONTHS.indexOf(mn!)
+    const want = y * 12 + (m - 1)
+    if (cur === want) break
+    await scope.getByRole('button', { name: cur > want ? 'Previous month' : 'Next month' }).click()
+  }
+  await scope.locator(`[data-date="${iso}"]`).click()
+  void d
+}
+
+/** Open a DateField by its label and choose a date. */
+export async function pickDate(page: Page, label: string, iso: string) {
+  await page.getByRole('button', { name: label, exact: true }).click()
+  const sheet = page.getByRole('dialog', { name: label })
+  await calendarPick(sheet, iso)
+  await expect(sheet).toBeHidden()
 }

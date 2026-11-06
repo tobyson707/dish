@@ -43,7 +43,7 @@ export function SearchWorkspace({ open, onClose }: { open: boolean; onClose: () 
 
   return (
     <Workspace open={open} onClose={onClose} label="Search">
-      <h2 className="font-serif text-[2.4rem] leading-none text-on-glass-dark">Search</h2>
+      <h2 className="text-title-2 leading-none text-on-glass-dark">Search</h2>
       <label className="relative mt-6 flex items-center">
         <span className="sr-only">Search meals, recipes and ingredients</span>
         <Icon name="search" size={20} className="pointer-events-none absolute left-4 text-on-glass-dark-muted" />
@@ -53,7 +53,7 @@ export function SearchWorkspace({ open, onClose }: { open: boolean; onClose: () 
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Meals, recipes, ingredients…"
-          className="h-12 w-full rounded-full bg-white/[0.07] pl-12 pr-4 text-[15px] text-on-glass-dark placeholder:text-on-glass-dark-muted ring-1 ring-inset ring-white/12 outline-none focus:ring-2 focus:ring-accent"
+          className="h-12 w-full rounded-full bg-white/[0.07] pl-12 pr-4 text-callout text-on-glass-dark placeholder:text-on-glass-dark-muted ring-1 ring-inset ring-white/12 outline-none focus:ring-2 focus:ring-accent"
         />
       </label>
       <div className="mt-6" aria-live="polite">
@@ -65,13 +65,13 @@ export function SearchWorkspace({ open, onClose }: { open: boolean; onClose: () 
           <>
             {meals.length > 0 && (
               <section aria-label="Meals and recipes">
-                <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-glass-dark-muted">Meals & recipes</h3>
+                <h3 className="mb-3 text-micro font-semibold uppercase tracking-[0.14em] text-on-glass-dark-muted">Meals & recipes</h3>
                 <MealOptionList items={meals} onOpen={openRecipe} onAdd={addFood} busyId={busy ? busyId : null} addedIds={added} />
               </section>
             )}
             {byIngredient.length > 0 && (
               <section aria-label="Made with matching ingredients" className="mt-6">
-                <h3 className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-on-glass-dark-muted">Made with {matchedIngredients.join(', ')}</h3>
+                <h3 className="mb-3 text-micro font-semibold uppercase tracking-[0.14em] text-on-glass-dark-muted">Made with {matchedIngredients.join(', ')}</h3>
                 <MealOptionList items={byIngredient} onOpen={openRecipe} onAdd={addFood} busyId={busy ? busyId : null} addedIds={added} />
               </section>
             )}

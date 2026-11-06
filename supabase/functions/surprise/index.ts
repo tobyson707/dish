@@ -1,3 +1,4 @@
+import { budgetMealsPerDay } from '../_shared/domain/budget.ts'
 import { z } from 'zod'
 import { handler, json, parseBody } from '../_shared/http.ts'
 import { authenticate } from '../_shared/supabase.ts'
@@ -31,7 +32,7 @@ Deno.serve(
     const cands = surpriseCandidates(
       catalogue,
       { slot: b.slot, method: b.method, maxBudget: b.max_budget, maxMinutes: b.max_minutes, cuisine: b.cuisine, useKitchen: b.use_kitchen },
-      { prefs: ctx.prefs, date: b.today, history, kitchenNames: kitchen.map((k) => k.name), seed: `${user.id}:${Date.now()}`, mealsPerDay: ctx.slots.length, exclude: b.exclude, count: 6 },
+      { prefs: ctx.prefs, date: b.today, history, kitchenNames: kitchen.map((k) => k.name), seed: `${user.id}:${Date.now()}`, mealsPerDay: budgetMealsPerDay(ctx.slots), exclude: b.exclude, count: 6 },
     )
     if (cands.length === 0) {
       return json({ suggestions: [], engine: 'deterministic', ai_used: false, message: 'Nothing matches all of those filters. Try a bigger budget, more time, or "anything" for cuisine.' })

@@ -126,7 +126,7 @@ export function buildFoodPhotoPrompt(r: FoodPhotoRecipe, variant: FoodPhotoVaria
 export const FOOD_PHOTO_QC = [
   { id: 'accurate', label: 'Looks like the real dish' },
   { id: 'ingredients', label: 'Ingredients are correct (nothing that isn’t in the recipe)' },
-  { id: 'realistic', label: 'Photorealistic — no plastic or CGI look' },
+  { id: 'realistic', label: 'Photorealistic, no plastic or CGI look' },
   { id: 'appetising', label: 'Appetising, well plated' },
   { id: 'style', label: 'Matches DISH style (light, props, colours)' },
   { id: 'clean', label: 'No text, watermark, logo, hands or clutter' },

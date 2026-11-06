@@ -1,4 +1,4 @@
-// DISH starter catalogue — SAMPLE / REFERENCE DATA.
+// DISH starter catalogue, SAMPLE / REFERENCE DATA.
 //
 // * Recipes and descriptions are original DISH writing.
 // * Nutrition values are ILLUSTRATIVE ESTIMATES for a typical home portion,
@@ -169,7 +169,7 @@ export const MEALS = [
     types: ['lunch', 'dinner'], tags: [], spice: 1, rich: 2, prep: 20, cook: 40, cook_ok: true, buy: true,
     cost: [2500, 4000], serving: [1, 'plate', 400], n: [640, 22, 88, 22], complete: true, servings: 4,
     ing: [['rice', 500, 'g'], ['chicken', 600, 'g'], ['carrot', 2, 'piece'], ['green-beans', 150, 'g'], ['peas', 100, 'g'], ['spring-onion', 3, 'piece'], ['curry-powder', 2, 'tsp'], ['thyme', 1, 'tsp'], ['vegetable-oil', 4, 'tbsp'], ['stock', 600, 'ml'], ['seasoning-cube', 2, 'piece'], ['salt', 1, 'tsp']],
-    steps: ['Cook the chicken with thyme and seasoning; reserve the stock.', 'Parboil rice in the stock with curry powder until just tender, then spread out to dry slightly.', 'Dice carrots and green beans. Stir-fry briefly in oil with the peas — keep them crisp.', 'Fry the rice in batches with a little oil, folding in the vegetables and spring onion.', 'Serve with the chicken, fried or grilled.'],
+    steps: ['Cook the chicken with thyme and seasoning; reserve the stock.', 'Parboil rice in the stock with curry powder until just tender, then spread out to dry slightly.', 'Dice carrots and green beans. Stir-fry briefly in oil with the peas, keep them crisp.', 'Fry the rice in batches with a little oil, folding in the vegetables and spring onion.', 'Serve with the chicken, fried or grilled.'],
   },
   {
     slug: 'white-rice-stew', name: 'White rice and tomato stew', cuisine: 'Nigerian',
@@ -265,7 +265,7 @@ export const MEALS = [
     types: ['lunch', 'dinner'], tags: ['contains_beef'], spice: 2, rich: 3, prep: 20, cook: 35, cook_ok: true, buy: true,
     cost: [2800, 4800], serving: [1, 'plate', 550], n: [800, 34, 92, 34], complete: true, servings: 4,
     ing: [['ogbono', 120, 'g'], ['beef', 500, 'g'], ['dried-fish', 100, 'g'], ['palm-oil', 5, 'tbsp'], ['crayfish', 2, 'tbsp'], ['ugu', 100, 'g'], ['scotch-bonnet', 2, 'piece'], ['seasoning-cube', 2, 'piece'], ['garri', 400, 'g']],
-    steps: ['Cook beef and fish with seasoning.', 'Melt ground ogbono in warm palm oil over low heat — do not fry it hard.', 'Add stock gradually, whisking, until it draws. Add meat, fish, crayfish and pepper.', 'Simmer 10 minutes, then add sliced ugu.', 'Serve with eba.'],
+    steps: ['Cook beef and fish with seasoning.', 'Melt ground ogbono in warm palm oil over low heat, do not fry it hard.', 'Add stock gradually, whisking, until it draws. Add meat, fish, crayfish and pepper.', 'Simmer 10 minutes, then add sliced ugu.', 'Serve with eba.'],
   },
   {
     slug: 'pepper-soup-goat', name: 'Goat meat pepper soup', cuisine: 'Nigerian',
@@ -277,11 +277,11 @@ export const MEALS = [
   },
   {
     slug: 'catfish-pepper-soup', name: 'Catfish pepper soup', cuisine: 'Nigerian',
-    description: 'Fragrant, spicy fresh-fish broth — light but warming.',
+    description: 'Fragrant, spicy fresh-fish broth, light but warming.',
     types: ['lunch', 'dinner'], tags: ['pescatarian'], spice: 3, rich: 1, prep: 15, cook: 25, cook_ok: true, buy: true,
     cost: [3000, 5000], serving: [1, 'bowl', 450], n: [320, 38, 6, 14], complete: true, servings: 3,
     ing: [['catfish', 800, 'g'], ['pepper-soup-spice', 2, 'tbsp'], ['scotch-bonnet', 2, 'piece'], ['onion', 1, 'piece'], ['seasoning-cube', 1, 'piece'], ['salt', 1, 'tsp'], ['basil', 10, 'g', true]],
-    steps: ['Clean the catfish with hot water and salt to remove slime.', 'Bring water to a boil with spices, pepper and onion.', 'Lower in the fish and simmer gently for 15 minutes — avoid stirring so it stays whole.', 'Finish with scent leaf or basil.'],
+    steps: ['Clean the catfish with hot water and salt to remove slime.', 'Bring water to a boil with spices, pepper and onion.', 'Lower in the fish and simmer gently for 15 minutes, avoid stirring so it stays whole.', 'Finish with scent leaf or basil.'],
   },
   {
     slug: 'suya', name: 'Beef suya', cuisine: 'Nigerian',
@@ -340,7 +340,7 @@ export const MEALS = [
     steps: ['Soak the dried abacha in cold water for 5 minutes, then drain well.', 'Dissolve the ngu in a tablespoon of water, strain it into the palm oil and stir until it turns thick and yellow.', 'Fold in the abacha, crayfish, locust beans and fish.', 'Top with sliced garden egg and onion.'],
   },
   {
-    slug: 'okpa', name: 'Okpa', cuisine: 'Nigerian', description: 'Steamed Bambara-nut pudding — filling and portable.',
+    slug: 'okpa', name: 'Okpa', cuisine: 'Nigerian', description: 'Steamed Bambara-nut pudding, filling and portable.',
     types: ['breakfast', 'snack'], tags: ['vegetarian', 'vegan'], spice: 1, rich: 2, prep: 15, cook: 60, cook_ok: false, buy: true,
     cost: [500, 1200], serving: [1, 'wrap', 250], n: [430, 18, 52, 16], complete: false, servings: 1,
     ing: [['palm-oil', 2, 'tbsp'], ['scotch-bonnet', 0.5, 'piece']],
@@ -403,7 +403,7 @@ export const MEALS = [
   },
   {
     slug: 'zobo', name: 'Zobo drink', cuisine: 'Nigerian', description: 'Chilled hibiscus drink with ginger and pineapple.',
-    types: ['snack'], tags: ['vegetarian', 'vegan'], spice: 1, rich: 0, prep: 10, cook: 25, cook_ok: true, buy: true,
+    kind: 'beverage', types: ['drink'], tags: ['vegetarian', 'vegan'], spice: 1, rich: 0, prep: 10, cook: 25, cook_ok: true, buy: true,
     cost: [300, 800], serving: [1, 'glass', 330], n: [90, 0, 22, 0], complete: true, servings: 6,
     ing: [['zobo-leaves', 100, 'g'], ['ginger', 40, 'g'], ['pineapple', 300, 'g'], ['sugar', 6, 'tsp', true]],
     steps: ['Rinse the zobo leaves.', 'Boil with ginger and pineapple peel for 20 minutes.', 'Strain, sweeten lightly if you like, and chill.'],
@@ -490,7 +490,7 @@ export const MEALS = [
   },
   {
     slug: 'jollof-spaghetti', name: 'Jollof spaghetti', cuisine: 'Nigerian',
-    description: 'Spaghetti cooked right in a peppery tomato sauce — quick and filling.',
+    description: 'Spaghetti cooked right in a peppery tomato sauce, quick and filling.',
     types: ['lunch', 'dinner'], tags: [], spice: 2, rich: 2, prep: 10, cook: 25, cook_ok: true, buy: false,
     cost: [1200, 2200], serving: [1, 'plate', 400], n: [620, 20, 90, 18], complete: true, servings: 3,
     ing: [['spaghetti', 350, 'g'], ['tomato', 3, 'piece'], ['tatashe', 2, 'piece'], ['scotch-bonnet', 1, 'piece'], ['onion', 1, 'piece'], ['vegetable-oil', 3, 'tbsp'], ['sardines', 1, 'piece', true], ['seasoning-cube', 1, 'piece'], ['curry-powder', 1, 'tsp']],
@@ -627,14 +627,14 @@ export const MEALS = [
   {
     slug: 'smoothie', name: 'Banana and berry smoothie', cuisine: 'International',
     description: 'Thick blended banana, berries, yoghurt and oats.',
-    types: ['breakfast', 'snack'], tags: ['vegetarian'], spice: 0, rich: 0, prep: 5, cook: 0, cook_ok: true, buy: true,
+    kind: 'beverage', types: ['drink'], tags: ['vegetarian'], spice: 0, rich: 0, prep: 5, cook: 0, cook_ok: true, buy: true,
     cost: [900, 1800], serving: [1, 'glass', 400], n: [320, 12, 58, 5], complete: true, servings: 1,
     ing: [['banana', 1, 'piece'], ['berries', 100, 'g'], ['yoghurt', 100, 'g'], ['milk', 150, 'ml'], ['oats', 20, 'g', true]],
     steps: ['Blend everything until smooth.', 'Add a splash more milk if it is too thick.'],
   },
   {
     slug: 'peanuts-banana', name: 'Groundnuts and banana', cuisine: 'Nigerian',
-    description: 'A classic quick snack — a banana with a handful of groundnuts.',
+    description: 'A classic quick snack, a banana with a handful of groundnuts.',
     types: ['snack'], tags: ['vegetarian', 'vegan'], spice: 0, rich: 1, prep: 1, cook: 0, cook_ok: true, buy: true,
     cost: [300, 700], serving: [1, 'snack', 150], n: [270, 9, 30, 14], complete: true, servings: 1,
     ing: [['banana', 1, 'piece'], ['groundnuts', 30, 'g']],
@@ -649,7 +649,7 @@ export const MEALS = [
     steps: ['Cut cucumber and carrot into sticks and serve with hummus.'],
   },
   {
-    slug: 'beef-sausage-roll', name: 'Sausage roll', cuisine: 'Nigerian', description: 'Flaky pastry around a beef sausage — a bought favourite.',
+    slug: 'beef-sausage-roll', name: 'Sausage roll', cuisine: 'Nigerian', description: 'Flaky pastry around a beef sausage, a bought favourite.',
     types: ['snack', 'breakfast'], tags: ['contains_beef'], spice: 0, rich: 3, prep: 0, cook: 0, cook_ok: false, buy: true,
     cost: [400, 1000], serving: [1, 'roll', 110], n: [330, 9, 26, 21], complete: false, servings: 1,
     ing: [['flour', 50, 'g'], ['sausage', 1, 'piece'], ['butter', 15, 'g']],

@@ -1,11 +1,12 @@
 import { expect, test } from '@playwright/test'
-import { collectConsoleErrors, completeOnboardingFor, createUser, expectNoHorizontalScroll, mailLink, signIn, uniqueEmail } from './helpers'
+import { autoDismissCelebrations, collectConsoleErrors, completeOnboardingFor, createUser, expectNoHorizontalScroll, mailLink, signIn, uniqueEmail } from './helpers'
 
 const shots = (name: string) => `test-results/screens/${test.info().project.name}-${name}.png`
 
 test('first-time user: sign up, verify email, onboard, get a plan', async ({ page }) => {
   const errors = collectConsoleErrors(page)
   const email = uniqueEmail('signup')
+  await autoDismissCelebrations(page)
   await page.goto('/')
   await expect(page).toHaveURL(/\/welcome/)
   await page.screenshot({ path: shots('welcome') })
@@ -17,68 +18,118 @@ test('first-time user: sign up, verify email, onboard, get a plan', async ({ pag
 
   await page.getByLabel('Your name').fill('Ada')
   await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill('short')
+  await page.getByLabel('Password', { exact: true }).fill('short')
   await page.getByRole('checkbox').check()
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page.getByText('Use at least 8 characters')).toBeVisible()
-  await page.getByLabel('Password').fill('jollof-2026')
+  await page.getByLabel('Password', { exact: true }).fill('jollof-2026')
+  // password visibility toggle
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'password')
+  await page.getByRole('button', { name: 'Show password' }).click()
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'text')
+  await page.getByRole('button', { name: 'Hide password' }).click()
+  await expect(page.getByLabel('Password', { exact: true })).toHaveAttribute('type', 'password')
   await page.getByRole('button', { name: 'Create account' }).click()
   await expect(page.getByRole('heading', { name: 'Check your inbox.' })).toBeVisible()
 
+  // "I've confirmed my email" really checks: not yet, so it asks you to sign in
+  await page.getByRole('button', { name: "I've confirmed my email" }).click()
+  await expect(page).toHaveURL(/\/sign-in/)
+  await expect(page.getByLabel('Email')).toHaveValue(email)
   // Can't get into the app before verifying
-  await page.goto('/sign-in')
-  await page.getByLabel('Email').fill(email)
-  await page.getByLabel('Password').fill('jollof-2026')
+  await page.getByLabel('Password', { exact: true }).fill('jollof-2026')
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await expect(page.getByText(/confirm your email/i)).toBeVisible()
+  await expect(page.getByText(/confirm your email/i).first()).toBeVisible()
 
   // Verify via the real email link (Mailpit)
   await page.goto(await mailLink(email))
   await expect(page).toHaveURL(/\/onboarding/, { timeout: 20_000 })
 
-  // Step 1 — name prefilled from sign-up
-  await expect(page.getByLabel('What should we call you?')).toHaveValue('Ada')
+  // Name, prefilled from sign-up, on the underlined field
+  await expect(page.getByRole('heading', { name: 'What should we call you?' })).toBeVisible()
+  await expect(page.getByLabel('Your first name')).toHaveValue('Ada')
+  await page.getByLabel('Your first name').fill('')
+  await page.getByRole('button', { name: 'Continue' }).click()
+  await expect(page.getByText('Add a name so DISH can greet you')).toBeVisible()
+  await page.getByLabel('Your first name').fill('Ada')
   await page.screenshot({ path: shots('onboarding-1') })
   await page.getByRole('button', { name: 'Continue' }).click()
-  // Step 2 — goal required
-  await page.getByRole('button', { name: 'Continue' }).click()
-  await expect(page.getByText('Pick the one closest to you')).toBeVisible()
-  await page.getByRole('radio', { name: /Eat more balanced meals/ }).click()
+
+  // Country and currency are separate; choosing a country suggests its currency
+  await expect(page.getByRole('heading', { name: 'Where are you based?' })).toBeVisible()
+  await page.getByRole('button', { name: /^Country/ }).click()
+  await page.getByRole('combobox', { name: /Search countries/ }).fill('niger')
+  await page.getByRole('option', { name: /^Nigeria\b/ }).click()
+  await expect(page.getByRole('button', { name: /^Currency/ })).toContainText('Nigerian Naira')
+  await page.screenshot({ path: shots('onboarding-place') })
   await page.getByRole('button', { name: 'Continue' }).click()
 
-  // Leave and come back: progress is preserved (step 3)
-  await expect(page.getByRole('heading', { name: 'What do you enjoy eating?' })).toBeVisible()
+  // Goals: several, optional
+  await page.getByRole('button', { name: 'Plan my meals ahead' }).click()
+  await page.getByRole('button', { name: 'Eat more balanced meals' }).click()
+  await expect(page.getByRole('button', { name: 'Eat more balanced meals' })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: 'Continue' }).click()
+
+  // Leave and come back: progress is preserved
+  await expect(page.getByRole('heading', { name: 'Which cuisines do you enjoy?' })).toBeVisible()
   await page.waitForTimeout(800)
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'What do you enjoy eating?' })).toBeVisible()
-
+  await expect(page.getByRole('heading', { name: 'Which cuisines do you enjoy?' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Open to anything' })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: 'Nigerian' }).click()
+  await page.getByRole('button', { name: 'Spanish' }).click()
+  await expect(page.getByRole('button', { name: 'Open to anything' })).toHaveAttribute('aria-pressed', 'false')
   await page.getByRole('button', { name: 'Continue' }).click()
-  // Step 4 — allergies
+
+  // Allergies and restrictions: one category at a time
+  await page.getByRole('button', { name: /^Allergies/ }).click()
   await page.getByRole('button', { name: 'Peanuts / groundnuts' }).click()
   await page.getByRole('button', { name: /Shellfish/ }).click()
+  await page.getByRole('button', { name: /^Dietary preferences/ }).click()
+  await page.getByRole('radio', { name: 'No pork' }).click()
   await page.screenshot({ path: shots('onboarding-allergies'), fullPage: true })
   await page.getByRole('button', { name: 'Continue' }).click()
-  await page.getByRole('button', { name: 'Continue' }).click() // taste
+  // Taste: five spice levels
+  await expect(page.getByRole('radiogroup', { name: 'How much heat do you enjoy?' }).getByRole('radio')).toHaveCount(5)
+  await page.getByRole('radio', { name: 'Very hot' }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByRole('radio', { name: /A mix of both/ }).click()
   await page.getByRole('button', { name: 'Continue' }).click() // cooking
   await page.getByLabel(/Roughly how much per day/).fill('6000')
   await page.getByRole('button', { name: 'Continue' }).click() // budget
   await page.getByRole('button', { name: 'Continue' }).click() // planning
-  await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible()
-  await expect(page.getByText('Peanuts / groundnuts, Shellfish & crustaceans')).toBeVisible()
-  await page.screenshot({ path: shots('onboarding-summary'), fullPage: true })
-  await page.getByRole('button', { name: /Looks good/ }).click()
 
-  await expect(page).toHaveURL(/\/plan\/new\?first=1/)
-  await page.getByRole('radio', { name: /One week/ }).click()
-  await page.getByRole('button', { name: 'Create my plan' }).click()
-  await expect(page).toHaveURL(/\/plan\?date=/, { timeout: 30_000 })
+  // Profile card, with a way back into each section
+  await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible()
+  const card = page.getByRole('article', { name: 'Your profile' })
+  await expect(card.getByText('Peanuts / groundnuts, Shellfish & crustaceans')).toBeVisible()
+  await expect(card.getByText(/Nigeria · NGN/)).toBeVisible()
+  await expect(card.getByText('Plan my meals ahead · Eat more balanced meals')).toBeVisible()
+  await expect(card.getByText(/Very hot/)).toBeVisible()
+  await card.getByRole('button', { name: 'Edit cuisines' }).click()
+  await expect(page.getByRole('heading', { name: 'Which cuisines do you enjoy?' })).toBeVisible()
+  await page.getByRole('button', { name: 'Spanish' }).click()
+  await page.getByRole('button', { name: 'Back to my profile' }).click()
+  await expect(card.getByText(/^Nigerian/)).toBeVisible()
+  await page.screenshot({ path: shots('onboarding-summary'), fullPage: true })
+  await page.getByRole('button', { name: 'Looks good, plan my meals' }).click()
+
+  // First plan straight from the saved answers, then the optional tour
+  await expect(page).toHaveURL(/\/plan\?date=.*welcome=1/, { timeout: 40_000 })
+  const tour = page.getByRole('region', { name: 'Quick tour' })
+  await expect(tour.getByText('Tip 1 of 3')).toBeVisible()
+  await tour.getByRole('button', { name: 'Next' }).click()
+  await expect(tour.getByText('Tip 2 of 3')).toBeVisible()
+  await tour.getByRole('button', { name: 'Skip tour' }).click()
+  await expect(tour).toHaveCount(0)
   await expect(page.getByRole('list').getByRole('link').first()).toBeVisible()
   await page.screenshot({ path: shots('plan-day'), fullPage: true })
+  // exactly one plan was created
+  await page.reload()
+  await expect(page.getByRole('region', { name: 'Quick tour' })).toHaveCount(0)
 
   await page.getByRole('link', { name: 'Home' }).first().click()
-  await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
   await expect(page.getByRole('article').first()).toBeVisible()
   await page.screenshot({ path: shots('home'), fullPage: true })
   await expectNoHorizontalScroll(page)
@@ -91,9 +142,9 @@ test('planned vs eaten, locking, regenerate, grocery list, and offline sync', as
   const uid = await createUser(email)
   await completeOnboardingFor(uid, { allergies: ['peanut'], cook_time: '30_60' })
   await signIn(page, email)
-  await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
-  await expect(page.getByText('No meal plan yet')).toBeVisible()
-  await page.getByRole('link', { name: 'Create my meal plan' }).click()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: "Let's plan your first meals." })).toBeVisible()
+  await page.getByRole('link', { name: 'Plan my meals' }).click()
   await page.getByRole('button', { name: 'Create my plan' }).click()
   await expect(page).toHaveURL(/\/plan\?date=/, { timeout: 30_000 })
 
@@ -135,7 +186,7 @@ test('planned vs eaten, locking, regenerate, grocery list, and offline sync', as
 
   // Month view renders the dot calendar
   await page.getByRole('radio', { name: 'Month' }).click()
-  await expect(page.getByRole('grid', { name: 'Month' })).toBeVisible()
+  await expect(page.getByRole('grid')).toBeVisible()
   await page.screenshot({ path: shots('plan-month'), fullPage: true })
 
   // Grocery list from plan
@@ -195,20 +246,37 @@ test('discover, recipe detail, surprise, kitchen, budget, profile @responsive', 
   const uid = await createUser(email)
   await completeOnboardingFor(uid, { allergies: ['peanut'] })
   await signIn(page, email)
-  await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
   await expectNoHorizontalScroll(page)
   await page.screenshot({ path: shots('home-empty'), fullPage: true })
 
   await page.goto('/discover')
   await expect(page.getByRole('heading', { name: 'Discover' })).toBeVisible()
-  // allergy filter hides suya (peanut) by default
-  await expect(page.getByText('Beef suya')).toHaveCount(0)
-  await page.getByRole('button', { name: /Suits my diet/ }).click()
-  await expect(page.getByText('Beef suya')).toBeVisible()
-  await page.screenshot({ path: shots('discover'), fullPage: true })
+  // an endless feed: loads more as you scroll, each meal once, allergies are hard filters
+  const feed = page.getByRole('list', { name: 'Meal ideas' })
+  await expect(feed.getByRole('listitem').first()).toBeVisible()
+  const firstPage = await feed.getByRole('listitem').count()
+  expect(firstPage % 8).toBe(0) // pages of 8 (a tall screen may fill two at once)
+  await page.screenshot({ path: shots('discover') })
+  await page.mouse.wheel(0, 6000)
+  await expect.poll(() => feed.getByRole('listitem').count()).toBeGreaterThan(firstPage)
+  const names = await feed.getByRole('heading').allTextContents()
+  expect(new Set(names).size).toBe(names.length)
+  await page.getByRole('searchbox', { name: 'Search meals' }).fill('suya')
+  await expect(page.getByText('Nothing matches')).toBeVisible() // suya contains peanut
   await expectNoHorizontalScroll(page)
-  // recipe cards open a side preview first; the full recipe is one tap further
-  await page.getByRole('button', { name: /Jollof rice with chicken/ }).first().click()
+  // categories narrow the feed
+  await page.getByRole('searchbox', { name: 'Search meals' }).fill('')
+  await page.getByRole('tab', { name: 'Breakfast' }).click()
+  await expect(feed.getByText(/· Breakfast$/).first()).toBeVisible()
+  await expect(feed.getByText(/· Dinner$/)).toHaveCount(0)
+  await page.getByRole('tab', { name: 'All' }).click()
+  // add straight to today's plan from the feed
+  await page.getByRole('searchbox', { name: 'Search meals' }).fill('jollof rice with chicken')
+  await feed.getByRole('button', { name: /^Add Jollof rice with chicken to today's/ }).click()
+  await expect(feed.getByRole('button', { name: 'Jollof rice with chicken added' })).toBeVisible()
+  // cards open a side preview first; the full recipe is one tap further
+  await feed.getByRole('button', { name: 'Open Jollof rice with chicken' }).first().click()
   const preview = page.getByRole('dialog', { name: /Jollof rice with chicken preview/ })
   await expect(preview.getByRole('heading', { name: 'Jollof rice with chicken' })).toBeVisible()
   await expect(preview.getByText(/allergies|allergen/i)).toBeVisible()
@@ -236,7 +304,7 @@ test('discover, recipe detail, surprise, kitchen, budget, profile @responsive', 
   await page.screenshot({ path: shots('kitchen'), fullPage: true })
 
   await page.goto('/budget')
-  await page.getByRole('button', { name: 'Spend', exact: true }).click()
+  await page.getByRole('button', { name: 'Record spending' }).first().click()
   await page.getByLabel('Amount').fill('2500')
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByText(/(₦|\$|NGN\s?|USD\s?)2,500/).first()).toBeVisible() // in the account's currency
@@ -246,7 +314,8 @@ test('discover, recipe detail, surprise, kitchen, budget, profile @responsive', 
   await expect(page.getByRole('link', { name: /Food preferences/ })).toBeVisible()
   await page.screenshot({ path: shots('profile'), fullPage: true })
   await page.goto('/profile/preferences')
-  await expect(page.getByRole('button', { name: 'Peanuts / groundnuts' })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: /^Allergies Peanuts \/ groundnuts/ }).click()
+  await expect(page.getByRole('button', { name: 'Peanuts / groundnuts', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expectNoHorizontalScroll(page)
 
   await page.goto('/this-does-not-exist')
@@ -258,19 +327,20 @@ test('password reset via email link', async ({ page }) => {
   const email = uniqueEmail('reset')
   const uid = await createUser(email)
   await completeOnboardingFor(uid)
+  await autoDismissCelebrations(page)
   await page.goto('/forgot-password')
   await page.getByLabel('Email').fill(email)
   await page.getByRole('button', { name: 'Send reset link' }).click()
   await expect(page.getByText(/reset link is on its way/)).toBeVisible()
   await page.goto(await mailLink(email))
   await expect(page).toHaveURL(/\/reset-password/, { timeout: 20_000 })
-  await page.getByLabel('New password').fill('new-pass-456')
-  await page.getByLabel('Confirm password').fill('new-pass-456')
+  await page.getByLabel('New password', { exact: true }).fill('new-pass-456')
+  await page.getByLabel('Confirm password', { exact: true }).fill('new-pass-456')
   await page.getByRole('button', { name: 'Save password' }).click()
-  await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
   await page.goto('/profile')
   await page.getByRole('button', { name: 'Sign out' }).click()
   await expect(page).toHaveURL(/\/welcome/)
   await signIn(page, email, 'new-pass-456')
-  await expect(page.getByRole('heading', { name: /what.s cooking/i })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
 })

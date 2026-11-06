@@ -8,7 +8,7 @@ import type { MealPlan, PlannedMeal, PlannedStatus } from '@/types/db'
 import { persistMeta, qk } from './keys'
 import { patchLists, patchRangeLists, upsertIn } from './optimistic'
 
-const PM_SELECT = '*, food_item:food_items(id, slug, image_path, image_alt, cuisine, prep_minutes, cook_minutes, allergens, ingredients_complete, description)'
+const PM_SELECT = '*, food_item:food_items(id, slug, food_type, image_path, image_alt, cuisine, prep_minutes, cook_minutes, allergens, ingredients_complete, description)'
 
 export function useActivePlan() {
   const uid = useUserId()
@@ -17,6 +17,20 @@ export function useActivePlan() {
     meta: persistMeta(uid),
     queryFn: async () => {
       const { data, error } = await supabase.from('meal_plans').select('*').eq('user_id', uid).eq('status', 'active').order('created_at', { ascending: false }).limit(1).maybeSingle()
+      if (error) throw error
+      return (data as MealPlan | null) ?? null
+    },
+  })
+}
+
+/** The most recent plan of any status (or null if the person has never made one). */
+export function useLatestPlan() {
+  const uid = useUserId()
+  return useQuery({
+    queryKey: [...qk.activePlan(uid), 'latest-any'],
+    meta: persistMeta(uid),
+    queryFn: async () => {
+      const { data, error } = await supabase.from('meal_plans').select('*').eq('user_id', uid).order('created_at', { ascending: false }).limit(1).maybeSingle()
       if (error) throw error
       return (data as MealPlan | null) ?? null
     },
@@ -59,7 +73,7 @@ export function usePlannedMeal(id: string | undefined) {
   })
 }
 
-const SORT: Record<MealSlot, number> = { breakfast: 0, lunch: 1, dinner: 3, snack: 2 }
+const SORT: Record<MealSlot, number> = { breakfast: 0, lunch: 1, dinner: 3, snack: 2, drink: 4 }
 export const sortPlanned = (a: PlannedMeal, b: PlannedMeal) => (a.date === b.date ? SORT[a.slot] - SORT[b.slot] : a.date < b.date ? -1 : 1)
 
 /** Local-first edits to a planned meal (lock, portion, move, time). Queued for sync. */
@@ -109,6 +123,8 @@ export interface ManualMealInput {
   carbs_g: number | null
   fat_g: number | null
   est_cost: number | null
+  /** ISO 4217 code the estimate is in (catalogue estimates are NGN) */
+  est_cost_currency?: string | null
   method: 'cook' | 'buy'
   food_item_id?: string | null
   nutrition_source?: PlannedMeal['nutrition_source']
@@ -134,6 +150,7 @@ export function useCreatePlannedMeal() {
         carbs_g: m.carbs_g,
         fat_g: m.fat_g,
         est_cost: m.est_cost,
+        est_cost_currency: m.est_cost == null ? null : (m.est_cost_currency ?? null),
         method: m.method,
         food_item_id: m.food_item_id ?? null,
         nutrition_source: m.nutrition_source ?? (m.calories != null ? 'user' : null),

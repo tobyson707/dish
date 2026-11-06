@@ -37,7 +37,7 @@ export function AppearanceSheet({ open, onClose }: { open: boolean; onClose: () 
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block font-bold">{o.label}</span>
-                <span className={cn('block text-[13px]', on ? 'opacity-80' : 'text-on-glass-dark-muted')}>{o.hint}</span>
+                <span className={cn('block text-footnote', on ? 'opacity-80' : 'text-on-glass-dark-muted')}>{o.hint}</span>
               </span>
               <span className={cn('flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-[opacity,transform] duration-300', on ? 'scale-100 bg-ink text-on-ink opacity-100' : 'scale-75 opacity-0')} aria-hidden="true">
                 <Icon name="check" size={15} />
@@ -67,7 +67,7 @@ function SoundRow() {
     >
       <span className="min-w-0 flex-1">
         <span className="block font-semibold text-on-glass-dark">Interface sounds</span>
-        <span className="block text-[13px] text-on-glass-dark-muted">A quiet click when you turn the category dial.</span>
+        <span className="block text-footnote text-on-glass-dark-muted">A quiet click when you turn the category dial.</span>
       </span>
       <span aria-hidden="true" className={cn('relative h-7 w-12 shrink-0 rounded-full transition-colors duration-300', on ? 'bg-accent' : 'bg-white/15')}>
         <span className={cn('absolute top-1 h-5 w-5 rounded-full bg-on-glass-dark shadow transition-transform duration-300 [transition-timing-function:var(--ease-spring)]', on ? 'translate-x-6' : 'translate-x-1')} />

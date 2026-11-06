@@ -77,7 +77,7 @@ export function Surprise() {
         ) : data ? (
           <>
             <ul className="stagger flex flex-col gap-3">
-              {data.suggestions.map((s) => <SuggestionCard key={s.food_item_id} s={s} slot={slot} today={today} currency={currency} />)}
+              {data.suggestions.map((s) => <SuggestionCard key={s.food_item_id} s={s} slot={slot} today={today} />)}
             </ul>
             <Button variant="secondary" icon="refresh" block className="mt-4" loading={surprise.isPending} onClick={() => void go(false)}>
               See other ideas
@@ -89,7 +89,7 @@ export function Surprise() {
   )
 }
 
-function SuggestionCard({ s, slot, today, currency }: { s: Suggestion; slot: MealSlot; today: string; currency: string }) {
+function SuggestionCard({ s, slot, today }: { s: Suggestion; slot: MealSlot; today: string }) {
   const nav = useNavigate()
   const toast = useToast()
   const plan = useActivePlan()
@@ -105,7 +105,7 @@ function SuggestionCard({ s, slot, today, currency }: { s: Suggestion; slot: Mea
 
   async function addToday() {
     if (!food) return
-    await create.mutateAsync({ date: today, slot, plan_id: plan.data && today >= plan.data.start_date && today <= plan.data.end_date ? plan.data.id : null, name: food.name, food_item_id: food.id, calories: food.calories, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g, nutrition_source: food.nutrition_source, est_cost: midCost(food.est_cost_min, food.est_cost_max), method: s.method })
+    await create.mutateAsync({ date: today, slot, plan_id: plan.data && today >= plan.data.start_date && today <= plan.data.end_date ? plan.data.id : null, name: food.name, food_item_id: food.id, calories: food.calories, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g, nutrition_source: food.nutrition_source, est_cost: midCost(food.est_cost_min, food.est_cost_max), est_cost_currency: food.cost_currency, method: s.method })
     toast.show(`Added to today's ${SLOT_LABEL[slot].toLowerCase()}.`, { tone: 'success', action: { label: 'View', onClick: () => nav('/') } })
   }
   async function swap() {
@@ -126,11 +126,11 @@ function SuggestionCard({ s, slot, today, currency }: { s: Suggestion; slot: Mea
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <Link to={`/recipes/${s.slug}`} className="text-lg font-bold leading-snug">{s.name}</Link>
+            <Link to={`/recipes/${s.slug}`} className="text-title-3 font-bold leading-snug">{s.name}</Link>
             <IconButton icon="heart" label={isFav ? 'Remove from favourites' : 'Save to favourites'} size={40} className={isFav ? 'text-accent-strong' : undefined} onClick={() => fav.mutate({ foodItemId: s.food_item_id, on: !isFav })} />
           </div>
-          <p className="num text-[13px] text-muted">
-            {s.method === 'cook' ? `Cook · ${formatMinutes(s.prep_minutes + s.cook_minutes)}` : 'Buy'} · {formatCostRange(s.est_cost_min, s.est_cost_max, currency)}
+          <p className="num text-footnote text-muted">
+            {s.method === 'cook' ? `Cook · ${formatMinutes(s.prep_minutes + s.cook_minutes)}` : 'Buy'} · {formatCostRange(s.est_cost_min, s.est_cost_max, s.cost_currency ?? 'NGN')}
             {s.calories != null && ` · ≈ ${formatKcal(s.calories)}`}
           </p>
           {s.reasons[0] && <p className="mt-1 text-sm text-ink-2">{s.reasons[0]}</p>}
