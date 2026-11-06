@@ -128,9 +128,11 @@ test('first-time user: sign up, verify email, onboard, get a plan', async ({ pag
   await page.reload()
   await expect(page.getByRole('region', { name: 'Quick tour' })).toHaveCount(0)
 
-  await page.getByRole('link', { name: 'Home' }).first().click()
+  // navigation floats: open it, then go Home
+  await page.getByRole('button', { name: /^Navigation/ }).click()
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Home' }).click()
   await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
-  await expect(page.getByRole('article').first()).toBeVisible()
+  await expect(page.getByText(/^Next meal · /)).toBeVisible() // the new plan's next meal is featured
   await page.screenshot({ path: shots('home'), fullPage: true })
   await expectNoHorizontalScroll(page)
   expect(errors).toEqual([])
@@ -216,7 +218,8 @@ test('planned vs eaten, locking, regenerate, grocery list, and offline sync', as
   await context.setOffline(true)
   await page.getByRole('checkbox', { name: /Tick off Bottled water/ }).click()
   await expect(page.getByText(/Offline · \d+ change/)).toBeVisible()
-  await page.getByRole('link', { name: 'Diary' }).first().click()
+  await page.getByRole('button', { name: /^Navigation/ }).click()
+  await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Diary' }).click()
   await page.getByRole('link', { name: 'Add food' }).first().click()
   await page.getByRole('radio', { name: 'Enter manually' }).click()
   await page.getByLabel('What did you eat?').fill('Offline puff-puff')

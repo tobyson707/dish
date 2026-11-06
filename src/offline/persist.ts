@@ -30,9 +30,16 @@ export function startQueryCachePersistence(client: QueryClient, userId: string):
     })
     void db.queryCache.put({ key: `${userId}|cache`, userId, state, updatedAt: Date.now() }).catch(() => {})
   }
+  // Fresh data is saved almost at once (a quick navigation away must not lose it); bursts of
+  // updates in the same moment still share one write.
   const unsub = client.getQueryCache().subscribe((e) => {
     if (e.type !== 'updated' && e.type !== 'removed') return
-    if (!timer) timer = setTimeout(save, 800)
+    if (e.type === 'updated' && e.action.type === 'success') {
+      if (timer) clearTimeout(timer)
+      timer = setTimeout(save, 60)
+      return
+    }
+    if (!timer) timer = setTimeout(save, 400)
   })
   const flushNow = () => {
     if (timer) clearTimeout(timer)
