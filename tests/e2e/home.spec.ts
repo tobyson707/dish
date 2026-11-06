@@ -50,7 +50,7 @@ test('floating navigation replaces the bottom bar and reaches every destination 
   await expect(nav).toHaveCount(0)
   await expect(btn).toBeFocused()
   await btn.click()
-  await page.mouse.click(vp.width / 2, vp.height * 0.3) // an empty part of the screen
+  await page.mouse.click(vp.width - 12, vp.height * 0.15) // outside the panel (it is taller on short phones)
   await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0)
   // 4. each destination navigates
   for (const [name, path] of [['Plan', '/plan'], ['Diary', '/diary'], ['Discover', '/discover'], ['Profile', '/profile'], ['Home', '/']] as const) {
