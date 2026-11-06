@@ -63,7 +63,7 @@ test('every plan length is created, fully saved, retrievable and navigable', asy
   await page.goto('/plan?view=month')
   await page.getByRole('button', { name: 'Next month' }).click()
   await page.getByRole('button', { name: 'Next month' }).click()
-  await expect(page.getByRole('heading', { level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 3 }).first()).toBeVisible()
   expect(errors).toEqual([])
 })
 

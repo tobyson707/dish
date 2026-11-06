@@ -133,9 +133,11 @@ export function RotaryCategorySelector({ value, onChange, onActivate, workspaceO
       <div
         data-rotary-pill
         aria-hidden="true"
-        className="pointer-events-none absolute left-1.5 right-1 z-[5] overflow-hidden rounded-[24px] bg-accent ring-inset ring-accent-ink/45 group-has-[button:focus-visible]:ring-2"
+        className="pointer-events-none absolute left-1.5 right-1 z-[5] overflow-hidden rounded-[24px] ring-inset ring-accent-ink/45 group-has-[button:focus-visible]:ring-2"
         style={{ top: PAD + ROTARY_ITEM, height: ROTARY_ITEM }}
       >
+        {/* the orange fill stretches slightly with speed; the labels inside never distort */}
+        <span className="absolute inset-0 rounded-[24px] bg-accent" style={{ transform: 'scaleY(var(--rotary-stretch, 1))' }} />
         {CATEGORIES.map((c) => (
           <div key={c.id} data-item className="absolute flex flex-col items-center justify-center gap-1.5 text-micro font-semibold text-accent-ink will-change-transform min-[380px]:text-caption" style={{ top: 0, left: -6, right: -4, height: ROTARY_ITEM }}>
             {face(c)}

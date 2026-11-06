@@ -17,7 +17,7 @@ export function LevelProgress({ totalXp, size = 'sm', highlight }: { totalXp: nu
         className={cn('overflow-hidden rounded-full bg-progress-track', size === 'md' ? 'h-2' : 'h-1.5')}
       >
         <div
-          className={cn('h-full rounded-full transition-[width] duration-700 ease-out', 'bg-progress', highlight && 'animate-[pulse-bar_900ms_var(--ease-out)]')}
+          className={cn('h-full rounded-full transition-[width] duration-700 ease-out', 'bg-progress', highlight && 'animate-[pulse-bar_var(--dur-celebrate)_var(--ease-enter)]')}
           style={{ width: `${Math.round(p.fraction * 1000) / 10}%` }}
         />
       </div>

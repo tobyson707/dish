@@ -50,7 +50,7 @@ export function MealRow({ meal, onActions }: { meal: PlannedMeal; onActions?: ()
       <Link to={`/meal/${meal.id}`} className="press flex min-w-0 flex-1 items-center gap-3">
         <span className="relative shrink-0">
           <FoodImage path={meal.food_item?.image_path} alt={meal.food_item?.image_alt} name={meal.name} shape="circle" className="h-14 w-14" width={120} />
-          {meal.status === 'eaten' && <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-accent-ink ring-2 ring-bg"><Icon name="check" size={12} /></span>}
+          {meal.status === 'eaten' && <span className="pulse-once absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-accent text-accent-ink ring-2 ring-bg"><Icon name="check" size={12} /></span>}
         </span>
         <span className="min-w-0">
           <span className="label-caps block">

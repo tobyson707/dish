@@ -87,7 +87,11 @@ export function useRotary(opts: Options) {
       st.detent = near
       if (st.source !== 'external') o.current.onDetent?.(near, st.source)
     }
-    if (root.current) o.current.apply(pos, red.current, root.current)
+    if (root.current) {
+      // subtle stretch of the selection while the dial is travelling (max 6%, none with reduced motion)
+      root.current.style.setProperty('--rotary-stretch', red.current ? '1' : String(1 + Math.min(0.06, Math.abs(st.vel) * 0.004)))
+      o.current.apply(pos, red.current, root.current)
+    }
   }, [])
 
   const stop = () => {
@@ -113,7 +117,7 @@ export function useRotary(opts: Options) {
     commit()
   }, [render])
 
-  /** Spring to `target` (an unbounded detent). Restrained (~2% overshoot); critically damped with reduced motion. */
+  /** Spring to `target` (an unbounded detent). Critically damped: settles cleanly onto the detent, no overshoot. */
   const springTo = useCallback(
     (target: number, source: RotarySource, vel?: number) => {
       const st = s.current
@@ -121,7 +125,7 @@ export function useRotary(opts: Options) {
       st.source = source
       if (vel !== undefined) st.vel = vel
       const k = reduced ? 900 : 430
-      const c = reduced ? 2 * Math.sqrt(k) : 2 * Math.sqrt(k) * 0.8
+      const c = 2 * Math.sqrt(k)
       stop()
       st.lastT = performance.now()
       const tick = (now: number) => {

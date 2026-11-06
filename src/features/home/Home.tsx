@@ -23,7 +23,8 @@ import { NextMealPanel } from '@/components/canvas/NextMealPanel'
 import { UtilityDock } from '@/components/canvas/UtilityDock'
 import { CategoryWorkspace } from '@/components/canvas/CategoryWorkspace'
 import { SearchWorkspace } from '@/components/canvas/SearchWorkspace'
-import { categoryLabel, type Category } from '@/components/canvas/categories'
+import { CATEGORIES, categoryLabel, type Category } from '@/components/canvas/categories'
+import { crossfade } from '@/lib/motion'
 import { dayState, emptyCopy, tipFor, tomorrow, type DayState } from './homeState'
 
 /**
@@ -41,6 +42,9 @@ export function Home() {
   const [actionsFor, setActionsFor] = useState<PlannedMeal | null>(null)
   // single source of truth: the dial, the canvas filter and the workspace all read `category`
   const [category, setCategory] = useState<Category>('all')
+  // what the open drawer shows: follows the dial, but swaps through a crossfade so the
+  // dial itself (and Home) always update at once and never wait on an animation
+  const [drawerCategory, setDrawerCategory] = useState<Category>('all')
   const [workspaceOpen, setWorkspaceOpen] = useState(false)
   const [searchOpen, setSearchOpen] = useState(false)
   const [addOpen, setAddOpen] = useState(false)
@@ -71,6 +75,7 @@ export function Home() {
           category={category}
           onFind={(c) => {
             setCategory(c)
+            setDrawerCategory(c)
             setWorkspaceOpen(true)
           }}
         />
@@ -95,8 +100,8 @@ export function Home() {
           <p className="text-callout text-muted">{state.kind === 'first' ? 'Your meals will appear here once you have a plan.' : 'No meals on today’s menu.'}</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {todays.map((m) => (
-              <div key={`${m.id}-${m.food_item_id}`} className="animate-[swap-in_260ms_var(--ease-out)_both]">
+            {todays.map((m, i) => (
+              <div key={`${m.id}-${m.food_item_id}`} className="enter-item" style={{ ['--i' as string]: i }}>
                 <MealHeroCard compact meal={m} onActions={() => setActionsFor(m)} />
               </div>
             ))}
@@ -126,11 +131,21 @@ export function Home() {
         workspaceOpen={workspaceOpen}
         onChange={(c: CategoryChange) => {
           setCategory(c.category)
+          // with the drawer open, the old and new category overlap as they swap (no close/reopen)
+          if (workspaceOpen && c.category !== drawerCategory) {
+            const n = CATEGORIES.length
+            const a = CATEGORIES.findIndex((x) => x.id === drawerCategory)
+            const b = CATEGORIES.findIndex((x) => x.id === c.category)
+            crossfade(() => setDrawerCategory(c.category), (b - a + n) % n <= n / 2 ? 1 : -1)
+          } else setDrawerCategory(c.category)
           if (c.open) setWorkspaceOpen(true)
         }}
-        onActivate={() => setWorkspaceOpen(true)}
+        onActivate={() => {
+          setDrawerCategory(category)
+          setWorkspaceOpen(true)
+        }}
       />
-      <CategoryWorkspace category={category} open={workspaceOpen} onClose={() => setWorkspaceOpen(false)} />
+      <CategoryWorkspace category={drawerCategory} open={workspaceOpen} onClose={() => setWorkspaceOpen(false)} />
       <MealActionsSheet meal={actionsFor} onClose={() => setActionsFor(null)} />
       <SearchWorkspace open={searchOpen} onClose={() => setSearchOpen(false)} />
       <AddMealSheet key={`add-${addOpen}`} open={addOpen} onClose={() => setAddOpen(false)} date={today} slot={category === 'all' ? undefined : category} planId={plan.data && today >= plan.data.start_date && today <= plan.data.end_date ? plan.data.id : null} />
@@ -167,10 +182,10 @@ function HomeCanvas({ greeting, tip, meals, state, today, onRetry, category, onF
       <FloatingToolbar className="absolute inset-x-4 top-4 z-20 sm:inset-x-5 sm:top-5" />
 
       <div className="absolute left-5 right-[92px] top-[92px] z-10 sm:left-8 lg:right-[45%] lg:top-[120px]">
-        <h1 className="text-display text-ink animate-[rise_520ms_var(--ease-out)_both]">{greeting}</h1>
-        <p className="mt-4 max-w-[24ch] text-headline leading-snug text-ink-2 animate-[fade_500ms_ease-out_120ms_both]">Let's make today delicious.</p>
+        <h1 className="text-display text-ink animate-[rise_var(--dur-celebrate)_var(--ease-enter)_both]">{greeting}</h1>
+        <p className="mt-4 max-w-[24ch] text-headline leading-snug text-ink-2 animate-[fade_var(--dur-celebrate)_var(--ease-enter)_120ms_both]">Let's make today delicious.</p>
         {/* on small phones the invitation panel takes this space, so the tip steps aside */}
-        <p className={cn('mt-3 flex max-w-[30ch] items-start gap-1.5 text-footnote text-muted animate-[fade_500ms_ease-out_240ms_both]', !loading && (!featured || state.kind === 'done' || state.kind === 'error') && 'max-sm:hidden')}>
+        <p className={cn('mt-3 flex max-w-[30ch] items-start gap-1.5 text-footnote text-muted animate-[fade_var(--dur-celebrate)_var(--ease-enter)_240ms_both]', !loading && (!featured || state.kind === 'done' || state.kind === 'error') && 'max-sm:hidden')}>
           <Icon name="leaf" size={14} className="mt-[3px] shrink-0 text-accent-strong" aria-hidden="true" />
           <span>
             <span className="sr-only">Tip: </span>
@@ -191,7 +206,7 @@ function HomeCanvas({ greeting, tip, meals, state, today, onRetry, category, onF
           if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(e.clientY - s.y)) go(idx + (dx < 0 ? 1 : -1))
         }}
       >
-        <div key={featured?.id ?? `empty-${category}`} className="animate-[hero-in_620ms_var(--ease-out)_both]">
+        <div key={featured?.id ?? `empty-${category}`} className="animate-[hero-in_var(--dur-celebrate)_var(--ease-enter)_both]">
           {loading ? <div className="aspect-square w-full animate-pulse rounded-full bg-[var(--c-glass)]" /> : <HeroFood path={featured?.food_item?.image_path} name={heroName} slug={featured?.food_item?.slug} className="aspect-square w-full" />}
         </div>
       </div>
@@ -231,7 +246,7 @@ const SECONDARY = 'press inline-flex h-11 items-center rounded-full px-4 text-sm
 
 function EmptyCanvasPanel({ title, body, primary, secondary, extra }: { title: string; body: string; primary: React.ReactNode; secondary?: React.ReactNode; extra?: React.ReactNode }) {
   return (
-    <div role="region" aria-label={title} className="rounded-[26px] bg-[var(--c-glass)] p-5 shadow-[0_18px_40px_-20px_var(--c-shadow)] ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-xl animate-[info-in_380ms_var(--ease-out)_both]">
+    <div role="region" aria-label={title} className="rounded-[26px] bg-[var(--c-glass)] p-5 shadow-[0_18px_40px_-20px_var(--c-shadow)] ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-xl animate-[info-in_var(--dur-standard)_var(--ease-enter)_both]">
       <h2 className="text-title-3 text-ink">{title}</h2>
       <p className="mt-1 text-footnote text-ink-2">{body}</p>
       <div className="mt-4 flex flex-wrap items-center gap-2">

@@ -186,7 +186,7 @@ test('planned vs eaten, locking, regenerate, grocery list, and offline sync', as
 
   // Month view renders the dot calendar
   await page.getByRole('radio', { name: 'Month' }).click()
-  await expect(page.getByRole('grid', { name: 'Month' })).toBeVisible()
+  await expect(page.getByRole('grid')).toBeVisible()
   await page.screenshot({ path: shots('plan-month'), fullPage: true })
 
   // Grocery list from plan

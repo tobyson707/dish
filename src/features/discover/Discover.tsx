@@ -117,8 +117,8 @@ export function Discover() {
         ) : (
           <>
             <ul className="grid gap-x-5 gap-y-7 sm:grid-cols-2" aria-label="Meal ideas">
-              {visible.map((f) => (
-                <FeedItem key={f.id} food={f} category={category} favourite={!!favs.data?.includes(f.id)} onOpen={() => setPreview(f)} />
+              {visible.map((f, i) => (
+                <FeedItem key={f.id} index={i % PAGE} food={f} category={category} favourite={!!favs.data?.includes(f.id)} onOpen={() => setPreview(f)} />
               ))}
             </ul>
             <div ref={sentinel} aria-hidden="true" className="h-4" />
@@ -142,7 +142,7 @@ export function Discover() {
   )
 }
 
-function FeedItem({ food: f, category, favourite, onOpen }: { food: FoodItem; category: Category; favourite: boolean; onOpen: () => void }) {
+function FeedItem({ food: f, index, category, favourite, onOpen }: { food: FoodItem; index: number; category: Category; favourite: boolean; onOpen: () => void }) {
   const toggle = useToggleFavourite()
   const prefs = usePreferences()
   const toast = useToast()
@@ -151,7 +151,7 @@ function FeedItem({ food: f, category, favourite, onOpen }: { food: FoodItem; ca
   const mins = f.can_cook ? f.prep_minutes + f.cook_minutes : null
   const slot = category === 'all' ? slotFor(f, prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']) : category
   return (
-    <li className="animate-[info-in_320ms_var(--ease-out)_both]">
+    <li className="enter-item" style={{ ['--i' as string]: index }}>
       <div className="relative">
         <button type="button" onClick={onOpen} className="press block w-full" aria-label={`Open ${f.name}`}>
           <FoodImage path={f.image_path} alt={f.image_alt} name={f.name} slug={f.slug} className="aspect-[4/3] w-full rounded-[28px]" width={720} />
@@ -180,9 +180,9 @@ function FeedItem({ food: f, category, favourite, onOpen }: { food: FoodItem; ca
           onClick={async () => {
             if (await add(f, slot)) setAdded(true)
           }}
-          className={cn('press flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors', added ? 'bg-accent text-accent-ink' : 'bg-ink text-on-ink')}
+          className={cn('press flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors', added ? 'pulse-once bg-accent text-accent-ink' : 'bg-ink text-on-ink')}
         >
-          <Icon name={added ? 'check' : 'plus'} size={18} />
+          <span key={added ? 'done' : 'add'} className="icon-swap flex"><Icon name={added ? 'check' : 'plus'} size={18} /></span>
         </button>
       </div>
     </li>

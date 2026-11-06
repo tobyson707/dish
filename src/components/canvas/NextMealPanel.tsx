@@ -12,7 +12,7 @@ export function NextMealPanel({ meal, label, className }: { meal: PlannedMeal; l
       to={`/meal/${meal.id}`}
       key={meal.id}
       aria-label={`${label}: ${meal.name}. Open meal`}
-      className={cn('press group flex items-center gap-3 rounded-[26px] bg-[var(--c-glass)] p-4 pl-5 shadow-[0_18px_40px_-20px_var(--c-shadow)] ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-xl animate-[info-in_380ms_var(--ease-out)_both]', className)}
+      className={cn('press group flex items-center gap-3 rounded-[26px] bg-[var(--c-glass)] p-4 pl-5 shadow-[0_18px_40px_-20px_var(--c-shadow)] ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-xl animate-[info-in_var(--dur-standard)_var(--ease-enter)_both]', className)}
     >
       <div className="min-w-0 flex-1">
         <p className="text-micro font-semibold uppercase tracking-[0.14em] text-ink-2">{label}</p>

@@ -29,7 +29,7 @@ export function PlanWalkthrough({ uid, onDone }: { uid: string; onDone: () => vo
     onDone()
   }
   return (
-    <section aria-label="Quick tour" aria-live="polite" className="mb-5 animate-[rise_240ms_var(--ease-out)_both] rounded-[24px] bg-ink p-5 text-on-ink">
+    <section aria-label="Quick tour" aria-live="polite" className="mb-5 animate-[rise_var(--dur-standard)_var(--ease-enter)_both] rounded-[24px] bg-ink p-5 text-on-ink">
       <div className="flex items-start gap-3">
         <span aria-hidden="true" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink">
           <Icon name={s.icon} size={18} />

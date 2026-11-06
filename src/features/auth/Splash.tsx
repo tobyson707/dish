@@ -2,7 +2,7 @@
 export function Splash() {
   return (
     <div role="status" aria-label="Loading DISH" className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-bg">
-      <p className="display text-6xl animate-[wordmark_450ms_var(--ease-out)_both]">
+      <p className="display text-6xl animate-[wordmark_var(--dur-celebrate)_var(--ease-enter)_both]">
         DISH<span className="text-accent-strong">.</span>
       </p>
       <div className="flex gap-1.5" aria-hidden="true">

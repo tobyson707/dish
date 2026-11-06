@@ -197,7 +197,7 @@ function DayBlock({ date, today, meals, slots, onActions, onAdd, notGenerated, c
       <h3 className={compact ? 'label-caps mb-1' : 'mb-2 text-title-3 font-bold'}>{dayLabel(date, today)}</h3>
       <ul className="flex flex-col">
         {meals.map((m) => (
-          <div key={`${m.id}-${m.food_item_id}`} className="animate-[swap-in_240ms_var(--ease-out)_both]">
+          <div key={`${m.id}-${m.food_item_id}`} className="animate-[swap-in_var(--dur-standard)_var(--ease-enter)_both]">
             <MealRow meal={m} onActions={() => onActions(m)} />
           </div>
         ))}

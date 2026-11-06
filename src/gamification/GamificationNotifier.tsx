@@ -111,14 +111,14 @@ export function GamificationNotifier() {
       {notices.map((n) => {
         if (n.kind === 'xp')
           return (
-            <div key={n.id} role="status" className="flex items-center gap-2 rounded-full bg-ink px-3.5 py-2 text-sm text-on-ink shadow-lg animate-[xp-rise_420ms_var(--ease-out)_both]">
+            <div key={n.id} role="status" className="flex items-center gap-2 rounded-full bg-ink px-3.5 py-2 text-sm text-on-ink shadow-lg animate-[xp-rise_var(--dur-standard)_var(--ease-enter)_both]">
               <span className="num font-extrabold text-accent-on-ink">+{n.amount} XP</span>
               <span className="opacity-80">{n.label}</span>
             </div>
           )
         if (n.kind === 'level')
           return (
-            <div key={n.id} role="status" className="flex items-center gap-3 rounded-lg bg-elevated px-4 py-3 text-sm shadow-lg ring-1 ring-line animate-[badge-in_380ms_var(--ease-out)_both]">
+            <div key={n.id} role="status" className="flex items-center gap-3 rounded-lg bg-elevated px-4 py-3 text-sm shadow-lg ring-1 ring-line animate-[badge-in_var(--dur-standard)_var(--ease-enter)_both]">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent text-accent-ink"><Icon name="medal" size={18} /></span>
               <span>
                 <span className="label-caps block">New level</span>
@@ -128,14 +128,14 @@ export function GamificationNotifier() {
           )
         if (n.kind === 'streak')
           return (
-            <div key={n.id} role="status" className="flex items-center gap-2 rounded-full bg-elevated px-3.5 py-2 text-sm font-semibold shadow-lg ring-1 ring-line animate-[xp-rise_420ms_var(--ease-out)_both]">
+            <div key={n.id} role="status" className="flex items-center gap-2 rounded-full bg-elevated px-3.5 py-2 text-sm font-semibold shadow-lg ring-1 ring-line animate-[xp-rise_var(--dur-standard)_var(--ease-enter)_both]">
               <Icon name="flame" size={16} className="text-accent-strong" /> You're on a {n.days}-day streak.
             </div>
           )
         const def = defs.data?.find((d) => d.id === n.achievementId)
         if (!def) return null
         return (
-          <div key={n.id} role="status" className="flex max-w-sm items-center gap-3 rounded-lg bg-elevated px-4 py-3 text-sm shadow-lg ring-1 ring-line animate-[badge-in_380ms_var(--ease-out)_both]">
+          <div key={n.id} role="status" className="flex max-w-sm items-center gap-3 rounded-lg bg-elevated px-4 py-3 text-sm shadow-lg ring-1 ring-line animate-[badge-in_var(--dur-standard)_var(--ease-enter)_both]">
             <AchievementBadge def={def} unlockedAt="now" size={40} />
             <span>
               <span className="label-caps block">Achievement unlocked</span>

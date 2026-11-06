@@ -63,17 +63,17 @@ test('infinite dial: loops both ways, snaps, stays fixed, no DOM growth @respons
   expect(await dial(page).boundingBox()).toEqual(b0) // Home scrolls underneath; the dial doesn't move
   await page.evaluate(() => scrollTo(0, 0))
 
-  // keyboard: wraps backwards from All to Snacks, forwards all the way round (select only)
+  // keyboard: wraps backwards from All to Drinks, forwards all the way round (select only)
   await pressed(page).focus()
   await page.keyboard.press('ArrowUp')
-  await expect(pressed(page)).toHaveText('Snacks')
+  await expect(pressed(page)).toHaveText('Drinks')
   const seen: string[] = []
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 7; i++) {
     await page.keyboard.press('ArrowDown')
     await page.waitForTimeout(450)
     seen.push((await pressed(page).textContent())!.trim())
   }
-  expect(seen).toEqual(['All', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'All'])
+  expect(seen).toEqual(['All', 'Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks', 'All'])
   await expect(panel(page)).toHaveCount(0)
 
   // a tiny accidental movement changes nothing
@@ -86,16 +86,16 @@ test('infinite dial: loops both ways, snaps, stays fixed, no DOM growth @respons
   await expect(pressed(page)).toHaveText('All')
   await expect(panel(page)).toHaveCount(0)
 
-  // backwards past the start: All → Snacks by touch, opening the Snacks workspace
+  // backwards past the start: All → Drinks by touch, opening the Drinks workspace
   await turn(page, -1)
-  await expect(pressed(page)).toHaveText('Snacks')
-  await expect(page.getByRole('dialog', { name: 'Snacks ideas' })).toBeVisible()
+  await expect(pressed(page)).toHaveText('Drinks')
+  await expect(page.getByRole('dialog', { name: 'Drinks ideas' })).toBeVisible()
   await page.keyboard.press('Escape')
   await expect(panel(page)).toHaveCount(0)
 
-  // prolonged spinning: 12 deliberate detents forward from Snacks lands on 12 mod 5 = 2 → Breakfast
+  // prolonged spinning: 13 deliberate detents forward from Drinks (index 5) lands on (5 + 13) mod 6 = 0 → All
   const items = await page.evaluate(() => document.querySelectorAll('[data-rotary] [data-item]').length)
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < 13; i++) {
     await turn(page, 1)
     await page.waitForTimeout(450)
     if (await panel(page).count()) {
@@ -103,7 +103,7 @@ test('infinite dial: loops both ways, snaps, stays fixed, no DOM growth @respons
       await expect(panel(page)).toHaveCount(0)
     }
   }
-  await expect(pressed(page)).toHaveText('Breakfast')
+  await expect(pressed(page)).toHaveText('All')
   expect(await page.evaluate(() => document.querySelectorAll('[data-rotary] [data-item]').length)).toBe(items) // no accumulation
   // settled exactly on a detent (centre item has no offset)
   const centre = await dial(page).locator('[data-rotary-item][aria-pressed=true]').evaluate((e) => e.style.transform)
@@ -164,9 +164,9 @@ test('mouse wheel and trackpad turn the dial endlessly (desktop)', async ({ page
   test.skip(!!test.info().project.use.isMobile, 'no wheel on touch devices')
   await home(page)
   await dial(page).hover()
-  await page.mouse.wheel(0, -100) // one notch up from All wraps to Snacks
-  await expect(page.getByRole('dialog', { name: 'Snacks ideas' })).toBeVisible()
-  await expect(pressed(page)).toHaveText('Snacks')
+  await page.mouse.wheel(0, -100) // one notch up from All wraps to Drinks
+  await expect(page.getByRole('dialog', { name: 'Drinks ideas' })).toBeVisible()
+  await expect(pressed(page)).toHaveText('Drinks')
   // the page never scrolls while turning the dial
   expect(await page.evaluate(() => scrollY)).toBe(0)
   await page.keyboard.press('Escape')

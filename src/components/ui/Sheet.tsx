@@ -1,3 +1,4 @@
+import { MOTION } from '@/styles/motion'
 import { useEffect, useRef, type ReactNode, useId } from 'react'
 import { cn } from '@/lib/cn'
 import { IconButton } from './Button'
@@ -12,7 +13,7 @@ import { useDragDismiss, usePresence } from './usePresence'
 export function Sheet({ open, onClose, title, children, footer, size = 'md', description, tone = 'default' }: { open: boolean; onClose: () => void; title: string; children: ReactNode; footer?: ReactNode; size?: 'md' | 'lg'; description?: string; tone?: 'default' | 'glass' }) {
   const ref = useRef<HTMLDialogElement>(null)
   const titleId = useId() // unique, so a sheet opened from another sheet keeps its own name
-  const { mounted, closing } = usePresence(open, 260)
+  const { mounted, closing } = usePresence(open, MOTION.exit(MOTION.panel))
   const drag = useDragDismiss('y', onClose)
   useEffect(() => {
     const d = ref.current

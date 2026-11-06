@@ -1,3 +1,4 @@
+import { MOTION } from '@/styles/motion'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router'
@@ -8,6 +9,7 @@ import { useDragDismiss, usePresence } from '@/components/ui/usePresence'
 import { cn } from '@/lib/cn'
 import { CATEGORIES, categoryIcon, categoryLabel, type Category } from './categories'
 import { MealOptionList } from './MealOptionList'
+import { crossfade } from '@/lib/motion'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { SLOT_LABEL, type MealSlot } from '@domain/types.ts'
 import type { FoodItem } from '@/types/db'
@@ -50,7 +52,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
   const { add, busy } = useAddToToday()
   const [busyId, setBusyId] = useState<string | null>(null)
   const [added, setAdded] = useState<Set<string>>(new Set())
-  const { mounted, closing } = usePresence(open, 320)
+  const { mounted, closing } = usePresence(open, MOTION.exit(MOTION.panel))
   const drag = useDragDismiss('x', onClose, 90)
   const ranked = useRankedMeals(mounted ? category : null)
   const heading = useRef<HTMLHeadingElement>(null)
@@ -138,7 +140,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
             drag.handlers.onPointerDown(e)
           }}
         >
-          <div key={category} className="ws-swap min-w-0 flex-1 pt-2" style={{ ['--swap-dir' as string]: dir }}>
+          <div key={category} data-crossfade className="ws-swap min-w-0 flex-1 pt-2" style={{ ['--swap-dir' as string]: dir }}>
             <div className="flex items-center gap-3">
               <Icon name={categoryIcon(category)} size={28} />
               <h2 ref={heading} tabIndex={-1} className="truncate text-title-1 leading-none outline-none">
@@ -157,7 +159,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
                 role="tab"
                 type="button"
                 aria-selected={tab === t.id}
-                onClick={() => setTab(t.id)}
+                onClick={() => crossfade(() => setTab(t.id), TABS.findIndex((x) => x.id === t.id) >= TABS.findIndex((x) => x.id === tab) ? 1 : -1)}
                 className={cn('press h-10 rounded-full px-3.5 text-sm font-semibold transition-colors duration-300 sm:px-4', tab === t.id ? 'bg-accent text-accent-ink' : 'text-on-glass-dark-muted hover:text-on-glass-dark')}
               >
                 {t.label}
@@ -165,7 +167,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
             ))}
           </div>
           <p className="mt-3 text-footnote text-on-glass-dark-muted">{TAB_HINT[tab]}</p>
-          <div className="ws-swap mt-10" key={`${category}:${tab}`} style={{ ['--swap-dir' as string]: dir }}>
+          <div data-crossfade className="ws-swap mt-10" key={`${category}:${tab}`} style={{ ['--swap-dir' as string]: dir }}>
             {ranked.pending ? (
               <div className="grid gap-8 sm:grid-cols-2">{[0, 1].map((i) => <div key={i} className="aspect-[4/3] animate-pulse rounded-[24px] bg-white/[0.06]" />)}</div>
             ) : items.length === 0 ? (
@@ -215,9 +217,9 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
 function FeaturedMeal({ food: f, slot, added, busy, disabled, onView, onAdd }: { food: FoodItem; slot: MealSlot; added: boolean; busy: boolean; disabled: boolean; onView: () => void; onAdd: () => void }) {
   const mins = f.can_cook ? f.prep_minutes + f.cook_minutes : null
   return (
-    <li className="animate-[info-in_320ms_var(--ease-out)_both]">
+    <li className="enter-item">
       <button type="button" onClick={onView} className="press block w-full" aria-label={`View ${f.name}`}>
-        <FoodImage path={f.image_path} name={f.name} slug={f.slug} className="aspect-[4/3] w-full rounded-[24px]" width={720} />
+        <FoodImage path={f.image_path} name={f.name} slug={f.slug} className="reveal-mask aspect-[4/3] w-full rounded-[24px]" width={720} />
       </button>
       <h4 className="mt-5 text-title-3 leading-snug text-on-glass-dark">{f.name}</h4>
       <p className="num mt-1.5 text-footnote text-on-glass-dark-muted">
@@ -232,9 +234,9 @@ function FeaturedMeal({ food: f, slot, added, busy, disabled, onView, onAdd }: {
           onClick={onAdd}
           disabled={disabled || added}
           aria-label={added ? `${f.name} added` : `Add to plan: ${f.name}`}
-          className={cn('press inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-bold transition-colors disabled:cursor-default', added ? 'bg-accent text-accent-ink' : 'bg-on-glass-dark text-on-glass-dark-ink hover:bg-accent hover:text-accent-ink')}
+          className={cn('press inline-flex h-10 items-center gap-1.5 rounded-full px-4 text-sm font-bold transition-colors disabled:cursor-default', added ? 'pulse-once bg-accent text-accent-ink' : 'bg-on-glass-dark text-on-glass-dark-ink hover:bg-accent hover:text-accent-ink')}
         >
-          {busy ? <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent" style={{ animation: 'spin .8s linear infinite' }} /> : <Icon name={added ? 'check' : 'plus'} size={16} />}
+          {busy ? <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent" style={{ animation: 'spin .8s linear infinite' }} /> : <span key={added ? 'done' : 'add'} className="icon-swap flex"><Icon name={added ? 'check' : 'plus'} size={16} /></span>}
           {added ? 'Added' : 'Add to plan'}
         </button>
       </div>

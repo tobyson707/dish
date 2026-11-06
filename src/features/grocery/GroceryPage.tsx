@@ -143,9 +143,9 @@ function Row({ item, listId, onEdit }: { item: GroceryItem; listId: string; onEd
           tap()
           void m.toggle(item)
         }}
-        className={cn('press flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-2 ring-inset transition-colors duration-200', item.purchased ? 'bg-accent text-accent-ink ring-accent' : 'ring-dot')}
+        className={cn('press flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-2 ring-inset transition-colors duration-200', item.purchased ? 'pulse-once bg-accent text-accent-ink ring-accent' : 'ring-dot')}
       >
-        {item.purchased && <Icon name="check" size={16} className="animate-[pop_160ms_var(--ease-out)]" />}
+        {item.purchased && <span className="icon-swap flex"><Icon name="check" size={16} /></span>}
       </button>
       <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left">
         <span className={cn('block font-semibold transition-colors', item.purchased && 'text-muted line-through')}>

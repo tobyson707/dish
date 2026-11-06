@@ -80,7 +80,7 @@ function Editor({ initial }: { initial: Draft }) {
                 <Icon name="down" size={18} className={`transition-transform ${open === key ? 'rotate-180' : ''}`} />
               </button>
             </h2>
-            {open === key && <div className="px-4 pb-5 animate-[rise_200ms_var(--ease-out)]"><Step d={d} set={(p) => setD((x) => ({ ...x, ...p }))} errors={errors} mealNames={mealNames} ingredientNames={ingredientNames} /></div>}
+            {open === key && <div className="px-4 pb-5 animate-[rise_var(--dur-fast)_var(--ease-enter)]"><Step d={d} set={(p) => setD((x) => ({ ...x, ...p }))} errors={errors} mealNames={mealNames} ingredientNames={ingredientNames} /></div>}
           </section>
         ))}
       </div>

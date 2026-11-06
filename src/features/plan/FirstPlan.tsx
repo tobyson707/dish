@@ -83,7 +83,7 @@ export function FirstPlan() {
         <div role="status" aria-live="polite" className="flex flex-col items-center">
           <div className="grid grid-cols-7 gap-1.5" aria-hidden="true">
             {Array.from({ length: 21 }).map((_, i) => (
-              <span key={i} className={i === 10 ? 'h-4 w-4 rounded-full bg-accent animate-[pop_500ms_var(--ease-out)_both]' : 'h-4 w-4 rounded-full bg-ink animate-[pop_500ms_var(--ease-out)_both]'} style={{ animationDelay: `${i * 40}ms` }} />
+              <span key={i} className={i === 10 ? 'h-4 w-4 rounded-full bg-accent animate-[pop_var(--dur-celebrate)_var(--ease-enter)_both]' : 'h-4 w-4 rounded-full bg-ink animate-[pop_var(--dur-celebrate)_var(--ease-enter)_both]'} style={{ animationDelay: `${i * 40}ms` }} />
             ))}
           </div>
           <h1 className="mt-8 text-title-2">{MESSAGES[msg]}</h1>
