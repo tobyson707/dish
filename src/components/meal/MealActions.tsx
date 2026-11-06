@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/Button'
 import { Sheet } from '@/components/ui/Sheet'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Icon, type IconName } from '@/components/ui/Icon'
-import { Select, TextField } from '@/components/ui/Field'
+import { Select } from '@/components/ui/Field'
 import { Stepper } from '@/components/ui/Inputs'
 import { Notice, Skeleton } from '@/components/ui/States'
 import { FoodImage } from '@/components/ui/FoodImage'
@@ -22,6 +22,7 @@ import { formatCostRange, formatKcal, formatMinutes } from '@/lib/format'
 import { tap } from '@/platform/haptics'
 import { cn } from '@/lib/cn'
 import { DateField } from '@/components/ui/DateField'
+import { TimeField } from '@/components/ui/TimePicker'
 
 type Panel = 'menu' | 'replace' | 'move' | 'portion' | null
 
@@ -206,7 +207,7 @@ function MovePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void }) 
     <div className="flex flex-col gap-4">
       <DateField label="Day" value={date} onChange={(d) => d && setDate(d)} />
       <Select label="Meal" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot)} options={(meal.food_item ? occasionsFor(meal.food_item.food_type) : MEAL_SLOTS).map((s) => ({ value: s, label: SLOT_LABEL[s] }))} />
-      <TextField label="Time (optional)" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+      <TimeField label="Time (optional)" optional value={time || null} fallback={({ breakfast: '08:00', lunch: '13:00', snack: '16:00', dinner: '19:00', drink: '15:00' } as Record<MealSlot, string>)[slot]} onChange={(v) => setTime(v ?? '')} />
       <Button
         block
         disabled={!date}

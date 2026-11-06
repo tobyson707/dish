@@ -12,6 +12,7 @@ import { currencySymbol } from '@/lib/format'
 import { cn } from '@/lib/cn'
 import { PLANNING_GOALS, PLANNING_GOAL_LABEL, type AllergyStatus } from '@/types/db'
 import type { Draft } from './draft'
+import { TimeField } from '@/components/ui/TimePicker'
 
 export interface StepProps {
   d: Draft
@@ -263,7 +264,7 @@ export function StepPlanning({ d, set, errors }: StepProps) {
       </div>
       <div className="grid grid-cols-2 gap-3">
         {d.meal_slots.map((s: MealSlot) => (
-          <TextField key={s} label={`${SLOT_LABEL[s]} time`} type="time" value={d.meal_times[s] ?? ''} onChange={(e) => set({ meal_times: { ...d.meal_times, [s]: e.target.value } })} />
+          <TimeField key={s} label={`${SLOT_LABEL[s]} time`} value={d.meal_times[s] || null} fallback={({ breakfast: '08:00', lunch: '13:00', snack: '16:00', dinner: '19:00', drink: '15:00' } as Record<MealSlot, string>)[s]} onChange={(v) => set({ meal_times: { ...d.meal_times, [s]: v ?? '' } })} optional />
         ))}
       </div>
       <div className="flex flex-col gap-2">

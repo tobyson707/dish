@@ -531,3 +531,21 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
   a[href], button:not(:disabled), [role='button'], [role='tab'], [role='option'], [role='radio'], [role='switch'], summary, label[for] { cursor: pointer; }
   button, [role='button'], [role='tab'], [role='radio'], [role='switch'], nav a, summary { -webkit-user-select: none; user-select: none; }
 }
+
+/* Time picker wheels: no scrollbar, rows fade towards the edges */
+.wheel-scroll {
+  scrollbar-width: none;
+  mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 30%, #000 70%, transparent);
+}
+.wheel-scroll::-webkit-scrollbar {
+  display: none;
+}
+.wheel-row {
+  transition: color var(--dur-micro) var(--ease-move), font-weight var(--dur-micro) var(--ease-move);
+}
+@media (prefers-reduced-motion: reduce) {
+  .wheel-row {
+    transition: none;
+  }
+}

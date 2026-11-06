@@ -17,6 +17,7 @@ import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/St
 import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
 import { MealActionsSheet } from '@/components/meal/MealActions'
+import { formatTime } from '@/lib/time'
 
 export function PlannedMealPage() {
   const { id } = useParams()
@@ -37,7 +38,7 @@ export function PlannedMealPage() {
 
   return (
     <div>
-      <PageHeader back eyebrow={`${SLOT_LABEL[m.slot]} · ${dayLabel(m.date, today)}${m.scheduled_time ? ` · ${m.scheduled_time.slice(0, 5)}` : ''}`} title={m.name} actions={<IconButton icon="dots" label="More actions" onClick={() => setActions(true)} />} />
+      <PageHeader back eyebrow={`${SLOT_LABEL[m.slot]} · ${dayLabel(m.date, today)}${m.scheduled_time ? ` · ${formatTime(m.scheduled_time)}` : ''}`} title={m.name} actions={<IconButton icon="dots" label="More actions" onClick={() => setActions(true)} />} />
       {/* circle → rounded-rect reveal, echoing the reference motion */}
       <div className="origin-left animate-[pop_var(--dur-standard)_var(--ease-enter)_both]">
         <FoodImage path={m.food_item?.image_path} alt={m.food_item?.image_alt} name={m.name} className="aspect-[4/3] w-full rounded-xl transition-[border-radius] duration-500" width={960} priority />
