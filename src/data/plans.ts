@@ -44,7 +44,7 @@ export function usePlannedMeals(from: string, to: string, opts: { enabled?: bool
     meta: persistMeta(uid),
     enabled: opts.enabled ?? true,
     queryFn: async () => {
-      const { data, error } = await supabase.from('planned_meals').select(PM_SELECT).eq('user_id', uid).gte('date', from).lte('date', to).order('date').order('scheduled_time', { nullsFirst: false })
+      const { data, error } = await supabase.from('planned_meals').select(PM_SELECT).eq('user_id', uid).eq('on_calendar', true).gte('date', from).lte('date', to).order('date').order('scheduled_time', { nullsFirst: false })
       if (error) throw error
       return (data ?? []) as PlannedMeal[]
     },

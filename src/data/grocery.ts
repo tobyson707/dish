@@ -125,7 +125,7 @@ export function useGenerateGroceryList() {
   return useMutation({
     mutationFn: async ({ from, to, listId, name, catalogue, excludeKitchen }: { from: string; to: string; listId?: string; name?: string; catalogue: FoodItem[]; excludeKitchen: boolean }): Promise<GenerateResult> => {
       const [{ data: meals, error: e1 }, { data: kitchen, error: e2 }] = await Promise.all([
-        supabase.from('planned_meals').select('*').eq('user_id', uid).gte('date', from).lte('date', to).neq('status', 'skipped'),
+        supabase.from('planned_meals').select('*').eq('user_id', uid).eq('on_calendar', true).gte('date', from).lte('date', to).neq('status', 'skipped'),
         supabase.from('kitchen_inventory').select('*').eq('user_id', uid).is('used_at', null),
       ])
       if (e1) throw e1

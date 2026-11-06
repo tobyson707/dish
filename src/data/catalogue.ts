@@ -3,9 +3,10 @@ import { supabase } from '@/lib/supabase'
 import type { CatalogueMeal } from '@domain/types.ts'
 import type { FoodItem, Ingredient } from '@/types/db'
 import { qk } from './keys'
+import { countryByCode } from '@/lib/geo'
 
 const SELECT =
-  '*, recipe:recipes(id, food_item_id, servings, steps, tips, source, recipe_ingredients(id, quantity, unit, note, optional, sort, ingredient:ingredients(id, slug, name, category, allergens, default_unit)))'
+  '*, recipe:recipes(id, food_item_id, servings, steps, tips, source, recipe_ingredients(id, quantity, unit, note, optional, sort, prep_state, substitutions, ingredient:ingredients(id, slug, name, category, allergens, default_unit)))'
 
 /** Whole public catalogue. Small, stable and cached offline. */
 export function useCatalogue() {
@@ -61,6 +62,8 @@ export function toCatalogueMeal(f: FoodItem): CatalogueMeal {
     carbs_g: f.carbs_g,
     fat_g: f.fat_g,
     nutrition_source: f.nutrition_source,
+    verification_status: f.verification_status,
+    recipe_servings: f.recipe?.servings ?? 1,
     ingredients: (f.recipe?.recipe_ingredients ?? []).map((ri) => ({
       ingredient_id: ri.ingredient.id,
       name: ri.ingredient.name,
@@ -69,8 +72,15 @@ export function toCatalogueMeal(f: FoodItem): CatalogueMeal {
       unit: ri.unit,
       optional: ri.optional,
       allergens: ri.ingredient.allergens,
+      substitutions: ri.substitutions ?? [],
     })),
   }
+}
+
+/** Everything a person might search a dish by: name, other names, cuisine, origin. */
+export function searchText(f: Pick<FoodItem, 'name' | 'cuisine' | 'description' | 'alt_names' | 'countries' | 'region'>): string {
+  const countries = (f.countries ?? []).map((c) => countryByCode(c)?.name ?? c)
+  return [f.name, ...(f.alt_names ?? []), f.cuisine, ...countries, f.region ?? '', f.description].join(' ').toLowerCase()
 }
 
 export const CUISINES = ['Nigerian', 'West African', 'British', 'American', 'Italian', 'Spanish', 'Mediterranean', 'Indian', 'Asian', 'Mexican', 'International']

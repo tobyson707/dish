@@ -35,7 +35,7 @@ Deno.serve(
         const qs = toMin(p.quiet_start), qe = toMin(p.quiet_end)
         if (qs < qe ? nowMin >= qs && nowMin < qe : nowMin >= qs || nowMin < qe) continue
       }
-      const { data: meals } = await svc.from('planned_meals').select('id, name, slot, scheduled_time, method').eq('user_id', p.user_id).eq('date', today).eq('status', 'planned').not('scheduled_time', 'is', null)
+      const { data: meals } = await svc.from('planned_meals').select('id, name, slot, scheduled_time, method').eq('user_id', p.user_id).eq('on_calendar', true).eq('date', today).eq('status', 'planned').not('scheduled_time', 'is', null)
       for (const m of meals ?? []) {
         const at = toMin(String(m.scheduled_time))
         const lead = p.prep_reminders && m.method === 'cook' ? p.lead_minutes : 0

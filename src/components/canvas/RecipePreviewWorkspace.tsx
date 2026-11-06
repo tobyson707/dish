@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { isIncomplete } from '@/features/recipes/RecordStatus'
 import { Link } from 'react-router'
 import { checkAllergy } from '@domain/allergens.ts'
 import { formatQuantity } from '@domain/units.ts'
@@ -50,11 +51,15 @@ function Preview({ f, onClose }: { f: FoodItem; onClose: () => void }) {
       <h2 className="mt-1 text-title-2 leading-[1.05] text-on-glass-dark">{f.name}</h2>
       {f.description && <p className="mt-3 text-callout leading-relaxed text-on-glass-dark-muted">{f.description}</p>}
 
-      <dl className="num mt-5 grid grid-cols-3 gap-2 text-center">
+      {isIncomplete(f) ? (
+        <p className="mt-5 rounded-[18px] bg-white/[0.05] p-3 text-footnote text-on-glass-dark-muted ring-1 ring-inset ring-white/10">
+          Recipe not recorded yet. We know this dish, but its ingredients, quantities and method aren't in DISH yet, so there's no time, nutrition or cost to show.
+        </p>
+      ) : <dl className="num mt-5 grid grid-cols-3 gap-2 text-center">
         <Fact icon="clock" label="Time" value={mins != null ? `${mins} min` : 'Buy'} />
         <Fact icon="flame" label="Energy" value={f.calories != null ? `≈ ${f.calories} kcal` : '–'} />
         <Fact icon="wallet" label="Cost" value={formatCostRange(f.est_cost_min, f.est_cost_max, f.cost_currency || currency)} />
-      </dl>
+      </dl>}
 
       {verdict && (
         <p className={cn('mt-4 flex items-start gap-2 rounded-[18px] p-3 text-footnote', verdict.status === 'conflict' ? 'bg-[var(--c-error)]/25 text-on-glass-dark' : 'bg-white/[0.05] text-on-glass-dark-muted')}>
@@ -62,7 +67,7 @@ function Preview({ f, onClose }: { f: FoodItem; onClose: () => void }) {
           {verdict.status === 'conflict'
             ? `Contains ${verdict.hits.join(', ')} (on your allergy list).`
             : verdict.status === 'unknown'
-              ? 'Ingredient list is incomplete, so allergens can’t be ruled out.'
+              ? (isIncomplete(f) ? 'Ingredients aren’t recorded yet, so allergens can’t be checked.' : 'Ingredient list is incomplete, so allergens can’t be ruled out.')
               : 'No known conflict with your allergies in the listed ingredients. Always check.'}
         </p>
       )}

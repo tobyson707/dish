@@ -275,12 +275,18 @@ function drawHeader(ctx: Ctx, model: ExportModel, assets: ExportAssets) {
   spacing(ctx, 0)
   ctx.fillStyle = C.onInk
   ctx.font = `800 96px ${SANS}`
-  ctx.fillText(model.title, tx, 240)
+  if (ctx.measureText(model.title).width > maxW) ctx.font = `800 60px ${SANS}` // long plan names
+  ctx.fillText(wrap(ctx, model.title, maxW, 1)[0]!, tx, 240)
   let y = 240
   if (model.preparedFor) {
     ctx.font = `600 30px ${SANS}`
     ctx.fillStyle = C.onInk
     ctx.fillText(wrap(ctx, `Prepared for ${model.preparedFor}`, maxW, 1)[0]!, tx, (y += 50))
+  }
+  if (model.attribution) {
+    ctx.font = `500 21px ${SANS}`
+    ctx.fillStyle = C.onInkMuted
+    ctx.fillText(wrap(ctx, model.attribution, maxW, 1)[0]!, tx, (y += 36))
   }
   ctx.font = `400 21px ${SANS}`
   ctx.fillStyle = C.onInkMuted
@@ -306,10 +312,10 @@ function drawHeader(ctx: Ctx, model: ExportModel, assets: ExportAssets) {
 function drawSmallHeader(ctx: Ctx, model: ExportModel) {
   ctx.fillStyle = C.ink
   ctx.font = `800 36px ${SANS}`
-  ctx.fillText(model.title, M, 82)
+  ctx.fillText(wrap(ctx, model.title, PAGE_W * 0.5, 1)[0]!, M, 82)
   ctx.font = `600 17px ${SANS}`
   ctx.fillStyle = C.muted
-  const right = [model.preparedFor && `Prepared for ${model.preparedFor}`, model.shortRange].filter(Boolean).join(' · ')
+  const right = [model.attribution ?? (model.preparedFor && `Prepared for ${model.preparedFor}`), model.shortRange].filter(Boolean).join(' · ')
   ctx.textAlign = 'right'
   ctx.fillText(right, PAGE_W - M, 80)
   ctx.textAlign = 'left'
@@ -496,13 +502,13 @@ function weekHeights(ctx: Ctx, week: GridWeek, colW: number, model: ExportModel)
 function drawGridTitle(ctx: Ctx, model: ExportModel, w: number) {
   ctx.fillStyle = C.ink
   ctx.font = `800 46px ${SANS}`
-  ctx.fillText(model.title, M, 96)
+  ctx.fillText(wrap(ctx, model.title, w * 0.45, 1)[0]!, M, 96)
   ctx.fillStyle = C.accent
   ctx.fillRect(M, 116, 56, 4)
   ctx.font = `600 19px ${SANS}`
   ctx.fillStyle = C.muted
   ctx.textAlign = 'right'
-  ctx.fillText([model.preparedFor && `Prepared for ${model.preparedFor}`, model.rangeLabel].filter(Boolean).join(' · '), w - M, 92)
+  ctx.fillText([model.attribution ?? (model.preparedFor && `Prepared for ${model.preparedFor}`), model.rangeLabel].filter(Boolean).join(' · '), w - M, 92)
   if (model.note) {
     ctx.font = `500 17px ${SANS}`
     ctx.fillText(wrap(ctx, `“${model.note}”`, w * 0.5, 1)[0]!, w - M, 120)

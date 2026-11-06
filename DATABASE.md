@@ -110,3 +110,35 @@ The starter catalogue is **sample / reference data**:
 
 ## Developer Mode (`supabase/functions/dev-tools`)
 No tables of its own. Disabled unless the function's environment has `DISH_DEV_TOOLS=enabled` (set by `scripts/local-stack.sh`; never set it on a hosted project you use for real people). Test accounts carry `app_metadata.dish_test = true` (set with the service role; users can't change app metadata), and every state-changing action refuses any other account.
+
+## Catalogue provenance (migration `20261109000050_catalogue_provenance.sql`)
+- `food_items`: `alt_names`, `countries` (ISO alpha-2), `region`, `verification_status` (`verified | partial | awaiting_review | incomplete | unverified`), `provenance`, `source_refs` (jsonb `[{label, url, checked}]`), `last_reviewed_at`.
+- `recipe_ingredients`: `prep_state`, `substitutions` (named by the recipe source; drives "variations" in Use what you have).
+- The 71 starter recipes are `awaiting_review`: they were written by DISH and have not been checked against a published source.
+- 67 new dishes (Nigeria, the rest of West Africa, East/Southern/North Africa, Europe, Asia, the Middle East and the Americas) are `incomplete`. Each has a name, origin, occasion, a short description and a reference to check (`checked: false`). No ingredients, quantities, nutrition, prices or times are recorded, so none are shown. They are discoverable in search, never planned (`exclusionReason` returns `incomplete`), never suggested in the kitchen, and never presented as allergen-free.
+- To complete a record, a reviewer adds the recipe rows, sets `verification_status`, marks the checked `source_refs` and sets `last_reviewed_at`.
+
+## Plans, collaboration and community (migration `20261109000100_plans_collaboration_community.sql`)
+- `meal_plans`: `description`, `budget_amount`, `status` (`draft | active | archived`; one `active` per person, enforced by a unique index), `visibility` (`private | published`), `published_at`, `version`, `remix_of`, `remix_root`, `remix_attribution`, `allow_remix`, `unpublished_reason`.
+- `planned_meals.on_calendar`: maintained by triggers. It is true for free-standing meals, meals of the current plan, and anything already eaten or skipped. Every calendar, grocery, reminder and history query filters on it, so drafts never touch the calendar. `updated_by` records attribution.
+- `plan_members` (contributor | viewer). `plan_role(plan)` and `plan_is_published(plan)` are SECURITY DEFINER helpers used by RLS:
+  - Members and (for published plans) everyone signed in can read.
+  - Only owners change plans.
+  - Contributors insert, update and delete meals; the rows stay owned by the plan owner. A trigger stops non-owners from changing status (eaten or skipped) or moving meals between plans.
+  - People join only through `accept_plan_invite`.
+- `plan_invites`:
+  - Only the sha256 hash of the 48-hex secret is stored.
+  - Each invite can be limited to one email address, expires after 1 to 30 days, is revocable and works once.
+  - Functions: `create_plan_invite`, `peek_plan_invite` (no private data) and `accept_plan_invite`.
+- `plan_activity` and `plan_revisions`:
+  - A trigger logs every meal change and bumps `version`.
+  - Before the first change in any 30 minutes, it takes a snapshot of the plan.
+  - `restore_plan_revision` is owner-only. It snapshots first, so a restore can be undone, and keeps eaten and skipped meals.
+- Community:
+  - `plan_publish_issues` checks for: no meals, uncovered days, hand-typed meals, incomplete catalogue records, and beverages in the wrong slot.
+  - `publish_plan` is explicit and re-checks on the server.
+  - `community_plans` shows the creator's first name only.
+  - `plan_saves` and `plan_reports` (one per person per plan).
+  - `moderate_plan` (admins) removes a plan from the community and records a reason the owner sees.
+  - `copy_plan` serves both Duplicate and Remix. It creates a new private draft owned by the caller, shifted to the chosen start date, with lineage and "Original by …". The source plan is never changed.
+- Gamification: `gamify_on_planned_meal` now ignores edits made by someone other than the owner, and counts only `on_calendar` meals towards daily completion.

@@ -213,3 +213,19 @@ Hidden. Revealed by pressing F9 twice within 600ms (desktop; ignored while typin
 - **Simulated time**: an app-level clock (`appToday`) used by `useToday`, with day jumps, a custom date, time zone, leap-year and year-end shortcuts and a persistent "Simulated date" pill. Ignored in production.
 - **Previews** (never saved): the real celebration overlay for every achievement and level (labelled "Preview"), toasts, confirmation dialog, empty, loading and plan-progress states.
 - **Simulation** (`supabase/functions/dev-tools`): off unless the deployment sets `DISH_DEV_TOOLS=enabled` (the local stack does; hosted projects must not). It creates dedicated test accounts (`app_metadata.dish_test`) and only ever changes those: streaks are replayed through `gamify_record_day` (milestone XP and achievements follow), XP totals drive the real level-up notifier, unlocks write the real row (duplicates prevented by the constraint), and scenarios reset the test account to known states (the weekly plan uses the real planner).
+
+## Named plans, collaboration and community (`src/features/plans/`, `src/data/planbook.ts`)
+- `/plans` (My plans: current, drafts, shared with me, archived), `/plans/:id` (meals, people, activity, versions; share and publish panels), `/invite/:token`, `/community`, `/community/:id`.
+- Creating a plan can make it current (the previous current plan becomes a draft; nothing is deleted) or save it as a draft. `plan-generate` only generates for the owner and plans around the slots that are already taken (calendar meals for the current plan, the plan's own meals for a draft).
+- A signed-out person opening an invite link is brought back to it after signing in or finishing onboarding (`Guards.tsx`).
+- Export takes an optional `plan`. It exports that plan's meals with its name and attribution ("Created by Ada with Bola", "Original by …"); plans longer than 31 days are exported in ranges.
+
+## Catalogue records and "Use what you have"
+- `RecordStatus` shows each record's verification status, origin, other names, provenance and references. Discover search reaches the whole catalogue (name, other names, cuisine, country, region) but never past an allergy.
+- `whatYouCanMake` (`_shared/domain/kitchen.ts`), pure and unit-tested:
+  - Runs `safetyScreen` first. Leftovers more than 3 days old or with no cooked date, and items past their date, are excluded with a reason; usable leftovers carry a caution.
+  - Then produces three tiers:
+    - Recognised recipes, with missing ingredients and quantity checks where units are comparable.
+    - Variations, only where the recipe names the swap.
+    - Plain "simple use-up ideas" that never name a dish.
+  - Allergies, diet and exclusions are hard filters, and incomplete records are never suggested.

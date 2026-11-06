@@ -299,7 +299,7 @@ test('discover, recipe detail, surprise, kitchen, budget, profile @responsive', 
     await page.getByLabel('Ingredient', { exact: true }).fill(item)
     await page.getByRole('button', { name: 'Add', exact: true }).click()
   }
-  await page.getByRole('button', { name: 'Find recipes' }).click()
+  await expect(page.getByRole('heading', { name: 'Use what you have' })).toBeVisible()
   await expect(page.getByText(/Missing \d+ ingredient|You have every listed/).first()).toBeVisible({ timeout: 20_000 })
   await page.screenshot({ path: shots('kitchen'), fullPage: true })
 

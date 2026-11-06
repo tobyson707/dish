@@ -10,7 +10,8 @@ describe('Developer Mode screen navigator', () => {
     for (const r of routes) expect(listed, `navigator is missing ${r}`).toContain(r)
   })
   it('detail screens say which record they need', () => {
-    for (const s of SCREENS) if (s.path.includes('/:')) expect(s.needs, s.id).toBeTruthy()
+    // the invitation link opens with a placeholder token on purpose (secret tokens are never listed)
+    for (const s of SCREENS) if (s.path.includes('/:') && s.id !== 'invite') expect(s.needs, s.id).toBeTruthy()
   })
   it('includes every onboarding step', () => {
     expect(SCREENS.filter((s) => s.path.startsWith('/onboarding?dev-step=')).length).toBe(10)

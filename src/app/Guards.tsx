@@ -11,7 +11,11 @@ export function RequireAuth({ children }: { children: ReactNode }) {
   const { session, loading, recovery } = useAuth()
   const loc = useLocation()
   if (loading) return <Splash />
-  if (!session) return <Navigate to="/welcome" replace state={{ from: loc.pathname }} />
+  if (!session) {
+    // an invitation link opened while signed out: come back to it after signing in (or signing up)
+    if (loc.pathname.startsWith('/invite/')) rememberReturn(loc.pathname)
+    return <Navigate to="/welcome" replace state={{ from: loc.pathname }} />
+  }
   if (recovery && loc.pathname !== '/reset-password') return <Navigate to="/reset-password" replace />
   return <>{children}</>
 }
@@ -19,6 +23,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 /** Sends users who haven't finished onboarding back to where they left off. */
 export function RequireOnboarded({ children }: { children: ReactNode }) {
   const profile = useProfile()
+  const loc = useLocation()
   if (profile.isPending) return <Splash />
   if (profile.isError)
     return (
@@ -27,6 +32,8 @@ export function RequireOnboarded({ children }: { children: ReactNode }) {
       </div>
     )
   if (!profile.data.onboarding_completed_at) return <Navigate to="/onboarding" replace />
+  const back = pendingReturn()
+  if (back && back !== loc.pathname) return <Navigate to={back} replace />
   return <>{children}</>
 }
 
@@ -38,4 +45,29 @@ export function RedirectIfAuthed({ children }: { children: ReactNode }) {
   if (getDev().revealed && new URLSearchParams(loc.search).has('dev-preview')) return <>{children}</>
   if (session && !recovery) return <Navigate to="/" replace />
   return <>{children}</>
+}
+
+const RETURN_KEY = 'dish:return-to'
+function rememberReturn(path: string) {
+  try {
+    sessionStorage.setItem(RETURN_KEY, path)
+  } catch {
+    /* storage unavailable: the person can open the link again */
+  }
+}
+function pendingReturn(): string | null {
+  try {
+    const v = sessionStorage.getItem(RETURN_KEY)
+    return v && v.startsWith('/invite/') ? v : null
+  } catch {
+    return null
+  }
+}
+/** The page the person was sent back to has opened: stop redirecting there. */
+export function clearReturn() {
+  try {
+    sessionStorage.removeItem(RETURN_KEY)
+  } catch {
+    /* nothing to clear */
+  }
 }

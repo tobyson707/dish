@@ -105,6 +105,8 @@ export function exclusionReason(meal: CatalogueMeal, ctx: FilterContext): Exclus
   // a beverage never fills a meal or snack, and a drink slot never gets food, even if data disagreed
   if (!fitsOccasion(meal.food_type, ctx.slot)) return 'slot'
   // HARD — never relaxed.
+  // a record without a recorded recipe is never put in a plan (its ingredients and allergens are unknown)
+  if (meal.verification_status === 'incomplete' || meal.verification_status === 'unverified') return 'incomplete'
   const allergy = checkAllergy(meal, { allergies: prefs.allergies, custom_allergies: prefs.custom_allergies })
   if (allergy.status !== 'no_known_conflict') return 'allergy'
   if (prefs.excluded_foods.some((x) => mentions(meal, x))) return 'excluded'

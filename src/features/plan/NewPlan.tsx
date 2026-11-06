@@ -43,6 +43,8 @@ export function NewPlan() {
   const [start, setStart] = useState(today)
   const [title, setTitle] = useState('')
   const [replace, setReplace] = useState(true)
+  const [description, setDescription] = useState('')
+  const [budget, setBudget] = useState('')
   const [err, setErr] = useState<string | null>(null)
   // once created, a retry only continues filling this plan (never creates another)
   const [created, setCreated] = useState<MealPlan | null>(null)
@@ -60,7 +62,7 @@ export function NewPlan() {
     let unfilled = 0
     try {
       if (!plan) {
-        const r = await gen.mutateAsync({ create: { duration, start_date: start, title: title || undefined, replace_active: replace }, today })
+        const r = await gen.mutateAsync({ create: { duration, start_date: start, title: title.trim() || undefined, description: description.trim() || undefined, budget_amount: budget ? Number(budget) : null, replace_active: replace }, today })
         plan = r.plan
         unfilled += r.unfilled.length
         setCreated(plan)
@@ -72,7 +74,7 @@ export function NewPlan() {
       }
       if (!isComplete(plan)) throw new Error('Part of the plan could not be saved.')
       toast.show(`Your ${PLAN_DURATION_LABEL[plan.duration].toLowerCase()} plan is ready.${unfilled ? ` We couldn't find a suitable meal for ${unfilled} slot${unfilled > 1 ? 's' : ''}; you can add those yourself.` : ''}`, { tone: 'success' })
-      nav(`/plan?date=${plan.start_date}`, { replace: true })
+      nav(plan.status === 'active' ? `/plan?date=${plan.start_date}` : `/plans/${plan.id}`, { replace: true })
     } catch (e) {
       setErr(friendlyError(e))
     }
@@ -107,14 +109,18 @@ export function NewPlan() {
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <DateField label="Start date" min={today} max={addDays(today, 60)} value={start} onChange={(d) => d && setStart(d)} markers={markers} hint={`Ends ${dayLabel(planEndDate(start, duration), today)}`} />
-            <TextField label="Name (optional)" placeholder="My meal plan" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={60} />
+            <TextField label="Name (optional)" placeholder="My meal plan" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={80} />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextField label="Description (optional)" placeholder="What this plan is for" value={description} onChange={(e) => setDescription(e.target.value)} maxLength={500} />
+            <TextField label="Budget for this plan (optional)" inputMode="decimal" placeholder="No budget" value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^0-9.]/g, ''))} />
           </div>
           {overlap > 0 && (
             <Notice icon="plan">
-              {overlap} day{overlap > 1 ? 's' : ''} in this period already {overlap > 1 ? 'have' : 'has'} meals. {replace && active.data ? 'Replacing your plan keeps eaten, skipped and locked meals and swaps the rest.' : 'New meals are added only where a slot is free; nothing you have is overwritten.'}
+              {overlap} day{overlap > 1 ? 's' : ''} in this period already {overlap > 1 ? 'have' : 'has'} meals. {replace && active.data ? 'Your current plan becomes a draft and its meals leave the calendar; eaten and skipped meals stay. Nothing is deleted.' : replace ? 'New meals are added only where a slot is free; nothing you have is overwritten.' : 'This plan is saved as a draft, so your calendar does not change until you make it current.'}
             </Notice>
           )}
-          {active.data && <Toggle label="Replace my current plan" description={`“${active.data.title}” will be archived. Meals you've eaten stay in your diary.`} checked={replace} onChange={setReplace} />}
+          {active.data && <Toggle label="Make it my current plan" description={replace ? `“${active.data.title}” becomes a draft. You can switch back any time in My plans.` : 'Saved as a draft in My plans. Your calendar stays as it is.'} checked={replace} onChange={setReplace} />}
           <Notice icon="sparkle">
             Meals come from DISH's catalogue, filtered by your allergies, preferences, budget and cooking time.{' '}
             {ai.data?.ai_configured ? 'AI helps rank the options for variety.' : 'AI ranking isn\'t set up on this server, so DISH uses its built-in planner.'} You can replace or lock any meal afterwards.

@@ -101,8 +101,8 @@ export function PlanPage() {
           <>
             <IconButton icon="download" label="Export meal plan" onClick={() => setExportOpen(true)} />
             <IconButton icon="cart" label="Shopping list" onClick={() => nav('/grocery')} />
-            <ButtonLink to="/plan/new" size="sm" variant="secondary" icon="plus">
-              New plan
+            <ButtonLink to="/plans" size="sm" variant="secondary" icon="plan">
+              My plans
             </ButtonLink>
           </>
         }

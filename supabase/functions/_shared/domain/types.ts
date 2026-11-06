@@ -173,6 +173,8 @@ export interface IngredientLine {
   unit: string | null
   optional?: boolean
   allergens?: string[]
+  /** other ingredients the recipe source names as alternatives */
+  substitutions?: string[]
 }
 
 /** The subset of a catalogue meal the pure domain logic needs. */
@@ -197,6 +199,10 @@ export interface CatalogueMeal extends Macros {
   ingredients: IngredientLine[]
   nutrition_source: NutritionSource
   food_type?: FoodType
+  /** how many the recipe serves (ingredient quantities are for this many) */
+  recipe_servings?: number
+  /** incomplete / unverified records are discoverable but never planned */
+  verification_status?: 'verified' | 'partial' | 'awaiting_review' | 'incomplete' | 'unverified'
 }
 
 export interface PreferenceSnapshot {

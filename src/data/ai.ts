@@ -49,7 +49,7 @@ export function useAIStatus() {
 }
 
 export interface GeneratePlanInput {
-  create?: { duration: PlanDuration; start_date: string; title?: string; replace_active?: boolean }
+  create?: { duration: PlanDuration; start_date: string; title?: string; description?: string; budget_amount?: number | null; replace_active?: boolean }
   plan_id?: string
   /** regenerate a range inside an existing plan; locked meals are kept */
   regenerate?: { from: string; to: string }

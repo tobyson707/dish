@@ -186,7 +186,7 @@ function ScreenRow({ s }: { s: ScreenEntry }) {
   )
 }
 
-const RECORD_LABEL: Record<RecordKind, string> = { planned_meal: 'planned meals', diary_entry: 'diary entries', grocery_list: 'shopping lists', recipe: 'catalogue meals' }
+const RECORD_LABEL: Record<RecordKind, string> = { planned_meal: 'planned meals', diary_entry: 'diary entries', grocery_list: 'shopping lists', recipe: 'catalogue meals', meal_plan: 'plans', published_plan: 'community plans' }
 
 /** Pick an existing record of yours for a detail screen (read-only). */
 function RecordPicker({ kind, onPick }: { kind: RecordKind; onPick: (value: string) => void }) {
@@ -199,8 +199,16 @@ function RecordPicker({ kind, onPick }: { kind: RecordKind; onPick: (value: stri
         return (data ?? []).map((r) => ({ value: r.slug as string, label: r.name as string }))
       }
       if (kind === 'planned_meal') {
-        const { data } = await supabase.from('planned_meals').select('id, name, date, slot').eq('user_id', uid).order('date', { ascending: false }).limit(30)
+        const { data } = await supabase.from('planned_meals').select('id, name, date, slot').eq('user_id', uid).eq('on_calendar', true).order('date', { ascending: false }).limit(30)
         return (data ?? []).map((r) => ({ value: r.id as string, label: `${r.date} · ${r.slot} · ${r.name}` }))
+      }
+      if (kind === 'meal_plan') {
+        const { data } = await supabase.from('meal_plans').select('id, title, status').eq('user_id', uid).order('updated_at', { ascending: false }).limit(30)
+        return (data ?? []).map((r) => ({ value: r.id as string, label: `${r.title} · ${r.status}` }))
+      }
+      if (kind === 'published_plan') {
+        const { data } = await supabase.from('meal_plans').select('id, title').eq('visibility', 'published').order('published_at', { ascending: false }).limit(30)
+        return (data ?? []).map((r) => ({ value: r.id as string, label: r.title as string }))
       }
       if (kind === 'diary_entry') {
         const { data } = await supabase.from('food_diary_entries').select('id, name, local_date').eq('user_id', uid).order('local_date', { ascending: false }).limit(30)

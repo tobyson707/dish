@@ -4,7 +4,9 @@ import { SLOT_LABEL } from '@domain/types.ts'
 import type { FoodItem } from '@/types/db'
 import { useFavourites, useToggleFavourite } from '@/data/favourites'
 import { usePreferences } from '@/data/profile'
-import { useCatalogue } from '@/data/catalogue'
+import { searchText, toCatalogueMeal, useCatalogue } from '@/data/catalogue'
+import { checkAllergy } from '@domain/allergens.ts'
+import { isIncomplete } from '@/features/recipes/RecordStatus'
 import { friendlyError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
 import { PageHeader } from '@/components/ui/Layout'
@@ -46,19 +48,26 @@ export function Discover() {
   const cat = useCatalogue()
   const ranked = useRankedMeals(category)
   const favs = useFavourites()
+  const prefs = usePreferences()
   const sentinel = useRef<HTMLDivElement>(null)
 
   const feed = useMemo(() => {
     const t = q.trim().toLowerCase()
     let list = ranked.items
-    if (t) list = list.filter((f) => `${f.name} ${f.cuisine} ${f.description}`.toLowerCase().includes(t))
+    if (t) {
+      // search reaches the whole catalogue (any country, and dishes whose recipe isn't recorded yet),
+      // but never past a known allergy
+      const ids = new Set(list.map((f) => f.id))
+      const extra = (cat.data ?? []).filter((f) => !ids.has(f.id) && (!prefs.data || checkAllergy(toCatalogueMeal(f), prefs.data).status !== 'conflict'))
+      list = [...list, ...extra].filter((f) => searchText(f).includes(t))
+    }
     if (onlyFavs) list = list.filter((f) => favs.data?.includes(f.id))
     // keep the best matches near the top, but vary the order between sessions
     const head = list.slice(0, 6)
     const unique = new Map<string, FoodItem>()
     for (const f of [...shuffled(head, seed), ...shuffled(list.slice(6), seed)]) unique.set(f.id, f)
     return [...unique.values()]
-  }, [ranked.items, q, onlyFavs, favs.data, seed])
+  }, [ranked.items, q, onlyFavs, favs.data, seed, cat.data, prefs.data])
 
   // reset paging when the feed's inputs change
   const key = `${category}|${q}|${onlyFavs}|${seed}`
@@ -87,6 +96,7 @@ export function Discover() {
       <nav aria-label="More ideas" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         <Shortcut to="/surprise" icon="sparkle" label="Surprise me" />
         <Shortcut to="/kitchen" icon="fridge" label="My kitchen" />
+        <Shortcut to="/community" icon="community" label="Shared plans" />
         <Shortcut to="/budget" icon="wallet" label="Budget" />
         <Shortcut to="/history" icon="history" label="History" />
       </nav>
@@ -170,7 +180,7 @@ function FeedItem({ food: f, index, category, favourite, onOpen }: { food: FoodI
         <button type="button" onClick={onOpen} className="min-w-0 flex-1 text-left">
           <h3 className="text-title-3 leading-snug">{f.name}</h3>
           <p className="num mt-0.5 text-footnote text-muted">
-            {mins != null ? `${mins} min` : 'Ready to buy'} · {SLOT_LABEL[slot]}
+            {isIncomplete(f) ? `${f.cuisine} · recipe not recorded yet` : <>{mins != null ? `${mins} min` : 'Ready to buy'} · {SLOT_LABEL[slot]}</>}
           </p>
         </button>
         <button

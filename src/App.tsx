@@ -21,6 +21,11 @@ const Onboarding = L(() => import('@/features/onboarding/Onboarding'), 'Onboardi
 const Home = L(() => import('@/features/home/Home'), 'Home')
 const PlanPage = L(() => import('@/features/plan/PlanPage'), 'PlanPage')
 const NewPlan = L(() => import('@/features/plan/NewPlan'), 'NewPlan')
+const PlansPage = L(() => import('@/features/plans/PlansPage'), 'PlansPage')
+const PlanDetail = L(() => import('@/features/plans/PlanDetail'), 'PlanDetail')
+const InvitePage = L(() => import('@/features/plans/InvitePage'), 'InvitePage')
+const CommunityPage = L(() => import('@/features/plans/CommunityPage'), 'CommunityPage')
+const CommunityPlanPage = L(() => import('@/features/plans/CommunityPlanPage'), 'CommunityPlanPage')
 const FirstPlan = L(() => import('@/features/plan/FirstPlan'), 'FirstPlan')
 const PlannedMealPage = L(() => import('@/features/plan/PlannedMealPage'), 'PlannedMealPage')
 const GroceryPage = L(() => import('@/features/grocery/GroceryPage'), 'GroceryPage')
@@ -80,6 +85,11 @@ const router = createBrowserRouter([
       { path: '/', element: <Home /> },
       { path: '/plan', element: <PlanPage /> },
       { path: '/plan/new', element: <NewPlan /> },
+      { path: '/plans', element: <PlansPage /> },
+      { path: '/plans/:id', element: <PlanDetail /> },
+      { path: '/invite/:token', element: <InvitePage /> },
+      { path: '/community', element: <CommunityPage /> },
+      { path: '/community/:id', element: <CommunityPlanPage /> },
       { path: '/meal/:id', element: <PlannedMealPage /> },
       { path: '/grocery', element: <GroceryPage /> },
       { path: '/grocery/:listId', element: <GroceryPage /> },

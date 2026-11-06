@@ -15,7 +15,17 @@ const ISO = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
 const Body = z
   .object({
     today: ISO,
-    create: z.object({ duration: z.enum(PLAN_DURATIONS), start_date: ISO, title: z.string().max(60).optional(), replace_active: z.boolean().optional() }).optional(),
+    create: z
+      .object({
+        duration: z.enum(PLAN_DURATIONS),
+        start_date: ISO,
+        title: z.string().max(80).optional(),
+        description: z.string().max(500).optional(),
+        budget_amount: z.number().min(0).max(1e9).nullable().optional(),
+        /** make this the current plan (the one on the calendar); the previous current plan becomes a draft */
+        replace_active: z.boolean().optional(),
+      })
+      .optional(),
     plan_id: z.string().guid().optional(),
     regenerate: z.object({ from: ISO, to: ISO }).optional(),
     next_block: z.boolean().optional(),
@@ -43,35 +53,40 @@ Deno.serve(
     if (body.create) {
       const c = body.create
       if (c.start_date < addDays(body.today, -1) || c.start_date > addDays(body.today, 60)) throw new HttpError(400, 'Choose a start date between today and two months from now.', 'validation')
-      let replaced: string[] = []
-      if (c.replace_active) {
-        const { data: old, error } = await db.from('meal_plans').update({ status: 'archived' }).eq('user_id', user.id).eq('status', 'active').select('id')
+      // Only one plan is current (on the calendar). Making a new one current turns the
+      // previous one into a draft: nothing is deleted, its meals simply leave the calendar.
+      const { data: current } = await db.from('meal_plans').select('id').eq('user_id', user.id).eq('status', 'active').maybeSingle()
+      const makeCurrent = c.replace_active === true || !current
+      if (makeCurrent && current) {
+        const { error } = await db.from('meal_plans').update({ status: 'draft' }).eq('id', current.id)
         if (error) throw error
-        replaced = (old ?? []).map((r) => r.id as string)
       }
       const end = planEndDate(c.start_date, c.duration)
       const { data, error } = await db
         .from('meal_plans')
-        .insert({ user_id: user.id, title: c.title?.trim() || 'My meal plan', duration: c.duration, start_date: c.start_date, end_date: end, generated_through: addDays(c.start_date, -1) })
+        .insert({
+          user_id: user.id,
+          title: c.title?.trim() || 'My meal plan',
+          description: c.description?.trim() || null,
+          budget_amount: c.budget_amount ?? null,
+          status: makeCurrent ? 'active' : 'draft',
+          duration: c.duration,
+          start_date: c.start_date,
+          end_date: end,
+          generated_through: addDays(c.start_date, -1),
+        })
         .select('*')
         .single()
       if (error) throw error
       plan = data
-      if (replaced.length) {
-        // The replaced plan's still-planned future meals would otherwise sit in the new
-        // plan's slots. Eaten and skipped meals stay (they're history); locked ones are
-        // the person's own choice, so they move to the new plan and are planned around.
-        const { error: delErr } = await db.from('planned_meals').delete().in('plan_id', replaced).eq('status', 'planned').eq('locked', false).gte('date', c.start_date)
-        if (delErr) throw delErr
-        const { error: movErr } = await db.from('planned_meals').update({ plan_id: data.id }).in('plan_id', replaced).eq('status', 'planned').eq('locked', true).gte('date', c.start_date).lte('date', end)
-        if (movErr) throw movErr
-      }
       const blk = nextBlock(c.start_date, end, null, c.duration === 'day' ? 1 : Math.min(body.days ?? 7, 31))!
       ;({ start: from, end: to } = blk)
       mode = 'create'
     } else {
       const { data, error } = await db.from('meal_plans').select('*').eq('id', body.plan_id!).single()
       if (error || !data) throw new HttpError(404, 'That plan was not found.', 'not_found')
+      // shared plans: contributors edit meals, but only the owner generates (it uses the owner's preferences)
+      if (data.user_id !== user.id) throw new HttpError(403, 'Only the plan owner can generate meals for this plan.', 'forbidden')
       plan = data
       if (body.next_block) {
         const blk = nextBlock(data.start_date, data.end_date, data.generated_through, body.days ?? 7)
@@ -92,7 +107,10 @@ Deno.serve(
       }
     }
 
-    const { data: existing, error: exErr } = await db.from('planned_meals').select('date, slot, food_item_id, locked').eq('user_id', user.id).gte('date', from).lte('date', to)
+    // slots already taken: the current plan shares the calendar with free-standing meals; a draft only has its own
+    let exQ = db.from('planned_meals').select('date, slot, food_item_id, locked').eq('user_id', user.id).gte('date', from).lte('date', to)
+    exQ = plan.status === 'active' ? exQ.eq('on_calendar', true) : exQ.eq('plan_id', plan.id as string)
+    const { data: existing, error: exErr } = await exQ
     if (exErr) throw exErr
 
     // ── Deterministic selection ────────────────────────────────────────────
