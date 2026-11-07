@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router'
 import type { FoodItem } from '@/types/db'
 import { useCatalogue, useIngredients } from '@/data/catalogue'
 import { Workspace } from '@/components/ui/Workspace'
+import { friendlyError } from '@/lib/errors'
+import { DrawerMealsGhost } from '@/components/ui/Ghost'
 import { Icon } from '@/components/ui/Icon'
 import { MealOptionList } from './MealOptionList'
 import { useAddToToday } from './useAddToToday'
@@ -59,10 +61,18 @@ export function SearchWorkspace({ open, onClose }: { open: boolean; onClose: () 
       <div className="mt-6" aria-live="polite">
         {q.trim().length < 2 ? (
           <p className="text-sm text-on-glass-dark-muted">Try “jollof”, “plantain”, “eggs” or “Italian”.</p>
+        ) : cat.isPending ? (
+          <DrawerMealsGhost count={4} />
+        ) : cat.isError && !cat.data ? (
+          <div role="alert" className="text-sm text-on-glass-dark-muted">
+            <p className="font-semibold text-on-glass-dark">Search isn't ready yet</p>
+            <p className="mt-1">{friendlyError(cat.error)}</p>
+            <button type="button" onClick={() => void cat.refetch()} className="press mt-3 inline-flex h-10 items-center gap-1.5 rounded-full bg-on-glass-dark px-4 text-sm font-bold text-on-glass-dark-ink"><Icon name="refresh" size={16} /> Try again</button>
+          </div>
         ) : meals.length + byIngredient.length === 0 ? (
           <p className="text-sm text-on-glass-dark-muted">No meals or recipes match “{q}”.</p>
         ) : (
-          <>
+          <div className="ghost-reveal">
             {meals.length > 0 && (
               <section aria-label="Meals and recipes">
                 <h3 className="mb-3 text-micro font-semibold uppercase tracking-[0.14em] text-on-glass-dark-muted">Meals & recipes</h3>
@@ -75,7 +85,7 @@ export function SearchWorkspace({ open, onClose }: { open: boolean; onClose: () 
                 <MealOptionList items={byIngredient} onOpen={openRecipe} onAdd={addFood} busyId={busy ? busyId : null} addedIds={added} />
               </section>
             )}
-          </>
+          </div>
         )}
       </div>
     </Workspace>

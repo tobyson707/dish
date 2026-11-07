@@ -47,7 +47,9 @@ export function useRankedMeals(slot: MealSlot | 'all' | null) {
       }
     return out
   }, [slot, cat.data, prefs.data, today, profile.data?.currency, goal.data?.goal])
-  return { items, pending: cat.isPending || prefs.isPending }
+  // first load only: a refresh keeps showing what is there
+  const failed = (cat.isError && !cat.data) || (prefs.isError && !prefs.data)
+  return { items, pending: !failed && (cat.isPending || prefs.isPending), error: failed ? (cat.error ?? prefs.error) : null, retry: () => void Promise.all([cat.refetch(), prefs.refetch()]) }
 }
 
 /** The meal slot that fits the current local time. */

@@ -8,10 +8,11 @@ import { cn } from '@/lib/cn'
 import { SearchInput, Select } from '@/components/ui/Field'
 import { Icon } from '@/components/ui/Icon'
 import { SaveToggle } from '@/components/ui/ActionButton'
-import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/States'
 import { PlanCover } from './PlanCover'
 import { COVER_ASPECT } from './CoverEditor'
 import { CopyPlan } from './PlanActions'
+import { CommunityPlansGhost, REVEAL } from '@/components/ui/Ghost'
 
 const LENGTHS: { value: string; label: string; f: Pick<CommunityFilter, 'minDays' | 'maxDays'> }[] = [
   { value: '', label: 'Any length', f: {} },
@@ -48,13 +49,13 @@ export function CommunityPlans() {
       </div>
       <div className="mt-5">
         {plans.isPending ? (
-          <div className="grid gap-5 sm:grid-cols-2">{[0, 1].map((i) => <Skeleton key={i} className="h-72 rounded-[26px]" />)}</div>
-        ) : plans.isError ? (
+          <CommunityPlansGhost />
+        ) : plans.isError && !plans.data ? (
           <ErrorState message={friendlyError(plans.error)} onRetry={() => plans.refetch()} />
         ) : list.length === 0 ? (
           <EmptyState icon="community" title="No meal plans match" message="Try fewer filters, or publish one of your own from your plan's Share menu." action={<Link to="/plans" className="press inline-flex h-11 items-center rounded-full bg-ink px-5 text-sm font-bold text-on-ink">My plans</Link>} />
         ) : (
-          <ul className="grid gap-x-5 gap-y-7 sm:grid-cols-2" aria-label="Published meal plans">
+          <ul className={cn('grid gap-x-5 gap-y-7 sm:grid-cols-2', REVEAL)} aria-label="Published meal plans">
             {list.map((p, i) => <PlanCard key={p.id} plan={p} saved={!!saved.data?.has(p.id)} index={i} onRemix={() => setRemix(p)} />)}
           </ul>
         )}

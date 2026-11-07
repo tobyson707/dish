@@ -8,7 +8,8 @@ import { draftFrom, persistDraft, type Draft } from '@/features/onboarding/draft
 import { StepAvoid, StepBudget, StepCooking, StepCuisines, StepName, StepPlace, StepPlanning, StepTaste, validateStep } from '@/features/onboarding/Steps'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/Layout'
-import { ErrorState, LoadingBlock } from '@/components/ui/States'
+import { ErrorState } from '@/components/ui/States'
+import { GhostRegion, HeaderGhost, ListRowsGhost } from '@/components/ui/Ghost'
 import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
@@ -28,7 +29,7 @@ export function PreferencesPage() {
   const profile = useProfile()
   const prefs = usePreferences()
   const goal = useActiveGoal()
-  if (profile.isPending || prefs.isPending || goal.isPending) return <div className="pt-16"><LoadingBlock /></div>
+  if (profile.isPending || prefs.isPending || goal.isPending) return <GhostRegion label="Loading your preferences"><HeaderGhost /><ListRowsGhost rows={4} icon={false} /></GhostRegion>
   if (profile.isError || prefs.isError) return <ErrorState message={friendlyError(profile.error ?? prefs.error)} onRetry={() => { void profile.refetch(); void prefs.refetch() }} />
   return <Editor initial={draftFrom(profile.data, prefs.data, goal.data ?? null)} />
 }

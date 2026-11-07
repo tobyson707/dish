@@ -4,13 +4,14 @@ import { useAuth } from '@/features/auth/AuthProvider'
 import { useProfile } from '@/data/profile'
 import { ErrorState } from '@/components/ui/States'
 import { friendlyError } from '@/lib/errors'
-import { Splash } from '@/features/auth/Splash'
+import { PageGhost } from '@/components/ui/Ghost'
 import { getDev } from '@/dev/devStore'
 
 export function RequireAuth({ children }: { children: ReactNode }) {
   const { session, loading, recovery } = useAuth()
   const loc = useLocation()
-  if (loading) return <Splash />
+  // nothing protected is rendered until the session is known (the launch screen covers this)
+  if (loading) return null
   if (!session) {
     // an invitation link opened while signed out: come back to it after signing in (or signing up)
     if (loc.pathname.startsWith('/invite/')) rememberReturn(loc.pathname)
@@ -24,7 +25,7 @@ export function RequireAuth({ children }: { children: ReactNode }) {
 export function RequireOnboarded({ children }: { children: ReactNode }) {
   const profile = useProfile()
   const loc = useLocation()
-  if (profile.isPending) return <Splash />
+  if (profile.isPending) return <PageGhost />
   if (profile.isError)
     return (
       <div className="mx-auto max-w-md px-4 pt-24">
@@ -40,7 +41,7 @@ export function RequireOnboarded({ children }: { children: ReactNode }) {
 export function RedirectIfAuthed({ children }: { children: ReactNode }) {
   const { session, loading, recovery } = useAuth()
   const loc = useLocation()
-  if (loading) return <Splash />
+  if (loading) return null
   // Developer Mode screen navigator: view sign-in screens while signed in (explicit flag only)
   if (getDev().revealed && new URLSearchParams(loc.search).has('dev-preview')) return <>{children}</>
   if (session && !recovery) return <Navigate to="/" replace />

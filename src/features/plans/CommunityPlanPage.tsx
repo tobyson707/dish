@@ -11,7 +11,8 @@ import { Button, ButtonLink } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/Layout'
 import { Select, TextField } from '@/components/ui/Field'
 import { Sheet } from '@/components/ui/Sheet'
-import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
+import { EmptyState, ErrorState, Notice } from '@/components/ui/States'
+import { DayListGhost, GhostRegion, PublishedPlanGhost } from '@/components/ui/Ghost'
 import { useToast } from '@/components/ui/Toast'
 import type { PlannedMeal } from '@/types/db'
 import { CopyPlan } from './PlanActions'
@@ -43,7 +44,7 @@ export function CommunityPlanPage() {
     return [...m.entries()]
   }, [meals.data])
 
-  if (q.isPending) return <div className="pt-16"><LoadingBlock /></div>
+  if (q.isPending) return <PublishedPlanGhost />
   if (q.isError) return <div className="pt-16"><ErrorState message={friendlyError(q.error)} onRetry={() => q.refetch()} /></div>
   if (!plan || (plan.visibility !== 'published' && !q.data?.role)) return <EmptyState className="mt-16" icon="community" title="This plan isn’t shared any more" message="Its creator may have removed it from the community." action={<ButtonLink to="/discover?tab=plans">Browse meal plans</ButtonLink>} />
   const mine = q.data?.role === 'owner'
@@ -75,7 +76,7 @@ export function CommunityPlanPage() {
       {!plan.allow_remix && !mine && <p className="mt-2 text-footnote text-muted">The creator hasn’t allowed remixing for this plan.</p>}
 
       <section className="mt-6" aria-label="Meals">
-        {meals.isPending ? <LoadingBlock /> : days.length === 0 ? <p className="text-sm text-muted">No meals.</p> : (
+        {meals.isPending ? <GhostRegion label="Loading meals"><DayListGhost /></GhostRegion> : days.length === 0 ? <p className="text-sm text-muted">No meals.</p> : (
           <div className="flex flex-col gap-4">
             {days.slice(0, PREVIEW_DAYS).map(([date, list], i) => (
               <div key={date}>

@@ -9,10 +9,11 @@ import { friendlyError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
 import { PageHeader } from '@/components/ui/Layout'
 import { FoodImage } from '@/components/ui/FoodImage'
-import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/States'
 import { SaveToggle } from '@/components/ui/ActionButton'
 import { RecipePreviewWorkspace } from '@/components/canvas/RecipePreviewWorkspace'
 import { PlanCover } from '@/features/plans/PlanCover'
+import { REVEAL, SavedPlansGhost, SquareMealsGhost } from '@/components/ui/Ghost'
 
 type Tab = 'meals' | 'plans'
 
@@ -62,12 +63,12 @@ function SavedMeals() {
     const byId = new Map((cat.data ?? []).map((f) => [f.id, f]))
     return (favs.data ?? []).map((id) => byId.get(id)).filter((f): f is FoodItem => !!f)
   }, [favs.data, cat.data])
-  if (favs.isPending || cat.isPending) return <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="aspect-square rounded-[24px]" />)}</div>
-  if (favs.isError) return <ErrorState message={friendlyError(favs.error)} onRetry={() => favs.refetch()} />
+  if (favs.isError && !favs.data) return <ErrorState message={friendlyError(favs.error)} onRetry={() => favs.refetch()} />
+  if (favs.isPending || (cat.isPending && (favs.data?.length ?? 0) > 0)) return <SquareMealsGhost count={Math.min(6, Math.max(2, favs.data?.length ?? 4))} />
   if (!items.length) return <EmptyState icon="heart" title="No saved meals yet" message="Tap the heart on any meal in Discover or on a recipe to keep it here." />
   return (
     <>
-      <ul className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3" aria-label="Saved meals">
+      <ul className={cn('grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3', REVEAL)} aria-label="Saved meals">
         {items.map((f, i) => (
           <li key={f.id} className="enter-item" style={{ ['--i' as string]: i }}>
             <div className="relative">
@@ -92,11 +93,11 @@ function SavedMeals() {
 
 function SavedPlans() {
   const plans = useMySavedPlans()
-  if (plans.isPending) return <div className="grid gap-4 sm:grid-cols-2">{[0, 1].map((i) => <Skeleton key={i} className="h-56 rounded-[24px]" />)}</div>
-  if (plans.isError) return <ErrorState message={friendlyError(plans.error)} onRetry={() => plans.refetch()} />
+  if (plans.isPending) return <SavedPlansGhost />
+  if (plans.isError && !plans.data) return <ErrorState message={friendlyError(plans.error)} onRetry={() => plans.refetch()} />
   if (!plans.data?.length) return <EmptyState icon="community" title="No saved plans yet" message="Save a meal plan from Discover to keep it here." action={<Link to="/discover?tab=plans" className="press inline-flex h-11 items-center rounded-full bg-ink px-5 text-sm font-bold text-on-ink">Browse meal plans</Link>} />
   return (
-    <ul className="grid gap-4 sm:grid-cols-2" aria-label="Saved meal plans">
+    <ul className={cn('grid gap-4 sm:grid-cols-2', REVEAL)} aria-label="Saved meal plans">
       {plans.data.map((p, i) => <SavedPlanCard key={p.id} plan={p} index={i} />)}
     </ul>
   )

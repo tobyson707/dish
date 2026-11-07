@@ -7,6 +7,7 @@ import { formatTime } from '@/lib/time'
 import { FoodImage, HeroFood } from '@/components/ui/FoodImage'
 import { Icon } from '@/components/ui/Icon'
 import { Spinner } from '@/components/ui/Spinner'
+import { FeaturedGhost } from '@/components/ui/Ghost'
 import { useAddToToday } from './useAddToToday'
 
 /** One featured item: a meal on today's plan, or a suggestion from the recommendation engine. */
@@ -69,17 +70,17 @@ export function FeaturedMealCarousel({ items, loading, footer }: { items: Featur
           if (Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(e.clientY - s.y)) go(dx < 0 ? 1 : -1)
         }}
       >
-        {loading ? (
-          <div className="aspect-square w-full animate-pulse rounded-full bg-[var(--c-glass)]" />
-        ) : cur && img ? (
+        {loading ? null : cur && img ? (
           <div key={cur.key} className="feat-in" style={{ ['--feat-dir' as string]: dir }}>
             <HeroFood path={img.path} slug={img.slug} name={nameOf(cur)} className="aspect-square w-full" />
           </div>
         ) : null}
       </div>
 
+      {loading && <FeaturedGhost />}
+
       {/* what it is, and the one thing to do with it */}
-      <div className="feat-info absolute z-20" aria-live="polite">
+      <div className={cn('feat-info absolute z-20', loading && 'hidden')} aria-live="polite">
         {cur && (
           <div key={cur.key} className="feat-in" style={{ ['--feat-dir' as string]: dir }}>
             <p className="text-footnote font-semibold text-ink-2">{cur.label}</p>
@@ -115,7 +116,7 @@ export function FeaturedMealCarousel({ items, loading, footer }: { items: Featur
         {footer && <div className="mt-4">{footer}</div>}
       </div>
 
-      {items.length > 1 && (
+      {items.length > 1 && !loading && (
         <div role="group" aria-label="Featured meals" className="feat-nav absolute z-20 flex items-center gap-1 rounded-full bg-glass p-1 ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-md">
           <button type="button" onClick={() => go(-1)} aria-label="Previous suggestion" className="press flex h-11 w-11 items-center justify-center rounded-full bg-[var(--c-elevated)] text-accent-strong shadow-[0_6px_16px_-8px_var(--c-shadow)]">
             <Icon name="left" size={20} />

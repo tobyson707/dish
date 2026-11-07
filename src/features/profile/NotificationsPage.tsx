@@ -6,7 +6,8 @@ import { WEEKDAY_ABBR } from '@domain/dates.ts'
 import { PageHeader } from '@/components/ui/Layout'
 import { Toggle } from '@/components/ui/Inputs'
 import { Select } from '@/components/ui/Field'
-import { ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
+import { ErrorState, Notice } from '@/components/ui/States'
+import { GhostRegion, HeaderGhost, ListRowsGhost } from '@/components/ui/Ghost'
 import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
 import { TimeField } from '@/components/ui/TimePicker'
@@ -40,7 +41,7 @@ export function NotificationsPage() {
     }
   }
 
-  if (prefs.isPending) return <div className="pt-16"><LoadingBlock /></div>
+  if (prefs.isPending) return <GhostRegion label="Loading reminders"><HeaderGhost /><ListRowsGhost rows={4} icon={false} /></GhostRegion>
   if (prefs.isError) return <ErrorState message={friendlyError(prefs.error)} onRetry={() => prefs.refetch()} />
   const p = prefs.data
   return (
