@@ -11,8 +11,11 @@ import { SetupRequired } from '@/app/SetupRequired'
 import { UpdatePrompt } from '@/app/UpdatePrompt'
 import { ThemeProvider } from '@/theme/ThemeProvider'
 import { ThemeSync } from '@/theme/ThemeSync'
+import { BootSplash } from '@/app/BootSplash'
 
 const queryClient = makeQueryClient()
+// without a backend there is no session to wait for: drop the launch backdrop at once
+if (!isSupabaseConfigured) document.getElementById('boot')?.remove()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -20,6 +23,7 @@ createRoot(document.getElementById('root')!).render(
     {isSupabaseConfigured ? (
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
+          <BootSplash />
           <ThemeSync />
           <ToastProvider>
             <App />

@@ -56,7 +56,7 @@ export function weekRangeLabel(start: ISODate): string {
  * under each day, one small mark per expected meal (filled for each planned meal, accent
  * once eaten). Moving week slides the days in the direction of travel.
  */
-export function DateStrip({ selected, today, onSelect, marks, onPrev, onNext }: { selected: ISODate; today: ISODate; onSelect: (d: ISODate) => void; marks?: Record<ISODate, DayMark>; onPrev?: () => void; onNext?: () => void }) {
+export function DateStrip({ selected, today, onSelect, marks, loading, onPrev, onNext }: { selected: ISODate; today: ISODate; onSelect: (d: ISODate) => void; marks?: Record<ISODate, DayMark>; loading?: boolean; onPrev?: () => void; onNext?: () => void }) {
   const start = startOfWeek(selected)
   const days = Array.from({ length: 7 }, (_, i) => addDays(start, i))
   const [shown, setShown] = useState({ start, dir: 0 })
@@ -102,6 +102,7 @@ export function DateStrip({ selected, today, onSelect, marks, onPrev, onNext }: 
                 <span className={cn('text-micro font-semibold', isSel ? 'text-on-ink/75' : isToday ? 'text-accent-strong' : 'text-muted')}>{WEEKDAY_SHORT[i]}</span>
                 <span className="num text-callout font-bold leading-none">{Number(d.slice(8))}</span>
                 <span className="flex h-1.5 items-center gap-0.5" aria-hidden="true">
+                  {loading && !m && Array.from({ length: 3 }, (_, k) => <span key={k} className="ghost h-1 w-1.5 rounded-full" />)}
                   {Array.from({ length: slots }, (_, k) => {
                     const filled = k < (m?.meals ?? 0)
                     const eaten = k < (m?.done ?? 0)

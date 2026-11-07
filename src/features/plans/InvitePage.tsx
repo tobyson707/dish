@@ -6,7 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { friendlyError } from '@/lib/errors'
 import { Button, ButtonLink } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/Layout'
-import { EmptyState, LoadingBlock, Notice } from '@/components/ui/States'
+import { EmptyState, Notice } from '@/components/ui/States'
+import { Ghost, GhostRegion, GhostText } from '@/components/ui/Ghost'
 import { useToast } from '@/components/ui/Toast'
 
 const PROBLEM: Record<string, { title: string; message: string }> = {
@@ -25,7 +26,7 @@ export function InvitePage() {
   const accept = useAcceptInvite()
   useEffect(() => clearReturn(), [])
 
-  if (peek.isPending) return <div className="pt-16"><LoadingBlock /></div>
+  if (peek.isPending) return <div className="pt-10"><GhostRegion label="Checking the invitation"><Ghost className="mx-auto h-14 w-14 rounded-full" /><GhostText size="title2" width="60%" className="mx-auto mt-5" /><GhostText width="80%" className="mx-auto mt-2" /><Ghost className="mx-auto mt-6 h-12 w-48 rounded-full" /></GhostRegion></div>
   const info = peek.data
   if (peek.isError || !info || info.status !== 'valid') {
     const p = PROBLEM[info?.status ?? 'invalid'] ?? PROBLEM.invalid!

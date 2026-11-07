@@ -19,7 +19,8 @@ import { Sheet } from '@/components/ui/Sheet'
 import { NutritionSummary } from '@/components/ui/Nutrition'
 import { WeekBars } from '@/components/ui/Charts'
 import { ProvenanceBadge } from '@/components/ui/Badges'
-import { EmptyState, ErrorState, LoadingBlock } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/States'
+import { DiaryGhost } from '@/components/ui/Ghost'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
@@ -57,7 +58,7 @@ export function DiaryPage() {
       <DateStrip selected={date} today={today} onSelect={setDate} onPrev={() => setDate(addDays(date, -7))} onNext={() => setDate(addDays(date, 7))} />
 
       {week.isPending ? (
-        <div className="mt-6"><LoadingBlock /></div>
+        <DiaryGhost />
       ) : week.isError && !week.data ? (
         <ErrorState className="mt-6" message={friendlyError(week.error)} onRetry={() => week.refetch()} />
       ) : (

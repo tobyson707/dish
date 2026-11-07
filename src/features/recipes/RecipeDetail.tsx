@@ -21,7 +21,8 @@ import { ProvenanceBadge, Tag } from '@/components/ui/Badges'
 import { Stepper } from '@/components/ui/Inputs'
 import { Sheet } from '@/components/ui/Sheet'
 import { Select, TextField } from '@/components/ui/Field'
-import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
+import { EmptyState, ErrorState, Notice } from '@/components/ui/States'
+import { MealDetailGhost } from '@/components/ui/Ghost'
 import { useToast } from '@/components/ui/Toast'
 import { DateField } from '@/components/ui/DateField'
 import { RecordStatus, isIncomplete } from './RecordStatus'
@@ -42,7 +43,7 @@ export function RecipeDetail() {
   const [priceOpen, setPriceOpen] = useState(false)
   const food = useMemo(() => cat.data?.find((f) => f.slug === slug), [cat.data, slug])
 
-  if (cat.isPending) return <div className="pt-16"><LoadingBlock /></div>
+  if (cat.isPending) return <MealDetailGhost aspect="aspect-[4/5] max-h-[62dvh] sm:aspect-[16/10] sm:max-h-none" label="Loading recipe" />
   if (cat.isError && !cat.data) return <div className="pt-16"><ErrorState message={friendlyError(cat.error)} onRetry={() => cat.refetch()} /></div>
   if (!food) return <EmptyState title="Recipe not found" message="It may have been removed." />
 

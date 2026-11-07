@@ -23,6 +23,8 @@ export interface DishCalendarProps {
   max?: ISODate
   /** meal indicators from real saved data: day marks (meals, expected, done) or simple states */
   markers?: Record<ISODate, DayState | DayMark>
+  /** meal indicators are still loading: date cells shimmer quietly until they arrive */
+  markersLoading?: boolean
   /** controlled month (any date inside it); uncontrolled when omitted */
   month?: ISODate
   onMonthChange?: (m: ISODate) => void
@@ -36,7 +38,7 @@ export interface DishCalendarProps {
  * Keyboard: arrows move a day / week, Page Up/Down a month, Home/End the week,
  * Enter or Space selects.
  */
-export function DishCalendar({ today, value, range, onChange, onRangeChange, min, max, markers, month: monthProp, onMonthChange, className }: DishCalendarProps) {
+export function DishCalendar({ today, value, range, onChange, onRangeChange, min, max, markers, markersLoading, month: monthProp, onMonthChange, className }: DishCalendarProps) {
   const anchor = value ?? range?.from ?? today
   const [ownMonth, setOwnMonth] = useState(startOfMonth(anchor))
   const month = monthProp ? startOfMonth(monthProp) : ownMonth
@@ -109,7 +111,7 @@ export function DishCalendar({ today, value, range, onChange, onRangeChange, min
         <IconButton icon="left" label="Previous month" size={40} onClick={() => setMonth(addMonths(month, -1))} disabled={!prevOk} />
         <IconButton icon="right" label="Next month" size={40} onClick={() => setMonth(addMonths(month, 1))} disabled={!nextOk} />
       </div>
-      <div role="grid" aria-labelledby={headingId} ref={grid} className="flex flex-col gap-1">
+      <div role="grid" aria-labelledby={headingId} aria-busy={markersLoading || undefined} ref={grid} className="flex flex-col gap-1">
         <div role="row" className="grid grid-cols-7 gap-1">
           {WEEKDAYS.map((w) => (
             <span key={w} role="columnheader" aria-label={w} className="py-1 text-center text-caption font-semibold text-muted">
@@ -144,7 +146,8 @@ export function DishCalendar({ today, value, range, onChange, onRangeChange, min
                       d === today && !sel && 'ring-2 ring-inset ring-accent',
                     )}
                   >
-                    <span className="num leading-none">{Number(d.slice(8))}</span>
+                    {markersLoading && !sel && !off && <span aria-hidden="true" className="ghost absolute inset-0 rounded-[14px] opacity-80" />}
+                    <span className="num relative leading-none">{Number(d.slice(8))}</span>
                     {cov === 'partial' && <span aria-hidden="true" className={cn('absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full border', sel ? 'border-accent-ink' : 'border-ink/60')} />}
                     {allDone && <span aria-hidden="true" className={cn('absolute bottom-1.5 h-1 w-1 rounded-full', sel ? 'bg-accent-ink' : 'bg-accent')} />}
                   </button>

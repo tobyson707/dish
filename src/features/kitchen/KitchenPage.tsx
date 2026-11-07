@@ -14,7 +14,8 @@ import { PageHeader, Section } from '@/components/ui/Layout'
 import { TextField } from '@/components/ui/Field'
 import { Toggle } from '@/components/ui/Inputs'
 import { Sheet } from '@/components/ui/Sheet'
-import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
+import { EmptyState, ErrorState, Notice } from '@/components/ui/States'
+import { KitchenGhost } from '@/components/ui/Ghost'
 import { useToast } from '@/components/ui/Toast'
 import { DateField } from '@/components/ui/DateField'
 import { UseWhatYouHave } from './UseWhatYouHave'
@@ -40,7 +41,7 @@ export function KitchenPage() {
       </div>
 
       {kitchen.isPending ? (
-        <div className="mt-6"><LoadingBlock /></div>
+        <KitchenGhost />
       ) : kitchen.isError && !kitchen.data ? (
         <ErrorState className="mt-6" message={friendlyError(kitchen.error)} onRetry={() => kitchen.refetch()} />
       ) : items.length === 0 ? (

@@ -13,7 +13,8 @@ import { Button, ButtonLink, IconButton } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/Layout'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { ProvenanceBadge, Tag } from '@/components/ui/Badges'
-import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
+import { EmptyState, ErrorState, Notice } from '@/components/ui/States'
+import { MealDetailGhost } from '@/components/ui/Ghost'
 import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
 import { MealActionsSheet } from '@/components/meal/MealActions'
@@ -36,7 +37,7 @@ export function PlannedMealPage() {
   const food = useMemo(() => catalogue.data?.find((f) => f.id === meal.data?.food_item_id) ?? null, [catalogue.data, meal.data])
   const verdict = food && prefs.data ? checkAllergy(toCatalogueMeal(food), prefs.data) : null
 
-  if (meal.isPending) return <div className="pt-16"><LoadingBlock /></div>
+  if (meal.isPending) return <MealDetailGhost />
   if (meal.isError && !meal.data) return <div className="pt-16"><ErrorState message={friendlyError(meal.error)} onRetry={() => meal.refetch()} /></div>
   const m = meal.data
   if (!m) return <EmptyState title="Meal not found" message="It may have been removed or replaced." action={<ButtonLink to="/plan">Back to plan</ButtonLink>} />

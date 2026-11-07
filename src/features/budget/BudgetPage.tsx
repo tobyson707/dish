@@ -17,7 +17,8 @@ import { PageHeader, Section } from '@/components/ui/Layout'
 import { Segmented } from '@/components/ui/Inputs'
 import { Select, TextField } from '@/components/ui/Field'
 import { Sheet } from '@/components/ui/Sheet'
-import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
+import { EmptyState, ErrorState, Notice } from '@/components/ui/States'
+import { BudgetGhost } from '@/components/ui/Ghost'
 import { useToast } from '@/components/ui/Toast'
 import { DateField } from '@/components/ui/DateField'
 
@@ -69,7 +70,7 @@ export function BudgetPage() {
         {dateRange(from, to)}
       </p>
       {planned.isPending || records.isPending || prefs.isPending ? (
-        <div className="mt-6"><LoadingBlock /></div>
+        <BudgetGhost />
       ) : (planned.isError && !planned.data) || (records.isError && !records.data) ? (
         <ErrorState className="mt-6" message={friendlyError(planned.error ?? records.error)} onRetry={() => { void planned.refetch(); void records.refetch() }} />
       ) : (

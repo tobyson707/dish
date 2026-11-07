@@ -7,6 +7,7 @@ import { PLANNING_GOAL_LABEL } from '@/types/db'
 import { useAuth } from '@/features/auth/AuthProvider'
 import { useSyncState } from '@/offline/useSync'
 import { PageHeader } from '@/components/ui/Layout'
+import { GhostRegion, HeaderGhost, ProfileCardGhost } from '@/components/ui/Ghost'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
 import { InstallCard } from './InstallCard'
@@ -28,8 +29,15 @@ export function ProfilePage() {
   const isAdmin = useIsAdmin()
   return (
     <div>
+      {profile.isPending ? (
+        <GhostRegion label="Loading your profile">
+          <HeaderGhost large />
+          <ProfileCardGhost />
+        </GhostRegion>
+      ) : (
+        <>
       <PageHeader eyebrow={user?.email ?? ''} title={p?.display_name || 'Profile'} large />
-      <div className="flex items-center gap-4 rounded-[28px] bg-[var(--c-nav)] p-5 text-on-glass-dark">
+      <div className="ghost-reveal flex items-center gap-4 rounded-[28px] bg-[var(--c-nav)] p-5 text-on-glass-dark">
         {/* the avatar has no other job, so it hosts the hidden five-tap Developer Mode gesture */}
         <DevTapTarget className="shrink-0">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-on-glass-dark text-title-2 font-extrabold text-on-glass-dark-ink">{(p?.display_name?.[0] ?? '•').toUpperCase()}</span>
@@ -39,6 +47,8 @@ export function ProfilePage() {
           <p className="truncate font-bold">{goals.length ? PLANNING_GOAL_LABEL[goals[0]!] + (goals.length > 1 ? ` +${goals.length - 1}` : '') : 'No goals chosen yet'}</p>
         </div>
       </div>
+        </>
+      )}
       <MyProgress />
       <nav aria-label="Profile settings" className="mt-8">
         <ul className="divide-y divide-line overflow-hidden rounded-lg bg-elevated">

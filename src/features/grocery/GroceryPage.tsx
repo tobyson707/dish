@@ -18,7 +18,8 @@ import { Select, TextField } from '@/components/ui/Field'
 import { Segmented, Toggle } from '@/components/ui/Inputs'
 import { Sheet } from '@/components/ui/Sheet'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
+import { EmptyState, ErrorState, Notice } from '@/components/ui/States'
+import { ShoppingListGhost } from '@/components/ui/Ghost'
 import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
 import { tap } from '@/platform/haptics'
@@ -55,6 +56,9 @@ export function GroceryPage() {
   const total = items.data?.length ?? 0
   const bought = groups.done.length
 
+  // the list's own name and dates are the header: until they're known, the whole page is a ghost
+  if (lists.isPending) return <ShoppingListGhost withHeader />
+
   return (
     <div>
       <PageHeader
@@ -63,9 +67,7 @@ export function GroceryPage() {
         title={list?.name ?? 'Shopping list'}
         actions={lists.data && lists.data.length > 0 && <IconButton icon="dots" label="Manage lists" onClick={() => setManageOpen(true)} />}
       />
-      {lists.isPending ? (
-        <LoadingBlock />
-      ) : lists.isError && !lists.data ? (
+      {lists.isError && !lists.data ? (
         <ErrorState message={friendlyError(lists.error)} onRetry={() => lists.refetch()} />
       ) : !listId ? (
         <EmptyState
@@ -103,9 +105,9 @@ export function GroceryPage() {
             )}
           </div>
           {items.isPending ? (
-            <div className="mt-6">
-              <LoadingBlock />
-            </div>
+            <ShoppingListGhost rowsOnly />
+          ) : items.isError && !items.data ? (
+            <ErrorState className="mt-6" message={friendlyError(items.error)} onRetry={() => items.refetch()} />
           ) : total === 0 ? (
             <EmptyState title="Your list is empty" message="Add items with the bar below, or build the list from your meal plan." />
           ) : (

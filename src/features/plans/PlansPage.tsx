@@ -10,9 +10,10 @@ import { ButtonLink } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/Layout'
 import { SearchInput, Select } from '@/components/ui/Field'
 import { Icon } from '@/components/ui/Icon'
-import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/States'
 import { PlanActions } from './PlanActions'
 import { PlanCover } from './PlanCover'
+import { PlanCardsGhost, REVEAL } from '@/components/ui/Ghost'
 
 type Section = 'mine' | 'shared'
 type Filter = 'all' | 'active' | 'draft' | 'completed' | 'archived' | 'shared'
@@ -107,7 +108,7 @@ export function PlansPage() {
 
       <div className="mt-5">
         {plans.isPending ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-64 rounded-[24px]" />)}</div>
+          <PlanCardsGhost />
         ) : plans.isError ? (
           <ErrorState message={friendlyError(plans.error)} onRetry={() => plans.refetch()} />
         ) : list.length === 0 ? (
@@ -118,7 +119,7 @@ export function PlansPage() {
             action={section === 'mine' && filter !== 'archived' ? <ButtonLink to="/plan/new" icon="plus">New plan</ButtonLink> : undefined}
           />
         ) : (
-          <ul aria-label="Plans" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul aria-label="Plans" className={cn('grid gap-4 sm:grid-cols-2 lg:grid-cols-3', REVEAL)}>
             {list.map((p, i) => <PlanCard key={p.id} plan={p} index={i} today={today} onMenu={() => setMenu(p)} />)}
           </ul>
         )}
