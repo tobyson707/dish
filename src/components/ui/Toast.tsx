@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react'
 import { cn } from '@/lib/cn'
+import { play } from '@/lib/uiSound'
 import { Icon } from './Icon'
 
 type Tone = 'info' | 'success' | 'error'
@@ -24,6 +25,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const dismiss = useCallback((id: number) => setItems((xs) => xs.filter((x) => x.id !== id)), [])
   const show = useCallback<ToastApi['show']>(
     (message, opts = {}) => {
+      if (opts.tone === 'error') play('error') // every error is heard once, from here
       const id = ++seq.current
       setItems((xs) => [...xs.slice(-2), { id, message, tone: opts.tone ?? 'info', action: opts.action }])
       setTimeout(() => dismiss(id), opts.duration ?? (opts.action ? 6000 : 3500))

@@ -52,3 +52,5 @@ verify_jwt = true
 verify_jwt = true
 [functions.send-reminders]
 verify_jwt = true
+[functions.account-purge]
+verify_jwt = true

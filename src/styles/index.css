@@ -448,7 +448,7 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
 :root {
   --canvas-m: 8px; /* canvas and drawer inset from the screen edges */
   --canvas-r: 34px; /* canvas and drawer corner radius */
-  --sel-w: 48px; /* the category selector's width */
+  --sel-w: 48px; /* the category selector's width (the slot holds a vertical name) */
   --notch-depth: 62px; /* how far the selector's notch curves into the canvas */
   --notch-fillet: 18px; /* the rounded shoulder where the canvas edge turns into the notch */
   --nav-btn: 60px; /* floating navigation button */
@@ -495,40 +495,64 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
 /* over the open drawer the notch steps back: only the selector itself remains */
 .sel-notch[data-over-drawer] { background-color: transparent; }
 .sel-notch[data-over-drawer]::before, .sel-notch[data-over-drawer]::after { opacity: 0; }
-/* the category wheel: items fade towards its ends; the active name opens out to the
-   left of the selection slot once the wheel is at rest (one name at a time) */
+/* the category wheel: icons fade towards its ends; the active category's name lives inside
+   the selection slot, set vertically (read bottom to top), never outside the wheel */
 .sel-wheel {
-  mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
-  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 22%, #000 78%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 18%, #000 82%, transparent);
 }
-.sel-tag { display: grid; grid-template-columns: 0fr; opacity: 0; transition: grid-template-columns var(--dur-fast-exit) var(--ease-exit), opacity var(--dur-micro) var(--ease-exit); }
-.sel-tag[data-on] { grid-template-columns: 1fr; opacity: 1; transition: grid-template-columns var(--dur-standard) var(--ease-enter), opacity var(--dur-fast) var(--ease-enter) 40ms; }
-.sel-tag > * { min-width: 0; overflow: hidden; }
-.sel-tag-text { animation: fade var(--dur-fast) var(--ease-enter) both; }
+.sel-name {
+  position: absolute; left: 0; right: 0; top: 46px; bottom: 12px;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+  color: var(--c-accent-ink);
+  opacity: 0; clip-path: inset(0 0 100% 0);
+  transition: opacity var(--dur-micro) var(--ease-exit), clip-path var(--dur-fast-exit) var(--ease-exit);
+}
+.sel-name[data-on] {
+  opacity: 1; clip-path: inset(0 0 0 0);
+  transition: opacity var(--dur-fast) var(--ease-enter) 40ms, clip-path var(--dur-standard) var(--ease-enter);
+}
+.sel-name-text {
+  writing-mode: vertical-rl; transform: rotate(180deg);
+  font-size: 0.8125rem; font-weight: 800; letter-spacing: 0.01em; line-height: 1; white-space: nowrap;
+  animation: fade var(--dur-fast) var(--ease-enter) both;
+}
 
-/* Floating navigation button: a solid, raised control with a soft top light; its three
-   lines fold into a close mark while the panel is open */
+/* Floating navigation button: a raised squircle with a soft top light. Its mark is four
+   small squares (all of DISH) that fold into a close cross while the panel is open. */
 .nav-fab {
+  border-radius: 22px;
   box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.12), 0 0 0 1px rgb(255 255 255 / 0.08), 0 18px 36px -14px var(--c-shadow), 0 4px 10px -4px rgb(0 0 0 / 0.25);
+  transition-property: scale, border-radius, background-color, color, box-shadow;
 }
-.nav-fab[data-open] { background: var(--c-ink); color: var(--c-on-ink); }
-.nav-burger { position: relative; display: block; width: 22px; height: 16px; }
-.nav-burger > span {
-  position: absolute; left: 0; height: 2px; width: 22px; border-radius: 2px; background: currentColor;
-  transition: translate var(--dur-standard) var(--ease-move), rotate var(--dur-standard) var(--ease-move), opacity var(--dur-fast) var(--ease-move), width var(--dur-standard) var(--ease-move);
+.nav-fab[data-open] { background: var(--c-ink); color: var(--c-on-ink); border-radius: 50%; }
+.nav-mark { position: relative; display: block; width: 22px; height: 22px; }
+.nav-mark > span {
+  position: absolute; width: 8px; height: 8px; border-radius: 2.5px; background: currentColor;
+  transition: translate var(--dur-standard) var(--ease-move), rotate var(--dur-standard) var(--ease-move), width var(--dur-standard) var(--ease-move), height var(--dur-standard) var(--ease-move), border-radius var(--dur-standard) var(--ease-move);
 }
-.nav-burger > span:nth-child(1) { top: 0; }
-.nav-burger > span:nth-child(2) { top: 7px; }
-.nav-burger > span:nth-child(3) { top: 14px; width: 14px; }
-.nav-fab[data-open] .nav-burger > span:nth-child(1) { translate: 0 7px; rotate: 45deg; }
-.nav-fab[data-open] .nav-burger > span:nth-child(2) { opacity: 0; }
-.nav-fab[data-open] .nav-burger > span:nth-child(3) { translate: 0 -7px; rotate: -45deg; width: 22px; }
+.nav-mark > span:nth-child(1) { left: 1px; top: 1px; }
+.nav-mark > span:nth-child(2) { right: 1px; top: 1px; }
+.nav-mark > span:nth-child(3) { left: 1px; bottom: 1px; }
+.nav-mark > span:nth-child(4) { right: 1px; bottom: 1px; }
+/* open: each square becomes one arm of a cross meeting in the middle */
+.nav-fab[data-open] .nav-mark > span { width: 3px; height: 12px; border-radius: 2px; }
+.nav-fab[data-open] .nav-mark > span:nth-child(1) { translate: 6px 3px; rotate: -45deg; }
+.nav-fab[data-open] .nav-mark > span:nth-child(2) { translate: -6px 3px; rotate: 45deg; }
+.nav-fab[data-open] .nav-mark > span:nth-child(3) { translate: 6px -3px; rotate: 45deg; }
+.nav-fab[data-open] .nav-mark > span:nth-child(4) { translate: -6px -3px; rotate: -45deg; }
 
-/* Floating navigation panel: grows out of its button (bottom-left) */
-.nav-pop { transform-origin: bottom left; animation: nav-pop var(--dur-standard) var(--ease-enter) both; }
-.nav-pop[data-closing] { animation: nav-pop-out var(--dur-fast) var(--ease-exit) forwards; }
-@keyframes nav-pop { from { opacity: 0; transform: translateY(6px) scale(0.95); } to { opacity: 1; transform: none; } }
-@keyframes nav-pop-out { to { opacity: 0; transform: translateY(6px) scale(0.95); } }
+/* The navigation panel unfolds out of the button (a reveal from its corner, not a dropdown),
+   then its items arrive one after another; it folds back faster */
+.nav-panel { transform-origin: bottom left; animation: nav-unfold var(--dur-standard) var(--ease-enter) both; }
+.nav-panel[data-closing] { animation: nav-fold var(--dur-standard-exit) var(--ease-exit) forwards; }
+.nav-panel .nav-item { animation: nav-item var(--dur-standard) var(--ease-enter) both; animation-delay: calc(60ms + var(--i, 0) * var(--stagger)); }
+@keyframes nav-unfold {
+  from { opacity: 0.4; clip-path: inset(calc(100% - 44px) calc(100% - 44px) 0 0 round 22px); transform: translateY(10px) scale(0.98); }
+  to { opacity: 1; clip-path: inset(0 0 0 0 round 28px); transform: none; }
+}
+@keyframes nav-fold { to { opacity: 0; clip-path: inset(calc(100% - 44px) calc(100% - 44px) 0 0 round 22px); transform: translateY(8px) scale(0.98); } }
+@keyframes nav-item { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
 /* Home canvas: the whole screen, inset, rounded; controls float on and around it */
 .home-canvas {

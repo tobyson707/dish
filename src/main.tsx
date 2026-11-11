@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { installPressSounds } from '@/lib/uiSound'
 import { QueryClientProvider } from '@tanstack/react-query'
 import './styles/index.css'
 import { App } from './App'
@@ -14,6 +15,7 @@ import { ThemeSync } from '@/theme/ThemeSync'
 import { BootSplash } from '@/app/BootSplash'
 
 const queryClient = makeQueryClient()
+installPressSounds() // one listener for the whole app: unlocks audio on the first gesture, soft click on presses
 // without a backend there is no session to wait for: drop the launch backdrop at once
 if (!isSupabaseConfigured) document.getElementById('boot')?.remove()
 

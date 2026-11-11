@@ -1,0 +1,45 @@
+# Carries out account deletions whose 30-day grace period has ended, every day, whether or
+# not the person ever opens DISH again. Uses the same two repository secrets as the
+# functions deploy (SUPABASE_ACCESS_TOKEN, SUPABASE_PROJECT_REF): the service key is read
+# from the Supabase Management API at run time and never stored here.
+#
+# The job is idempotent: running it twice, or after a failure, is safe. Failed requests are
+# retried on later runs (up to 5 attempts) and stay visible in account_deletion_requests.
+name: Account deletions (daily)
+
+on:
+  schedule:
+    - cron: '17 3 * * *' # 03:17 UTC daily
+  workflow_dispatch:
+
+concurrency:
+  group: account-purge
+  cancel-in-progress: false
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+      SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
+    steps:
+      - name: Check configuration
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$SUPABASE_PROJECT_REF" ]; then
+            echo "::error::Add the SUPABASE_ACCESS_TOKEN and SUPABASE_PROJECT_REF repository secrets, then re-run."
+            exit 1
+          fi
+      - name: Run due deletions
+        shell: bash
+        run: |
+          set -euo pipefail
+          key=$(curl -fsS "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/api-keys?reveal=true" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" | jq -r '.[] | select(.name == "service_role") | .api_key')
+          if [ -z "$key" ] || [ "$key" = "null" ]; then echo "::error::Could not read the service role key for the project."; exit 1; fi
+          echo "::add-mask::$key"
+          out=$(curl -fsS -X POST "https://$SUPABASE_PROJECT_REF.supabase.co/functions/v1/account-purge" \
+            -H "Authorization: Bearer $key" -H 'content-type: application/json' -d '{}')
+          echo "$out" | jq '{processed, outcomes: [.results[].outcome]}'
+          if echo "$out" | jq -e '[.results[].outcome] | any(. == "failed")' > /dev/null; then
+            echo "::warning title=Some deletions failed::They will be retried on the next run. See account_deletion_requests.last_error."
+          fi

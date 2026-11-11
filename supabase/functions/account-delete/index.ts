@@ -1,29 +1,16 @@
-import { z } from 'zod'
-import { handler, json, parseBody } from '../_shared/http.ts'
-import { admin, authenticate } from '../_shared/supabase.ts'
-
-const Body = z.object({ confirm: z.literal('DELETE') })
+import { handler, json } from '../_shared/http.ts'
+import { authenticate } from '../_shared/supabase.ts'
 
 /**
- * Permanently deletes the caller's account: private storage objects first,
- * then the auth user (all user-owned rows cascade via foreign keys).
+ * Kept for older app versions: it no longer deletes anything immediately. It schedules
+ * deletion with the 30-day grace period (the same rules as the app: a recent sign-in is
+ * required), and the scheduled job (account-purge) carries it out after the deadline.
  */
 Deno.serve(
-  handler(async (req, raw) => {
-    const { user } = await authenticate(req)
-    parseBody(Body, raw)
-    const svc = admin()
-    // Remove every object in the user's private folder (paginated).
-    for (;;) {
-      const { data, error } = await svc.storage.from('food-scans').list(user.id, { limit: 100 })
-      if (error) throw error
-      if (!data?.length) break
-      const { error: rmErr } = await svc.storage.from('food-scans').remove(data.map((o) => `${user.id}/${o.name}`))
-      if (rmErr) throw rmErr
-      if (data.length < 100) break
-    }
-    const { error } = await svc.auth.admin.deleteUser(user.id)
-    if (error) throw error
-    return json({ deleted: true })
+  handler(async (req) => {
+    const { db } = await authenticate(req)
+    const { data, error } = await db.rpc('request_account_deletion')
+    if (error) return json({ error: error.message, code: error.hint === 'reauthenticate' ? 'reauthenticate' : 'refused' }, 403)
+    return json({ scheduled: true, ...(data as object) })
   }),
 )

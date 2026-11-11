@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { useBackToClose } from '@/hooks/useBackToClose'
 import { Link } from 'react-router'
 import { addDays } from '@domain/dates.ts'
 import { SLOT_LABEL } from '@domain/types.ts'
@@ -10,6 +11,7 @@ import { dayLabel } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
 import { greeting } from '@/lib/greeting'
 import { crossfade } from '@/lib/motion'
+import { play } from '@/lib/uiSound'
 import { Icon } from '@/components/ui/Icon'
 import { AddMealSheet } from '@/components/meal/AddMealSheet'
 import { FloatingToolbar } from '@/components/canvas/FloatingToolbar'
@@ -77,6 +79,8 @@ export function Home() {
   }, [planned, suggestions.items, category, slots])
 
   const select = (c: Category, how: SelectHow) => {
+    if (how === 'pointer' && !drawerOpen) play('drawer')
+    else if (c !== category) play('select')
     setCategory(c)
     if (drawerOpen) {
       if (c === drawerCategory) return
@@ -115,34 +119,6 @@ export function Home() {
       <AddMealSheet key={`add-${addOpen}`} open={addOpen} onClose={() => setAddOpen(false)} date={today} slot={category === 'all' ? undefined : category} planId={plan.data && today >= plan.data.start_date && today <= plan.data.end_date ? plan.data.id : null} />
     </>
   )
-}
-
-/**
- * The browser's (or phone's) Back closes the drawer instead of leaving Home: opening pushes
- * a history entry, Back pops it. Closing from the drawer itself goes back the same way, so
- * history never fills up with stale entries. Returns the function the drawer should call.
- */
-function useBackToClose(open: boolean, close: () => void) {
-  const pushed = useRef(false)
-  const latest = useRef(close)
-  useLayoutEffect(() => {
-    latest.current = close
-  })
-  useEffect(() => {
-    if (!open || pushed.current) return
-    window.history.pushState({ ...(window.history.state ?? {}), dishDrawer: true }, '')
-    pushed.current = true
-    const onPop = () => {
-      pushed.current = false
-      latest.current()
-    }
-    window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
-  }, [open])
-  return () => {
-    if (pushed.current && window.history.state?.dishDrawer) window.history.back()
-    else latest.current()
-  }
 }
 
 /** When there's no plan for today: one quiet line and one way forward, matching the real situation. */

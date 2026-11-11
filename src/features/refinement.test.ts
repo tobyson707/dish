@@ -1,25 +1,46 @@
 import { describe, expect, it } from 'vitest'
-import { follow, itemStyle, resist, restingIndex } from '@/components/canvas/wheel'
+import { cyclicOffset, follow, iconY, indexAt, itemStyle, nearestPosFor, PITCH, restingPos, SLOT } from '@/components/canvas/wheel'
 import { DEFAULT_CROP, dragCrop, normaliseCrop, placement, sourceRect } from '@/features/plans/coverCrop'
 import { coverage, markLabel, toDayMarks, weekRangeLabel } from '@/components/ui/Calendar'
 import { buildShoppingModel, shoppingFilename, toCsv } from '@/features/grocery/export/model'
 import { paginateShopping } from '@/features/grocery/export/render'
 import type { GroceryItem } from '@/types/db'
 
-describe('category wheel', () => {
-  it('rests on the nearest category, carried a little by momentum, never past an end', () => {
-    expect(restingIndex(2.4, 0, 6)).toBe(2)
-    expect(restingIndex(2.6, 0, 6)).toBe(3)
-    expect(restingIndex(2.2, 0.01, 6)).toBe(4) // a flick carries it on
-    expect(restingIndex(4.8, 1, 6)).toBe(5) // at most to the last
-    expect(restingIndex(0.3, -1, 6)).toBe(0)
+describe('category wheel (infinite)', () => {
+  it('maps any position, however far round, to a real category', () => {
+    expect(indexAt(0, 6)).toBe(0)
+    expect(indexAt(6, 6)).toBe(0)
+    expect(indexAt(-1, 6)).toBe(5)
+    expect(indexAt(-13, 6)).toBe(5)
+    expect(indexAt(5.4, 6)).toBe(5)
+    expect(indexAt(5.6, 6)).toBe(0) // past the last, the first: no end
   })
-  it('gives way past the ends with growing resistance, within half an item', () => {
-    expect(resist(2, 6)).toBe(2)
-    expect(resist(-1, 6)).toBeLessThan(0)
-    expect(resist(-1, 6)).toBeGreaterThan(-0.45)
-    expect(resist(-10, 6)).toBeGreaterThan(-0.45)
-    expect(resist(5 + 3, 6)).toBeLessThan(5.45)
+  it('turns the short way round, across the seam', () => {
+    expect(nearestPosFor(0, 5, 6)).toBe(6) // from the last to the first: one step on
+    expect(nearestPosFor(5, 0, 6)).toBe(-1) // from the first to the last: one step back
+    expect(nearestPosFor(2, 12, 6)).toBe(14)
+  })
+  it('draws each category once, at its shortest distance; the switch of sides happens out of view', () => {
+    for (const pos of [0, 0.3, 2.5, 5.49, 5.51, -7.2]) {
+      const ds = [0, 1, 2, 3, 4, 5].map((i) => cyclicOffset(i, pos, 6))
+      for (const d of ds) {
+        expect(d).toBeGreaterThanOrEqual(-3)
+        expect(d).toBeLessThan(3)
+      }
+      // whatever wraps (|d| near 3) is hidden
+      for (const d of ds) if (Math.abs(d) > 2.6) expect(itemStyle(d).hidden).toBe(true)
+    }
+  })
+  it('keeps icons continuous through the slot (no jumps), with room for the name', () => {
+    for (let d = -2.5; d <= 2.5; d += 0.01) expect(Math.abs(iconY(d + 0.01) - iconY(d))).toBeLessThan(PITCH * 0.01 + (SLOT - PITCH) * 0.01 + 1e-6)
+    expect(iconY(1) - iconY(0)).toBe(SLOT) // the next icon waits below the name
+    expect(iconY(0) - iconY(-1)).toBe(PITCH)
+  })
+  it('rests on the nearest category, carried a little by momentum, with no ends', () => {
+    expect(restingPos(2.4, 0)).toBe(2)
+    expect(restingPos(2.2, 0.01)).toBe(4)
+    expect(restingPos(5.8, 1)).toBe(9) // keeps going round
+    expect(restingPos(-0.4, -0.02)).toBe(-3) // a flick carries at most three
   })
   it('eases towards its target without overshooting, independent of frame rate', () => {
     let p = 0
@@ -30,12 +51,6 @@ describe('category wheel', () => {
     for (let i = 0; i < 6; i++) a = follow(a, 1, 16)
     for (let i = 0; i < 3; i++) b = follow(b, 1, 32)
     expect(Math.abs(a - b)).toBeLessThan(1e-9)
-    expect(follow(0.999, 1, 16)).toBe(1)
-  })
-  it('fades and shrinks items away from the slot, hiding the far ones', () => {
-    expect(itemStyle(0)).toEqual({ opacity: 1, scale: 1, hidden: false })
-    expect(itemStyle(1).opacity).toBeLessThan(1)
-    expect(itemStyle(3).hidden).toBe(true)
   })
 })
 

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router'
 import { midCost } from '@domain/budget.ts'
+import { play } from '@/lib/uiSound'
 import { SLOT_LABEL, occasionFor, type MealSlot } from '@domain/types.ts'
 import type { FoodItem } from '@/types/db'
 import { useActivePlan, useCreatePlannedMeal, usePlannedMeals } from '@/data/plans'
@@ -28,6 +29,7 @@ export function useAddToToday() {
     try {
       if (existing && existing.food_item_id !== food.id) {
         await replace.mutateAsync({ planned_meal_id: existing.id, choose_food_item_id: food.id })
+        play('confirm')
         toast.show(`${food.name} is now today's ${SLOT_LABEL[slot].toLowerCase()}.`, { tone: 'success', action: { label: 'View', onClick: () => nav(`/plan?date=${today}`) } })
       } else {
         const p = plan.data
@@ -46,6 +48,7 @@ export function useAddToToday() {
           est_cost_currency: food.cost_currency,
           method: food.can_cook ? 'cook' : 'buy',
         })
+        play('confirm')
         toast.show(`Added ${food.name} to today's ${SLOT_LABEL[slot].toLowerCase()}.`, { tone: 'success', action: { label: 'View', onClick: () => nav(`/plan?date=${today}`) } })
       }
       return true

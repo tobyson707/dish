@@ -14,6 +14,7 @@ import { Toggle } from '@/components/ui/Inputs'
 import { Icon } from '@/components/ui/Icon'
 import { Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
+import { play } from '@/lib/uiSound'
 import { buildExportModel, exportFilename, MAX_EXPORT_DAYS, shortRange, validateRange, type ExportModel } from './model'
 import { DateRangeField } from '@/components/ui/DateField'
 import { A4_PT, buildPdf } from './pdf'
@@ -144,6 +145,7 @@ export function ExportSheet({ open, onClose, anchorDate, plan }: { open: boolean
         files = (await generate(model, await assetsFor(model), fmt, layout)).files
       }
       await downloadFiles(files)
+      play('success')
       if (plan) void logPlanExport(plan.id, `${fmt.toUpperCase()} (${layout === 'grid' ? 'table' : 'list'}) for ${model.shortRange}`).catch(() => undefined)
       toast.success(files.length > 1 ? `${files.length} images saved.` : `Saved ${files[0]!.name}`)
     } catch (e) {
@@ -157,6 +159,7 @@ export function ExportSheet({ open, onClose, anchorDate, plan }: { open: boolean
     if (!output) return
     try {
       const r = await shareOrDownload(output.files, { title: model?.title ?? 'My Meal Plan', text: model ? `My meal plan · ${model.shortRange}` : undefined })
+      if (r !== 'cancelled') play('success')
       if (plan && model) void logPlanExport(plan.id, `${output.format.toUpperCase()} (${output.layout === 'grid' ? 'table' : 'list'}) for ${model.shortRange}`).catch(() => undefined)
       if (r === 'downloaded') toast.show("Sharing files isn't available in this browser, so we saved it to your device instead.")
     } catch (e) {

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { play } from '@/lib/uiSound'
 import { useUserId } from '@/features/auth/AuthProvider'
 import { enqueue } from '@/offline/outbox'
 import { uuid } from '@/lib/ids'
@@ -72,6 +73,7 @@ export function useGroceryItemMutations(listId: string) {
 
   return {
     toggle: async (item: GroceryItem) => {
+      if (!item.purchased) play('tick') // a tactile tick as it goes in the basket
       const patch = { purchased: !item.purchased, purchased_at: !item.purchased ? stamp() : null, client_updated_at: stamp() }
       local((rows) => rows.map((r) => (r.id === item.id ? { ...r, ...patch, _pending: true } : r)))
       await enqueue({ kind: 'update', table: 'grocery_items', id: item.id, patch }, { label: `${patch.purchased ? 'Tick off' : 'Untick'} ${item.name}`, invalidate: [key] })

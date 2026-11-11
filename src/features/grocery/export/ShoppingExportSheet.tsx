@@ -83,6 +83,7 @@ export function ShoppingExportSheet({ open, onClose, list, refresh }: { open: bo
               tone="ink"
               icon="share"
               doneLabel="Shared"
+              sound="success"
               busyLabel="Preparing…"
               action={async () => {
                 const files = await makeFiles(await current(), format)
@@ -100,6 +101,7 @@ export function ShoppingExportSheet({ open, onClose, list, refresh }: { open: bo
             tone={shareable ? 'soft' : 'ink'}
             icon="download"
             doneLabel="Downloaded"
+            sound="success"
             busyLabel="Preparing…"
             success={null}
             action={async () => downloadFiles(await makeFiles(await current(), format))}
