@@ -67,9 +67,15 @@ export function FloatingNavigation() {
   const id = useId()
   const current = NAV.find((n) => isActive(loc.pathname, n.to))
   // Back closes the panel (an entry is pushed while it's open)
+  const refocus = useRef(false)
   const close = useBackToClose(open, () => {
     setOpen(false)
     play('close')
+    // closing from the keyboard returns focus to the button (after Back has settled)
+    if (refocus.current) {
+      refocus.current = false
+      requestAnimationFrame(() => button.current?.focus())
+    }
   }, 'dishNav')
 
   // any other navigation closes the panel too
@@ -94,8 +100,8 @@ export function FloatingNavigation() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       e.stopPropagation()
+      refocus.current = true
       close()
-      button.current?.focus()
     }
     document.addEventListener('keydown', onKey, true)
     return () => document.removeEventListener('keydown', onKey, true)
