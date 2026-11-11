@@ -16,7 +16,8 @@ import { Sheet } from '@/components/ui/Sheet'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { Select } from '@/components/ui/Field'
 import { Stepper, Toggle } from '@/components/ui/Inputs'
-import { Notice, Skeleton } from '@/components/ui/States'
+import { Notice } from '@/components/ui/States'
+import { CircleRowsGhost } from '@/components/ui/Ghost'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { Spinner } from '@/components/ui/Spinner'
 import { useToast } from '@/components/ui/Toast'
@@ -328,9 +329,9 @@ function ReplacePanel({ meal, onDone }: { meal: PlannedMeal; onDone: () => void 
     <div className="flex flex-col gap-3" aria-busy={suggestions == null}>
       {error && <Notice tone="error">{error}</Notice>}
       {suggestions == null ? (
-        <div role="status" aria-label="Finding replacements" className="flex flex-col gap-3">
-          {[0, 1, 2].map((i) => <Skeleton key={i} className="h-24" />)}
-          <p className="text-center text-sm text-muted">Finding meals that fit your preferences…</p>
+        <div className="flex flex-col gap-3">
+          <CircleRowsGhost rows={3} size={64} card label="Finding replacements" />
+          <p aria-hidden="true" className="text-center text-sm text-muted">Finding meals that fit your preferences…</p>
         </div>
       ) : suggestions.length === 0 && !error ? (
         <Notice>Nothing else fits all your preferences for this slot right now. You can remove the meal or add one yourself.</Notice>

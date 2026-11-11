@@ -39,7 +39,8 @@ import { DishCalendar } from '@/components/ui/DishCalendar'
 import { DateRangeField } from '@/components/ui/DateField'
 import { Sheet } from '@/components/ui/Sheet'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { EmptyState, ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
+import { EmptyState, ErrorState, Notice } from '@/components/ui/States'
+import { DayBlocksGhost, PeopleGhost, PlanWorkspaceGhost, REVEAL } from '@/components/ui/Ghost'
 import { useToast } from '@/components/ui/Toast'
 import { MealActionsSheet, useRemoveMeal } from '@/components/meal/MealActions'
 import { AddMealSheet } from '@/components/meal/AddMealSheet'
@@ -97,8 +98,8 @@ export function PlanDetail() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [live.remote])
 
-  if (q.isPending) return <div className="pt-16"><LoadingBlock /></div>
-  if (q.isError) return <div className="pt-16"><ErrorState message={friendlyError(q.error)} onRetry={() => q.refetch()} /></div>
+  if (q.isPending) return <PlanWorkspaceGhost />
+  if (q.isError && !q.data) return <div className="pt-16"><ErrorState message={friendlyError(q.error)} onRetry={() => q.refetch()} /></div>
   if (!plan) return <EmptyState className="mt-16" title="Plan not found" message="It may have been deleted, or you no longer have access." action={<Button onClick={() => nav('/plans')}>Back to the Library</Button>} />
   if (!role) {
     if (plan.visibility === 'published') return <Navigate to={`/community/${plan.id}`} replace />
@@ -243,21 +244,21 @@ function PlanBoard({ plan, role, canEdit }: { plan: MealPlan; role: PlanRole; ca
       <div className="mt-4">
         {view === 'month' ? (
           <div className="rounded-[24px] bg-elevated p-4 sm:p-5">
-            <DishCalendar today={today} value={date} month={date} min={plan.start_date} max={plan.end_date} onMonthChange={(m) => set('date', clamp(m, plan))} onChange={(d) => set('date', d)} markers={states} />
+            <DishCalendar today={today} value={date} month={date} min={plan.start_date} max={plan.end_date} onMonthChange={(m) => set('date', clamp(m, plan))} onChange={(d) => set('date', d)} markers={states} markersLoading={meals.isPending} />
           </div>
         ) : view === 'custom' ? (
           <DateRangeField label="Dates" value={custom} min={plan.start_date} max={plan.end_date} onChange={(r) => setCustom(r)} hint="Any dates inside this plan, up to about two months." />
         ) : (
-          <DateStrip selected={date} today={today} marks={states} onSelect={(d) => set('date', clamp(d, plan))} onPrev={() => set('date', clamp(addDays(date, -7), plan))} onNext={() => set('date', clamp(addDays(date, 7), plan))} />
+          <DateStrip selected={date} today={today} marks={states} loading={meals.isPending} onSelect={(d) => set('date', clamp(d, plan))} onPrev={() => set('date', clamp(addDays(date, -7), plan))} onNext={() => set('date', clamp(addDays(date, 7), plan))} />
         )}
       </div>
 
       {meals.isPending ? (
-        <div className="mt-6"><LoadingBlock /></div>
-      ) : meals.isError ? (
+        <div className="mt-4"><DayBlocksGhost days={view === 'day' || view === 'month' ? 1 : 2} rows={slots.length} compact={!(view === 'day' || view === 'month')} /></div>
+      ) : meals.isError && !meals.data ? (
         <ErrorState className="mt-6" message={friendlyError(meals.error)} onRetry={() => meals.refetch()} />
       ) : (
-        <div className="mt-4 flex flex-col">
+        <div className={cn('mt-4 flex flex-col', REVEAL)}>
           {view === 'day' || view === 'month' ? block(date) : days(range.from, range.to).map((d) => block(d, true))}
         </div>
       )}
@@ -346,7 +347,7 @@ function PlanGrocerySheet({ plan, open, onClose }: { plan: MealPlan; open: boole
 }
 
 function PeopleTab({ planId, owner, people, me, onInvite }: { planId: string; owner: boolean; people: PlanPerson[] | undefined; me: string; onInvite: () => void }) {
-  if (!people) return <div className="mt-4"><LoadingBlock /></div>
+  if (!people) return <PeopleGhost label="Loading people" />
   return (
     <div className="mt-4">
       <PeopleList planId={planId} owner={owner} people={people} me={me} />
@@ -360,7 +361,7 @@ function ActivityTab({ planId, nameOf }: { planId: string; nameOf: (id: string |
   const uid = useUserId()
   const [limit, setLimit] = useState(40)
   const a = usePlanActivity(planId, true, limit)
-  if (a.isPending) return <div className="mt-4"><LoadingBlock /></div>
+  if (a.isPending) return <PeopleGhost rows={5} label="Loading activity" />
   if (!a.data?.length) return <EmptyState className="mt-4" icon="history" title="No activity yet" message="Changes to this plan show up here." />
   return (
     <>
@@ -393,7 +394,7 @@ function VersionsTab({ planId, owner, nameOf }: { planId: string; owner: boolean
   const v = usePlanRevisions(planId)
   const restore = useRestoreRevision(planId)
   const [pick, setPick] = useState<string | null>(null)
-  if (v.isPending) return <div className="mt-4"><LoadingBlock /></div>
+  if (v.isPending) return <PeopleGhost rows={3} label="Loading versions" />
   if (!v.data?.length) return <EmptyState className="mt-4" icon="history" title="No earlier versions yet" message="DISH keeps a copy of the plan before a round of changes (at most every 30 minutes)." />
   const chosen = v.data.find((r) => r.id === pick)
   return (

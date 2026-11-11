@@ -13,13 +13,14 @@ import { PageHeader } from '@/components/ui/Layout'
 import { SearchInput } from '@/components/ui/Field'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { Icon, type IconName } from '@/components/ui/Icon'
-import { EmptyState, ErrorState, Skeleton } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/States'
 import { RecipePreviewWorkspace } from '@/components/canvas/RecipePreviewWorkspace'
 import { CATEGORIES, type Category } from '@/components/canvas/categories'
 import { useAddToToday } from '@/components/canvas/useAddToToday'
 import { slotFor, useRankedMeals } from '@/components/canvas/useRankedMeals'
 import { SaveToggle } from '@/components/ui/ActionButton'
 import { CommunityPlans } from '@/features/plans/CommunityPage'
+import { MealFeedGhost, REVEAL } from '@/components/ui/Ghost'
 
 const PAGE = 8
 
@@ -161,14 +162,14 @@ function FoodFeed({ mode }: { mode: 'foryou' | 'recipes' }) {
 
       <div className="mt-3">
         {cat.isPending || ranked.pending ? (
-          <div className="grid gap-6 sm:grid-cols-2">{[0, 1, 2, 3].map((i) => <Skeleton key={i} className="aspect-[4/3] rounded-[28px]" />)}</div>
+          <MealFeedGhost label={mode === 'recipes' ? 'Loading recipes' : 'Loading meal ideas'} />
         ) : cat.isError && !cat.data ? (
           <ErrorState message={friendlyError(cat.error)} onRetry={() => cat.refetch()} />
         ) : feed.length === 0 ? (
            <EmptyState title={onlyFavs ? 'Nothing saved here yet' : 'Nothing matches'} message={onlyFavs ? 'Tap the heart on any meal to save it.' : q ? 'Try another word.' : 'Try another category.'} />
         ) : (
           <>
-            <ul className="grid gap-x-5 gap-y-7 sm:grid-cols-2" aria-label="Meal ideas">
+            <ul className={cn('grid gap-x-5 gap-y-7 sm:grid-cols-2', REVEAL)} aria-label="Meal ideas">
               {visible.map((f, i) => (
                 <FeedItem key={f.id} index={i % PAGE} food={f} category={category} favourite={!!favs.data?.includes(f.id)} onOpen={() => setPreview(f)} />
               ))}
@@ -182,8 +183,8 @@ function FoodFeed({ mode }: { mode: 'foryou' | 'recipes' }) {
                 </button>}
               </div>
             ) : (
-              <div className="grid gap-6 pt-2 sm:grid-cols-2" aria-hidden="true">
-                <Skeleton className="aspect-[4/3] rounded-[28px]" />
+              <div className="pt-7" aria-hidden="true">
+                <MealFeedGhost count={2} label="Loading more" />
               </div>
             )}
           </>

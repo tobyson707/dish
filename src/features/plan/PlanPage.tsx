@@ -16,7 +16,9 @@ import { PageHeader } from '@/components/ui/Layout'
 import { Segmented } from '@/components/ui/Inputs'
 import { DateStrip, toDayMarks } from '@/components/ui/Calendar'
 import { DishCalendar } from '@/components/ui/DishCalendar'
-import { EmptyState, ErrorState, LoadingBlock } from '@/components/ui/States'
+import { EmptyState, ErrorState } from '@/components/ui/States'
+import { DayBlocksGhost, REVEAL } from '@/components/ui/Ghost'
+import { cn } from '@/lib/cn'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { useToast } from '@/components/ui/Toast'
 import { Icon } from '@/components/ui/Icon'
@@ -106,26 +108,27 @@ export function PlanPage() {
       {tour && <PlanWalkthrough uid={uid} onDone={() => { setTour(false); setParams((x) => (x.delete('welcome'), x), { replace: true }) }} />}
       <Segmented label="Calendar view" hideLabel value={view} onChange={setView} options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }]} />
 
-      {plan.isSuccess && !p && !(meals.data ?? []).length ? (
+      {/* empty only once we know: never while the meals are still on their way */}
+      {plan.isSuccess && !p && meals.isSuccess && !meals.data.length ? (
         <EmptyState className="mt-6" title="No meal plan yet" message="Create one and it shows up here as a timetable." action={<ButtonLink to="/plan/new" size="lg" iconRight="arrow">Create my meal plan</ButtonLink>} />
       ) : (
         <>
           <div className="mt-5">
             {view === 'month' ? (
               <div className="rounded-[24px] bg-elevated p-4 sm:p-5">
-                <DishCalendar today={today} value={date} month={date} onMonthChange={(m) => setDate(m.slice(0, 7) === today.slice(0, 7) ? today : m)} onChange={setDate} markers={states} />
+                <DishCalendar today={today} value={date} month={date} onMonthChange={(m) => setDate(m.slice(0, 7) === today.slice(0, 7) ? today : m)} onChange={setDate} markers={states} markersLoading={meals.isPending} />
               </div>
             ) : (
-              <DateStrip selected={date} today={today} marks={states} onSelect={setDate} onPrev={() => setDate(addDays(date, -7))} onNext={() => setDate(addDays(date, 7))} />
+              <DateStrip selected={date} today={today} marks={states} loading={meals.isPending} onSelect={setDate} onPrev={() => setDate(addDays(date, -7))} onNext={() => setDate(addDays(date, 7))} />
             )}
           </div>
 
           {meals.isPending ? (
-            <div className="mt-6"><LoadingBlock /></div>
+            <div className="mt-4"><DayBlocksGhost days={view === 'week' ? 2 : 1} rows={prefs.data?.meal_slots?.length ?? 3} compact={view === 'week'} /></div>
           ) : meals.isError && !meals.data ? (
             <ErrorState className="mt-6" message={friendlyError(meals.error)} onRetry={() => meals.refetch()} />
           ) : view === 'week' ? (
-            <div className="mt-4 flex flex-col">
+            <div className={cn('mt-4 flex flex-col', REVEAL)}>
               {Array.from({ length: 7 }, (_, i) => addDays(range.from, i)).map((d) => (
                 <DayBlock key={d} date={d} today={today} meals={byDate[d] ?? []} slots={prefs.data?.meal_slots ?? ['breakfast', 'lunch', 'dinner']} onActions={setActionsFor} onRemove={remove} onAdd={(s) => { setDate(d); setAddSlot(s); setAddOpen(true) }} notGenerated={notGenerated(d)} compact />
               ))}

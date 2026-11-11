@@ -27,8 +27,15 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>DISH</title>
+    <style>
+      /* Pre-paint backdrop for the launch screen (the app takes it over; see BootSplash.tsx). */
+      #boot { position: fixed; inset: 0; z-index: 2147483000; background: #ffffff; }
+      html[data-theme='dark'] #boot { background: #111111; }
+      html[data-theme='dark'] body { background: #111111; }
+    </style>
   </head>
   <body>
+    <div id="boot" aria-hidden="true"></div>
     <div id="root"></div>
     <noscript>DISH needs JavaScript to run.</noscript>
     <script type="module" src="/src/main.tsx"></script>

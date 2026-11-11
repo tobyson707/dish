@@ -7,7 +7,7 @@ import { usePreferences } from '@/data/profile'
 import { SearchInput } from '@/components/ui/Field'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { Icon } from '@/components/ui/Icon'
-import { LoadingBlock } from '@/components/ui/States'
+import { CircleRowsGhost } from '@/components/ui/Ghost'
 import { formatKcal } from '@/lib/format'
 
 /** Searchable catalogue list. Flags (never hides) items that conflict with allergies. */
@@ -26,7 +26,7 @@ export function CataloguePicker({ slot, onPick }: { slot?: MealSlot; onPick: (f:
     <div className="flex flex-col gap-3">
       <SearchInput value={q} onChange={setQ} placeholder="Search meals and foods" label="Search the food catalogue" autoFocus />
       {cat.isPending ? (
-        <LoadingBlock rows={3} />
+        <CircleRowsGhost rows={4} label="Loading the food catalogue" />
       ) : list.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted">No matches. You can enter it manually instead.</p>
       ) : (

@@ -12,7 +12,8 @@ import { ChoiceCard } from '@/components/ui/Chip'
 import { Select, TextField } from '@/components/ui/Field'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/Layout'
-import { ErrorState, LoadingBlock, Notice } from '@/components/ui/States'
+import { ErrorState, Notice } from '@/components/ui/States'
+import { GhostRegion, HeaderGhost, ListRowsGhost } from '@/components/ui/Ghost'
 import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
 
@@ -20,7 +21,7 @@ export function GoalsPage() {
   const profile = useProfile()
   const prefs = usePreferences()
   const goal = useActiveGoal()
-  if (profile.isPending || prefs.isPending || goal.isPending) return <div className="pt-16"><LoadingBlock /></div>
+  if (profile.isPending || prefs.isPending || goal.isPending) return <GhostRegion label="Loading your goals"><HeaderGhost /><ListRowsGhost rows={4} icon={false} /></GhostRegion>
   if (profile.isError || prefs.isError) return <ErrorState message={friendlyError(profile.error ?? prefs.error)} />
   return <Editor initial={draftFrom(profile.data, prefs.data, goal.data ?? null)} />
 }

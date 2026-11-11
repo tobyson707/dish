@@ -7,6 +7,8 @@ import { IconButton } from '@/components/ui/Button'
 import { Icon } from '@/components/ui/Icon'
 import { useDragDismiss, usePresence } from '@/components/ui/usePresence'
 import { cn } from '@/lib/cn'
+import { friendlyError } from '@/lib/errors'
+import { DrawerMealsGhost, Ghost, GhostRegion, GhostText, REVEAL } from '@/components/ui/Ghost'
 import { CATEGORIES, categoryIcon, categoryLabel, type Category } from './categories'
 import { MealOptionList } from './MealOptionList'
 import { crossfade } from '@/lib/motion'
@@ -169,7 +171,13 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
           <p className="mt-3 text-footnote text-on-glass-dark-muted">{TAB_HINT[tab]}</p>
           <div data-crossfade className="ws-swap mt-10" key={`${category}:${tab}`} style={{ ['--swap-dir' as string]: dir }}>
             {ranked.pending ? (
-              <div className="grid gap-8">{[0, 1].map((i) => <div key={i} className="aspect-[4/3] animate-pulse rounded-[24px] bg-white/[0.06]" />)}</div>
+              <DrawerGhost />
+            ) : ranked.error ? (
+              <div role="alert" className="rounded-[22px] bg-white/[0.05] p-5 ring-1 ring-inset ring-white/10">
+                <p className="font-semibold text-on-glass-dark">These ideas didn't load</p>
+                <p className="mt-1 text-sm text-on-glass-dark-muted">{friendlyError(ranked.error)}</p>
+                <button type="button" onClick={ranked.retry} className="press mt-4 inline-flex h-10 items-center gap-1.5 rounded-full bg-on-glass-dark px-4 text-sm font-bold text-on-glass-dark-ink"><Icon name="refresh" size={16} /> Try again</button>
+              </div>
             ) : items.length === 0 ? (
               <div className="rounded-[22px] bg-white/[0.05] p-5 ring-1 ring-inset ring-white/10">
                 <p className="font-semibold text-on-glass-dark">Nothing fits here right now</p>
@@ -186,7 +194,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
               </div>
             ) : (
               <>
-                <section aria-label="Recommended">
+                <section aria-label="Recommended" className={REVEAL}>
                   <h3 className="label-caps !text-on-glass-dark-muted">Recommended for you</h3>
                   <ul className="mt-5 grid gap-y-10">
                     {items.slice(0, 2).map((f) => (
@@ -241,5 +249,29 @@ function FeaturedMeal({ food: f, slot, added, busy, disabled, onView, onAdd }: {
         </button>
       </div>
     </li>
+  )
+}
+
+/** The drawer before its ideas arrive: the same two large picks and the list beneath, in glass tones. */
+function DrawerGhost() {
+  return (
+    <div>
+      <GhostRegion label="Loading ideas">
+        <GhostText tone="glass" size="micro" width="9rem" />
+        <div className="mt-5 grid gap-y-10">
+          {[0, 1].map((i) => (
+            <div key={i} aria-hidden="true">
+              <Ghost tone="glass" className="aspect-[4/3] w-full rounded-[24px]" />
+              <GhostText tone="glass" size="title3" width={i ? '48%' : '62%'} className="mt-5" />
+              <GhostText tone="glass" size="footnote" width="40%" className="mt-1.5" />
+              <div className="mt-5 flex gap-2"><Ghost tone="glass" className="h-10 w-20 rounded-full" /><Ghost tone="glass" className="h-10 w-32 rounded-full" /></div>
+            </div>
+          ))}
+        </div>
+      </GhostRegion>
+      <div className="mt-14 border-t border-white/10 pt-10">
+        <DrawerMealsGhost count={3} />
+      </div>
+    </div>
   )
 }

@@ -50,12 +50,19 @@ export async function autoDismissCelebrations(page: Page) {
   })
 }
 
+/** The launch screen covers each fresh page load briefly; wait for it before raw pointer work or screenshots. */
+export async function appReady(page: Page) {
+  await expect(page.locator('.boot-splash')).toHaveCount(0, { timeout: 15_000 })
+}
+
 export async function signIn(page: Page, email: string, password = 'test-pass-123') {
   await autoDismissCelebrations(page)
   await page.goto('/sign-in')
+  await appReady(page)
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password', { exact: true }).fill(password)
   await page.getByRole('button', { name: 'Sign in' }).click()
+  await appReady(page)
 }
 
 /** Mark onboarding complete via SQL-free REST (service role) so app tests start at Home. */

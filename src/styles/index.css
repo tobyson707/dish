@@ -51,6 +51,8 @@
   --c-line: #e5e5e5; /* borders and dividers */
   --c-dot: #d4d4d4;
   --c-dot-soft: #eaeaea;
+  --c-ghost: rgb(17 17 17 / 0.065); /* loading placeholders: translucent, so they read on white and on cards */
+  --c-ghost-hi: rgb(255 255 255 / 0.6); /* the passing light */
   /* accent — semantic roles on the orange scale */
   --c-accent: var(--o-400); /* fills: primary accent, active nav, selected chips, streak */
   --c-accent-ink: #111111; /* text on orange 400: 6.8:1 */
@@ -140,6 +142,8 @@
   --c-line: #2e2e2e;
   --c-dot: #3d3d3d;
   --c-dot-soft: #262626;
+  --c-ghost: rgb(255 255 255 / 0.07);
+  --c-ghost-hi: rgb(255 255 255 / 0.06);
   --c-accent: var(--o-400);
   --c-accent-ink: #111111;
   --c-accent-pressed: var(--o-300); /* lighter on press: stays visible on near-black */
@@ -359,10 +363,10 @@
   .icon-swap { animation: icon-swap var(--dur-fast) var(--ease-enter) both; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { scrollbar-width: none; }
+  /* legacy name for the ghost surface (both read the same tokens) */
   .skeleton {
-    background: linear-gradient(90deg, var(--c-dot-soft) 0%, var(--c-surface) 50%, var(--c-dot-soft) 100%);
-    background-size: 200% 100%;
-    animation: shimmer 1.4s linear infinite;
+    background: var(--c-ghost) linear-gradient(100deg, transparent 35%, var(--c-ghost-hi) 50%, transparent 65%) 0 0 / 200vw 100% fixed;
+    animation: ghost-sweep 1.8s linear infinite;
   }
 }
 
@@ -678,3 +682,104 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
   transition: background-size var(--dur-standard) var(--ease-move);
 }
 .strike[data-on] { background-size: 100% 1.5px; }
+
+/* ── Launch screen (src/app/BootSplash.tsx): typography only ── */
+.boot-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #ffffff;
+  color: #111111;
+}
+:root[data-theme='dark'] .boot-splash { background: #111111; color: #ffffff; }
+.boot-stack { display: flex; flex-direction: column; align-items: center; text-align: center; }
+.boot-mark {
+  font-family: 'Manrope Variable', Manrope, system-ui, sans-serif;
+  font-weight: 800;
+  font-size: clamp(64px, 18vw, 128px);
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+  /* optical centring: the dot hangs outside the measured centre */
+  margin-right: -0.12em;
+}
+.boot-dot { color: #ff6b35; }
+.boot-tag {
+  margin-top: clamp(14px, 2.4vw, 20px);
+  font-family: 'Manrope Variable', Manrope, system-ui, sans-serif;
+  font-weight: 600;
+  font-size: clamp(11px, 2.9vw, 13px);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  opacity: 0.62;
+}
+/* studio credit at the foot of the launch screen: plain type, no accent */
+.boot-credit {
+  position: absolute; left: 0; right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(24px, 6dvh, 56px));
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  font-family: 'Manrope Variable', Manrope, system-ui, sans-serif;
+}
+.boot-credit-by { font-size: 10px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: #8a8a8a; }
+.boot-credit-name { font-size: clamp(13px, 3.6vw, 15px); font-weight: 800; letter-spacing: 0.14em; color: #000000; }
+:root[data-theme='dark'] .boot-credit-name { color: #ffffff; }
+.boot-splash[data-phase='wait'] .boot-credit { opacity: 0; }
+.boot-splash[data-phase='in'] .boot-credit { animation: fade 360ms var(--ease-enter) 320ms both; }
+.boot-splash[data-returning][data-phase='in'] .boot-credit { animation: fade 200ms var(--ease-enter) both; }
+/* very short screens (landscape phones): keep it clear of the wordmark */
+@media (max-height: 380px) { .boot-credit { bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); gap: 3px; } }
+.boot-splash[data-phase='wait'] .boot-stack { opacity: 0; }
+.boot-splash[data-phase='in'] .boot-mark { animation: boot-rise 460ms var(--ease-enter) both; }
+.boot-splash[data-phase='in'] .boot-tag { animation: boot-tag 360ms var(--ease-enter) 320ms both; }
+/* returning: already composed, it only settles in */
+.boot-splash[data-returning][data-phase='in'] .boot-mark,
+.boot-splash[data-returning][data-phase='in'] .boot-tag { animation: boot-tag 200ms var(--ease-enter) both; }
+.boot-splash[data-phase='out'] { pointer-events: none; animation: fade-out 300ms var(--ease-exit) forwards; }
+.boot-splash[data-phase='out'] .boot-stack { animation: boot-leave 300ms var(--ease-exit) forwards; }
+@keyframes boot-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes boot-tag { from { opacity: 0; } to { opacity: 0.62; } }
+.boot-splash[data-returning][data-phase='in'] .boot-mark { animation-name: fade; }
+@keyframes boot-leave { to { transform: translateY(-6px) scale(0.985); } }
+@media (prefers-reduced-motion: reduce) {
+  /* no movement: a brief fade in and out only (the global rule shortens durations) */
+  .boot-splash[data-phase='in'] .boot-mark, .boot-splash[data-phase='in'] .boot-tag { animation-name: fade; }
+  .boot-splash[data-phase='in'] .boot-tag { opacity: 0.62; }
+  .boot-splash[data-phase='out'] .boot-stack { animation: none; }
+}
+
+/* ── Ghost loading (src/components/ui/Ghost.tsx) ──
+   One slow sweep shared by every ghost on screen (the gradient is fixed to the viewport,
+   so neighbouring shapes shimmer as one surface). Only background-position animates. */
+/* in the components layer, so each ghost's own radius utility (rounded-full, rounded-[24px]…) wins */
+@layer components {
+  .ghost {
+    background: var(--c-ghost) linear-gradient(100deg, transparent 35%, var(--c-ghost-hi) 50%, transparent 65%) 0 0 / 200vw 100% fixed;
+    border-radius: var(--radius-md);
+    animation: ghost-sweep 1.8s linear infinite;
+  }
+  .ghost[data-tone='glass'] { --c-ghost: rgb(255 255 255 / 0.08); --c-ghost-hi: rgb(255 255 255 / 0.07); }
+}
+@keyframes ghost-sweep { from { background-position: 100vw 0; } to { background-position: -100vw 0; } }
+/* a fast load never flashes a skeleton: ghosts appear after a beat (space is held all along) */
+.ghost-region { animation: fade var(--dur-fast) var(--ease-enter) 120ms both; }
+/* real content arriving: a short fade, no movement */
+.ghost-reveal { animation: fade var(--dur-standard) var(--ease-enter) both; }
+@media (prefers-reduced-motion: reduce) {
+  .ghost.ghost, .skeleton.skeleton { animation: none; background-image: none; }
+  .ghost-region { animation: none; }
+}
+
+/* background refresh: a hairline at the very top, only when something already shown is being updated */
+.refresh-line {
+  position: fixed; inset: 0 0 auto 0; height: 2px; z-index: 90; pointer-events: none; overflow: hidden;
+  animation: fade var(--dur-standard) var(--ease-enter) 300ms both;
+}
+.refresh-line::after {
+  content: ''; position: absolute; inset: 0; width: 30%;
+  background: linear-gradient(90deg, transparent, var(--c-accent), transparent);
+  animation: refresh-run 1.2s var(--ease-move) infinite;
+}
+@keyframes refresh-run { from { translate: -100% 0; } to { translate: 340% 0; } }
+@media (prefers-reduced-motion: reduce) { .refresh-line::after { animation: none; width: 100%; opacity: 0.5; } }

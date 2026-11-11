@@ -4,7 +4,6 @@ import { DevMode } from '@/dev/DevMode'
 import { AppShell } from '@/app/AppShell'
 import { RedirectIfAuthed, RequireAuth, RequireOnboarded } from '@/app/Guards'
 import { NotFound } from '@/app/NotFound'
-import { Splash } from '@/features/auth/Splash'
 
 // Route-level code splitting: each screen loads on demand.
 const L = <T extends Record<string, unknown>>(f: () => Promise<T>, name: keyof T) =>
@@ -51,7 +50,7 @@ const Privacy = L(() => import('@/features/legal/Legal'), 'Privacy')
 const Terms = L(() => import('@/features/legal/Legal'), 'Terms')
 
 const Bare = () => (
-  <Suspense fallback={<Splash />}>
+  <Suspense fallback={null}>
     <Outlet />
     <DevMode />
   </Suspense>

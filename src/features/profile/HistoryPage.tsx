@@ -10,7 +10,7 @@ import { dayLabel } from '@/lib/format'
 import { PageHeader, Section } from '@/components/ui/Layout'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { ButtonLink } from '@/components/ui/Button'
-import { LoadingBlock } from '@/components/ui/States'
+import { GhostRegion, ListRowsGhost } from '@/components/ui/Ghost'
 
 export function HistoryPage() {
   const today = useToday()
@@ -36,7 +36,7 @@ export function HistoryPage() {
     <div>
       <PageHeader back eyebrow="Last 30 days" title="History" />
       <Section title="Recently eaten" className="mt-0">
-        {diary.isPending ? <LoadingBlock rows={2} /> : (diary.data ?? []).length === 0 ? <p className="text-sm text-muted">Nothing logged in the last 30 days.</p> : (
+        {diary.isPending ? <GhostRegion label="Loading history"><ListRowsGhost rows={3} /></GhostRegion> : (diary.data ?? []).length === 0 ? <p className="text-sm text-muted">Nothing logged in the last 30 days.</p> : (
           <ul className="divide-y divide-line rounded-lg bg-elevated px-4">
             {diary.data!.slice(0, 15).map((e) => (
               <li key={e.id} className="flex justify-between gap-3 py-2.5 text-sm">
