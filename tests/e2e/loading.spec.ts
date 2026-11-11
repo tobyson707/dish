@@ -49,6 +49,19 @@ test('launch screen: text only on a fresh launch, then the right route; protecte
   await expect(splash).toBeVisible()
   await expect(splash.locator('.boot-mark')).toHaveText('DISH.')
   await expect(splash.locator('.boot-tag')).toHaveText('Good food. Less thinking.')
+  // the studio credit: at the foot, plain black, no accent
+  await expect(splash.locator('.boot-credit-by')).toHaveText('A product by')
+  const studio = splash.locator('.boot-credit-name')
+  await expect(studio).toHaveText('TBXP STUDIO')
+  expect(await studio.evaluate((el) => getComputedStyle(el).color)).toBe('rgb(0, 0, 0)')
+  await expect(studio.locator('*')).toHaveCount(0) // one colour throughout
+  const sb = (await studio.boundingBox())!
+  const mb = (await splash.locator('.boot-mark').boundingBox())!
+  const vp = page.viewportSize()!
+  expect(sb.y + sb.height).toBeLessThanOrEqual(vp.height) // never clipped
+  expect(sb.y).toBeGreaterThan(vp.height * 0.8)
+  expect(sb.y - (mb.y + mb.height)).toBeGreaterThan(100) // generous space below the wordmark
+  expect(Math.abs(sb.x + sb.width / 2 - vp.width / 2)).toBeLessThan(2) // centred
   expect(await splash.locator('.boot-tag').evaluate((el) => getComputedStyle(el).textTransform)).toBe('uppercase')
   await expect(splash.locator('img, svg, button, [role="progressbar"]')).toHaveCount(0) // nothing but type
   const bg = await splash.evaluate((el) => getComputedStyle(el).backgroundColor)

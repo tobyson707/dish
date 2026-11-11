@@ -88,6 +88,11 @@ export function BootSplash() {
         </p>
         <p className="boot-tag">Good food. Less thinking.</p>
       </div>
+      {/* studio credit: quiet, at the foot of the screen */}
+      <div className="boot-credit" aria-hidden="true">
+        <p className="boot-credit-by">A product by</p>
+        <p className="boot-credit-name">TBXP STUDIO</p>
+      </div>
     </div>,
     document.body,
   )

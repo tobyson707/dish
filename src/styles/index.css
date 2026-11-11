@@ -715,6 +715,21 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
   text-transform: uppercase;
   opacity: 0.62;
 }
+/* studio credit at the foot of the launch screen: plain type, no accent */
+.boot-credit {
+  position: absolute; left: 0; right: 0;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + clamp(24px, 6dvh, 56px));
+  display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center;
+  font-family: 'Manrope Variable', Manrope, system-ui, sans-serif;
+}
+.boot-credit-by { font-size: 10px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: #8a8a8a; }
+.boot-credit-name { font-size: clamp(13px, 3.6vw, 15px); font-weight: 800; letter-spacing: 0.14em; color: #000000; }
+:root[data-theme='dark'] .boot-credit-name { color: #ffffff; }
+.boot-splash[data-phase='wait'] .boot-credit { opacity: 0; }
+.boot-splash[data-phase='in'] .boot-credit { animation: fade 360ms var(--ease-enter) 320ms both; }
+.boot-splash[data-returning][data-phase='in'] .boot-credit { animation: fade 200ms var(--ease-enter) both; }
+/* very short screens (landscape phones): keep it clear of the wordmark */
+@media (max-height: 380px) { .boot-credit { bottom: calc(env(safe-area-inset-bottom, 0px) + 10px); gap: 3px; } }
 .boot-splash[data-phase='wait'] .boot-stack { opacity: 0; }
 .boot-splash[data-phase='in'] .boot-mark { animation: boot-rise 460ms var(--ease-enter) both; }
 .boot-splash[data-phase='in'] .boot-tag { animation: boot-tag 360ms var(--ease-enter) 320ms both; }
