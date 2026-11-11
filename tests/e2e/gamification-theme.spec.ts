@@ -128,7 +128,7 @@ test.describe('gamification', () => {
     await page.getByRole('radio', { name: 'Enter manually' }).click()
     await page.getByLabel('What did you eat?').fill('Offline moi moi')
     await page.getByRole('button', { name: 'Add to diary' }).click()
-    await expect(page.getByText(/waiting to sync/).first()).toBeVisible()
+    await expect(page.getByText(/\d+ changes? saved on this device/)).toBeVisible() // kept locally, said quietly
     await page.waitForTimeout(800)
     await expect(page.getByText('+10 XP')).toHaveCount(0) // nothing claimed before the server confirms
     await context.setOffline(false)
@@ -193,7 +193,7 @@ test.describe('appearance', () => {
     await expect.poll(() => bg(page)).toBe(LIGHT_BG) // follows device change live
 
     await page.goto('/profile')
-    await page.getByRole('link', { name: /^Settings/ }).click()
+    await page.getByRole('link', { name: /^App preferences/ }).click()
     await expect(page.getByRole('radio', { name: /System default/ })).toHaveAttribute('aria-checked', 'true')
     await page.getByRole('radio', { name: /Dark/ }).click()
     await expect.poll(() => bg(page)).toBe(DARK_BG) // overrides the light device

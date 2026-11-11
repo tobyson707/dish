@@ -87,8 +87,8 @@ test('compact curved category selector, lower greeting, featured meals with prev
   // 6-7. a short wheel of icons; only the active category shows its name; the default is All
   const all = selector(page).getByRole('radio', { name: 'All' })
   await expect(all).toHaveAttribute('aria-checked', 'true')
-  await expect(page.locator('.sel-tag[data-on] .sel-tag-text')).toHaveText('All')
-  await expect(page.locator('.sel-tag-text')).toHaveCount(1)
+  await expect(page.locator('.sel-name[data-on] .sel-name-text')).toHaveText('All')
+  await expect(page.locator('.sel-name-text')).toHaveCount(1)
   for (const name of ['Breakfast', 'Lunch', 'Dinner', 'Snacks', 'Drinks']) {
     const r = selector(page).getByRole('radio', { name })
     await expect(r).toHaveAttribute('aria-checked', 'false')
@@ -107,7 +107,7 @@ test('compact curved category selector, lower greeting, featured meals with prev
   await page.waitForTimeout(150) // hold still: no flick
   await page.mouse.up()
   await expect(selector(page).getByRole('radio', { name: 'Snacks' })).toHaveAttribute('aria-checked', 'true')
-  await expect(page.locator('.sel-tag[data-on] .sel-tag-text')).toHaveText('Snacks')
+  await expect(page.locator('.sel-name[data-on] .sel-name-text')).toHaveText('Snacks')
   await expect(page.getByRole('dialog')).toHaveCount(0)
   await expect(page.locator('.feat-info p').first()).toHaveText(/snack/i)
   // back to All with the keyboard

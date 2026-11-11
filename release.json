@@ -1,0 +1,9 @@
+{
+  "channel": "beta",
+  "releasedAt": "2026-11-11",
+  "notes": "First public beta of DISH.",
+  "stores": {
+    "ios": null,
+    "android": null
+  }
+}

@@ -6,6 +6,7 @@ import { FloatingNavigation } from '@/components/nav/FloatingNavigation'
 import { OfflineIndicator } from '@/components/ui/OfflineIndicator'
 import { GhostRegion, HeaderGhost, ListRowsGhost } from '@/components/ui/Ghost'
 import { RefreshIndicator } from '@/components/ui/RefreshIndicator'
+import { DeletionBanner } from './DeletionBanner'
 import { ReminderScheduler } from '@/features/profile/ReminderScheduler'
 import { GamificationNotifier } from '@/gamification/GamificationNotifier'
 import { Celebrations } from '@/gamification/Celebrations'
@@ -20,6 +21,7 @@ export function AppShell() {
       </a>
       <OfflineIndicator />
       <RefreshIndicator />
+      <DeletionBanner />
       {/* Home is a full-screen canvas; other screens are a centred column. Nothing is
           reserved for navigation: it floats (bottom-left), and pages keep clear space
           at the end so their last content can scroll above it. */}

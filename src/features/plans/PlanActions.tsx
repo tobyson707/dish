@@ -142,7 +142,26 @@ export function PlanActions({ plan, onClose, from = 'list', initial = 'menu' }: 
         message={plan.status === 'active' ? 'It leaves your calendar and your plans list. Eaten and skipped meals stay in your history. You can restore it any time.' : 'It leaves your plans list. You can restore it any time.'}
         confirmLabel="Archive"
         loading={setStatus.isPending}
-        onConfirm={() => void run(() => setStatus.mutateAsync({ id: plan.id, status: 'archived' }), 'Plan archived.')}
+        onConfirm={async () => {
+          const before = plan.status
+          try {
+            await setStatus.mutateAsync({ id: plan.id, status: 'archived' })
+            toast.show('Plan archived.', {
+              duration: 6000,
+              action: {
+                label: 'Undo',
+                onClick: () =>
+                  void setStatus.mutateAsync({ id: plan.id, status: before }).then(
+                    () => toast.show(`“${plan.title}” is back.`, { tone: 'success', duration: 2000 }),
+                    (e) => toast.error(friendlyError(e)),
+                  ),
+              },
+            })
+            close()
+          } catch (e) {
+            toast.error(friendlyError(e))
+          }
+        }}
         onCancel={close}
       />
       <ConfirmDialog

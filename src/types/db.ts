@@ -20,6 +20,9 @@ export interface Profile {
   onboarding_draft: Record<string, unknown>
   onboarding_completed_at: string | null
   theme_preference: 'light' | 'dark' | 'system'
+  /** interface sounds, synced across devices (see SoundSync) */
+  ui_sounds?: boolean
+  ui_sound_volume?: number
   created_at: string
   updated_at: string
 }

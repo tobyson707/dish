@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { cn } from '@/lib/cn'
+import { play, type SoundName } from '@/lib/uiSound'
 import { friendlyError } from '@/lib/errors'
 import { Icon, type IconName } from './Icon'
 import { Spinner } from './Spinner'
@@ -12,7 +13,7 @@ export type ActionPhase = 'idle' | 'busy' | 'done' | 'error'
  * succeeded (briefly, then idle again), or error (the previous state stays, the message
  * says what happened, and Retry runs it again). A second press while busy is ignored.
  */
-export function useAction<A extends unknown[], R>(fn: (...args: A) => Promise<R>, opts: { success?: string | ((r: R) => string | null) | null; doneMs?: number; retry?: boolean } = {}) {
+export function useAction<A extends unknown[], R>(fn: (...args: A) => Promise<R>, opts: { success?: string | ((r: R) => string | null) | null; doneMs?: number; retry?: boolean; sound?: SoundName | null } = {}) {
   const [phase, setPhase] = useState<ActionPhase>('idle')
   const toast = useToast()
   const running = useRef(false)
@@ -28,6 +29,7 @@ export function useAction<A extends unknown[], R>(fn: (...args: A) => Promise<R>
     try {
       const r = await fn(...args)
       setPhase('done')
+      if (opts.sound !== null) play(opts.sound ?? 'confirm')
       const msg = typeof opts.success === 'function' ? opts.success(r) : opts.success
       if (msg) toast.show(msg, { tone: 'success', duration: 2200 })
       timer.current = setTimeout(() => setPhase('idle'), opts.doneMs ?? 1600)
@@ -70,7 +72,8 @@ const TONES: Record<Tone, string> = {
  * A button that runs an async action and shows each step: pressed → working (spinner) →
  * done (tick, its "done" label) or error (alert; the toast offers Retry).
  */
-export function ActionButton({ action, icon, doneIcon = 'check', children, doneLabel, busyLabel, success, tone = 'soft', size = 'md', className, iconOnly, label, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'children'> & {
+export function ActionButton({ action, icon, doneIcon = 'check', children, doneLabel, busyLabel, success, sound, tone = 'soft', size = 'md', className, iconOnly, label, ...rest }: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onClick' | 'children'> & {
+  sound?: SoundName | null
   action: () => Promise<unknown>
   icon: IconName
   doneIcon?: IconName
@@ -83,7 +86,7 @@ export function ActionButton({ action, icon, doneIcon = 'check', children, doneL
   iconOnly?: boolean
   label?: string
 }) {
-  const { phase, run } = useAction(action, { success })
+  const { phase, run } = useAction(action, { success, sound })
   const text = phase === 'busy' && busyLabel ? busyLabel : phase === 'done' && doneLabel ? doneLabel : children
   return (
     <button
@@ -126,14 +129,18 @@ export function SaveToggle({ on, onToggle, label, savedMessage = 'Saved', remove
   size?: number
   withText?: boolean
 }) {
-  const { phase, run } = useAction((next: boolean) => onToggle(next), { success: null })
+  // saving confirms with a sound; removing is just the press
+  const { phase, run } = useAction((next: boolean) => onToggle(next), { success: null, sound: null })
   const toast = useToast()
   const press = async () => {
     const next = !on
     const ok = await run(next)
+    if (ok && next) play('confirm')
     if (ok) {
       const msg = next ? savedMessage : removedMessage
-      if (msg) toast.show(msg, { tone: 'success', duration: 1800 })
+      // removing can be taken back for a few seconds (the save is simply made again)
+      if (msg && !next) toast.show(msg, { duration: 5000, action: { label: 'Undo', onClick: () => void onToggle(true).then(() => play('confirm'), () => toast.error('Couldn’t restore it. Please try again.')) } })
+      else if (msg) toast.show(msg, { tone: 'success', duration: 1800 })
     }
   }
   return (

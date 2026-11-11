@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Link } from 'react-router'
 import { usePreferences, useProfile } from '@/data/profile'
 import { countryByCode } from '@/lib/geo'
@@ -12,7 +11,6 @@ import { Icon, type IconName } from '@/components/ui/Icon'
 import { Button } from '@/components/ui/Button'
 import { InstallCard } from './InstallCard'
 import { MyProgress } from '@/components/gamification/MyProgress'
-import { AppearanceSheet } from '@/components/canvas/AppearanceSheet'
 import { useTheme } from '@/theme/ThemeProvider'
 import { useIsAdmin } from '@/data/foodImages'
 
@@ -25,7 +23,6 @@ export function ProfilePage() {
   const { user, signOut } = useAuth()
   const sync = useSyncState()
   const { preference } = useTheme()
-  const [appearanceOpen, setAppearanceOpen] = useState(false)
   const isAdmin = useIsAdmin()
   return (
     <div>
@@ -50,38 +47,34 @@ export function ProfilePage() {
         </>
       )}
       <MyProgress />
-      <nav aria-label="Profile settings" className="mt-8">
-        <ul className="divide-y divide-line overflow-hidden rounded-lg bg-elevated">
-          <Item to="/profile/settings" icon="settings" title="Settings" sub="Appearance, sounds and progress feedback" />
-          <Item to="/profile/preferences" icon="leaf" title="Food preferences" sub="Cuisines, allergies, dislikes, budget, planning" />
+      <nav aria-label="Profile" className="mt-8 flex flex-col gap-6">
+        <Group title="Your food">
+          <Item to="/profile/preferences" icon="leaf" title="Food preferences" sub="Diet, allergies, cuisines, dislikes, spice, meal times" />
           <Item to="/profile/goals" icon="flame" title="Goals & targets" sub="Meal-planning goals, optional calorie target" />
+          <Item to="/saved" icon="heart" title="Saved" sub="Meals and meal plans you saved" />
+          <Item to="/history" icon="history" title="History" sub="Eaten meals and leftovers" />
           <Item to="/budget" icon="wallet" title="Food budget" sub="Estimated vs actual spending" />
-          <Item to="/history" icon="history" title="History & favourites" sub="Eaten meals, favourites, leftovers" />
-          <Item to="/profile/notifications" icon="bell" title="Reminders" sub="Meal, prep and shopping reminders" />
-          <Item to="/profile/sync" icon="cloud" title="Offline & sync" sub={sync.pending + sync.failed + sync.conflicts ? `${sync.pending + sync.failed + sync.conflicts} change(s) need attention` : 'Everything is synced'} />
-          <li>
-            <button type="button" onClick={() => setAppearanceOpen(true)} className="press flex w-full items-center gap-4 px-4 py-3.5 text-left hover:bg-ink/5">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface"><Icon name={preference === 'dark' ? 'moon' : preference === 'light' ? 'sun' : 'monitor'} size={20} /></span>
-              <span className="min-w-0 flex-1">
-                <span className="block font-semibold">Appearance</span>
-                <span className="block truncate text-footnote text-muted">{preference === 'dark' ? 'Dark' : preference === 'light' ? 'Light' : 'System default'}</span>
-              </span>
-              <Icon name="right" size={18} className="text-muted" />
-            </button>
-          </li>
-          <Item to="/profile/account" icon="shield" title="Account & privacy" sub="Password, export, delete account" />
+        </Group>
+        <Group title="Settings">
+          <Item to="/profile/account" icon="user" title="Account" sub="Email, password, sign out" />
+          <Item to="/profile/settings" icon="settings" title="App preferences" sub={`${preference === 'dark' ? 'Dark' : preference === 'light' ? 'Light' : 'System'} appearance, sounds, reminders, about DISH`} />
+          <Item to="/profile/privacy" icon="shield" title="Privacy & security" sub="Your data, export, delete account" />
+          {sync.pending + sync.failed + sync.conflicts > 0 && <Item to="/profile/sync" icon="cloud" title="Offline & sync" sub={`${sync.pending + sync.failed + sync.conflicts} change(s) need attention`} />}
           {isAdmin.data && <Item to="/admin/images" icon="image" title="Image studio" sub="DISH team · generate and review catalogue photos" />}
-        </ul>
+        </Group>
       </nav>
       <div className="mt-4"><InstallCard /></div>
-      <div className="mt-6 flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted">
-        <Link to="/privacy" className="underline">Privacy</Link>
-        <Link to="/terms" className="underline">Terms</Link>
-        <span>DISH gives general food information, not medical advice.</span>
-      </div>
       <Button variant="secondary" icon="logout" block className="mt-6" onClick={() => void signOut()}>Sign out</Button>
-      <AppearanceSheet open={appearanceOpen} onClose={() => setAppearanceOpen(false)} />
     </div>
+  )
+}
+
+function Group({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section aria-label={title}>
+      <h2 className="label-caps mb-2 px-1">{title}</h2>
+      <ul className="divide-y divide-line overflow-hidden rounded-lg bg-elevated">{children}</ul>
+    </section>
   )
 }
 

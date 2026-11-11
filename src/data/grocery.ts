@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/lib/supabase'
+import { play } from '@/lib/uiSound'
 import { useUserId } from '@/features/auth/AuthProvider'
 import { enqueue } from '@/offline/outbox'
 import { uuid } from '@/lib/ids'
@@ -72,6 +73,7 @@ export function useGroceryItemMutations(listId: string) {
 
   return {
     toggle: async (item: GroceryItem) => {
+      if (!item.purchased) play('tick') // a tactile tick as it goes in the basket
       const patch = { purchased: !item.purchased, purchased_at: !item.purchased ? stamp() : null, client_updated_at: stamp() }
       local((rows) => rows.map((r) => (r.id === item.id ? { ...r, ...patch, _pending: true } : r)))
       await enqueue({ kind: 'update', table: 'grocery_items', id: item.id, patch }, { label: `${patch.purchased ? 'Tick off' : 'Untick'} ${item.name}`, invalidate: [key] })
@@ -100,6 +102,13 @@ export function useGroceryItemMutations(listId: string) {
     remove: async (item: GroceryItem) => {
       local((rows) => rows.filter((r) => r.id !== item.id))
       await enqueue({ kind: 'delete', table: 'grocery_items', id: item.id }, { label: `Remove ${item.name}`, invalidate: [key] })
+    },
+    /** Undo a removal: the same item (same id, quantity, ticked state) goes back on the list. */
+    restore: async (item: GroceryItem) => {
+      local((rows) => (rows.some((r) => r.id === item.id) ? rows : [...rows, item]))
+      const { _pending: _p, ...row } = item
+      void _p
+      await enqueue({ kind: 'upsert', table: 'grocery_items', row: { ...row, client_updated_at: stamp() } }, { label: `Put back ${item.name}`, invalidate: [key] })
     },
   }
 }

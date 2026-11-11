@@ -7,7 +7,9 @@ import { Toggle } from '@/components/ui/Inputs'
 import { useToast } from '@/components/ui/Toast'
 import { friendlyError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
-import { useUiSounds } from '@/lib/uiSound'
+import { setSoundPrefs, useSoundPrefs } from '@/lib/uiSound'
+import { Link } from 'react-router'
+import { AboutDish } from './AboutDish'
 import { formatTime, localeClock, useClockPreference, type ClockPreference } from '@/lib/time'
 import { Segmented } from '@/components/ui/Inputs'
 
@@ -22,11 +24,11 @@ export function SettingsPage() {
   const g = useGamification()
   const setFeedback = useSetGamificationFeedback()
   const toast = useToast()
-  const [sounds, setSounds] = useUiSounds()
+  const sound = useSoundPrefs()
   const [clock, setClock] = useClockPreference()
   return (
     <div>
-      <PageHeader back="/profile" eyebrow="Profile" title="Settings" />
+      <PageHeader back="/profile" eyebrow="Profile" title="App preferences" />
       <Section title="Appearance" className="mt-0">
         <div role="radiogroup" aria-label="Appearance" className="grid gap-2 sm:grid-cols-3">
           {OPTIONS.map((o) => {
@@ -86,10 +88,59 @@ export function SettingsPage() {
       </Section>
       <Section title="Sounds">
         <div className="rounded-lg bg-elevated px-4">
-          <Toggle label="Interface sounds" description="A quiet click (and a tiny vibration where supported) when you change the meal category on Home." checked={sounds} onChange={setSounds} />
+          <Toggle label="Interface sounds" description="Soft, short sounds when you press, choose, save or finish something. Never while you type or scroll." checked={sound.on} onChange={(on) => setSoundPrefs({ on })} />
+          <div className={cn('border-t border-line py-4', !sound.on && 'opacity-45')}>
+            <label htmlFor="ui-volume" className="flex items-center justify-between text-sm font-semibold">
+              Volume <span className="num font-normal text-muted">{Math.round(sound.volume * 100)}%</span>
+            </label>
+            <input
+              id="ui-volume"
+              type="range"
+              min={0}
+              max={1}
+              step={0.05}
+              value={sound.volume}
+              disabled={!sound.on}
+              onChange={(e) => setSoundPrefs({ volume: Number(e.target.value) })}
+              className="mt-3 w-full accent-[var(--c-accent)]"
+            />
+          </div>
         </div>
-        <p className="mt-2 text-sm text-muted">Saved on this device. Everything works the same with sounds off.</p>
+        <p className="mt-2 text-sm text-muted">Saved to your account. Everything works the same with sounds off.</p>
       </Section>
+      <Section title="More">
+        <ul className="divide-y divide-line overflow-hidden rounded-lg bg-elevated">
+          <MoreLink to="/profile/notifications" icon="bell" title="Reminders" sub="Meal, prep and shopping reminders" />
+          <MoreLink to="/profile/sync" icon="cloud" title="Offline & sync" sub="Changes waiting to sync, and what's saved on this device" />
+        </ul>
+      </Section>
+      <Section title="Support">
+        <ul className="divide-y divide-line overflow-hidden rounded-lg bg-elevated">
+          {SUPPORT_EMAIL && <MoreLink href={`mailto:${SUPPORT_EMAIL}`} icon="info" title="Contact support" sub={SUPPORT_EMAIL} />}
+          <MoreLink to="/terms" icon="diary" title="Terms" sub="The terms of using DISH" />
+          <MoreLink to="/privacy" icon="shield" title="Privacy policy" sub="What DISH stores and why" />
+        </ul>
+        <p className="mt-2 text-sm text-muted">DISH gives general food information, not medical advice.</p>
+      </Section>
+      <AboutDish />
     </div>
   )
+}
+
+/** Shown only when a support address is configured (VITE_SUPPORT_EMAIL); none is invented. */
+const SUPPORT_EMAIL = (import.meta.env.VITE_SUPPORT_EMAIL as string | undefined)?.trim() || null
+
+function MoreLink({ to, href, icon, title, sub }: { to?: string; href?: string; icon: IconName; title: string; sub: string }) {
+  const body = (
+    <>
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-surface"><Icon name={icon} size={20} /></span>
+      <span className="min-w-0 flex-1">
+        <span className="block font-semibold">{title}</span>
+        <span className="block truncate text-footnote text-muted">{sub}</span>
+      </span>
+      <Icon name="right" size={18} className="text-muted" />
+    </>
+  )
+  const cls = 'press flex items-center gap-4 px-4 py-3.5 hover:bg-ink/5'
+  return <li>{to ? <Link to={to} className={cls}>{body}</Link> : <a href={href} className={cls}>{body}</a>}</li>
 }

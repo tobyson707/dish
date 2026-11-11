@@ -65,6 +65,7 @@ export const SCREENS: ScreenEntry[] = [
   { id: 'diary-add', name: 'Add food to diary', category: 'Food and meal management', path: '/diary/add' },
   { id: 'diary-edit', name: 'Edit a diary entry', category: 'Food and meal management', path: '/diary/edit/:entryId', needs: 'diary_entry' },
   { id: 'history', name: 'History and favourites', category: 'Food and meal management', path: '/history' },
+  { id: 'privacy', name: 'Privacy & security (export, delete account)', category: 'Profile', path: '/profile/privacy', keywords: 'delete account deletion grace export data' },
   { id: 'saved', name: 'Saved meals and meal plans', category: 'Food and meal management', path: '/saved', keywords: 'favourites saved plans counts' },
 
   // E. Meal planning

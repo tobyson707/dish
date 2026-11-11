@@ -4,6 +4,26 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
+import { readFileSync } from 'node:fs'
+import type { Plugin } from 'vite'
+
+/**
+ * Release metadata, from one place: the version is package.json's; channel, date, notes and
+ * store links are release.json's. It is compiled into the app (what is installed) and also
+ * published with every deploy as /version.json (what is live), so "Check for updates" can
+ * compare the two for real.
+ */
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string }
+const releaseExtra = JSON.parse(readFileSync(new URL('./release.json', import.meta.url), 'utf8')) as Record<string, unknown>
+const RELEASE = { version: pkg.version, ...releaseExtra }
+function releaseManifest(): Plugin {
+  return {
+    name: 'dish-release-manifest',
+    generateBundle() {
+      this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify(RELEASE, null, 2) })
+    },
+  }
+}
 
 const domain = fileURLToPath(new URL('./supabase/functions/_shared/domain', import.meta.url))
 
@@ -28,7 +48,7 @@ function publicSupabaseEnv(mode: string): Record<string, string> {
 }
 
 export default defineConfig(({ mode }) => ({
-  define: publicSupabaseEnv(mode),
+  define: { ...publicSupabaseEnv(mode), __DISH_RELEASE__: JSON.stringify(RELEASE) },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
@@ -36,6 +56,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [
+    releaseManifest(),
     react(),
     tailwindcss(),
     VitePWA({
@@ -65,7 +86,8 @@ export default defineConfig(({ mode }) => ({
         // user data lives in IndexedDB (see PWA_OFFLINE.md).
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // only precache Latin font subsets; others load on demand if ever needed
-        globIgnores: ['**/manrope-cyrillic*', '**/manrope-greek*', '**/manrope-vietnamese*', '**/*.map'],
+        // version.json must always come from the network (it says what is live)
+        globIgnores: ['version.json', '**/manrope-cyrillic*', '**/manrope-greek*', '**/manrope-vietnamese*', '**/*.map'],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/auth\/v1/, /^\/rest\/v1/, /^\/storage\/v1/, /^\/functions\/v1/],
         cleanupOutdatedCaches: true,

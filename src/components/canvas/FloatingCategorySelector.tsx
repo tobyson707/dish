@@ -1,39 +1,42 @@
 import { useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { cn } from '@/lib/cn'
-import { playDetent, unlockUiSound } from '@/lib/uiSound'
+import { unlockUiSound } from '@/lib/uiSound'
 import { prefersReducedMotion } from '@/styles/motion'
 import { Icon } from '@/components/ui/Icon'
 import { CATEGORIES, type Category } from './categories'
-import { follow, itemStyle, PITCH, REACH, resist, restingIndex } from './wheel'
+import { cyclicOffset, follow, iconY, indexAt, itemStyle, mod, nearestPosFor, PITCH, restingPos, SLOT, WHEEL_HEIGHT } from './wheel'
 
-/** Breakfast to drinks in the order of a day, then everything. */
+/** Breakfast to drinks in the order of a day, then everything (and round again). */
 const ORDER: Category[] = ['breakfast', 'lunch', 'dinner', 'snack', 'drink', 'all']
 const ITEMS = ORDER.map((id) => CATEGORIES.find((c) => c.id === id)!)
 const N = ITEMS.length
-const HEIGHT = (REACH * 2 + 1) * PITCH
-const clampIndex = (i: number) => Math.max(0, Math.min(N - 1, i))
 
 export type SelectHow = 'pointer' | 'keyboard' | 'scroll'
 
 /**
- * The category wheel on the right edge of Home, sitting in a notch the canvas curves
- * around. Categories are icons on a short vertical wheel; the one in the selection slot
- * is the active category and only it shows its name, beside its icon. Drag, flick, the
- * mouse wheel or a trackpad turn it: it eases to a stop on the nearest category (never
- * past the ends, which give a little and spring back), and that category becomes active.
- * Tapping a category (or Enter on it) turns the wheel to it and opens its drawer.
+ * Sounds belong to Home (one select sound when the category changes, a soft whoosh when
+ * the drawer opens); the wheel itself is silent while it turns.
+ *
+ * The category wheel on the right edge of Home, in the notch the canvas curves around.
+ * An endless loop of category icons: drag, flick, scroll or use the arrow keys and it
+ * keeps going round in either direction, easing to a stop with one category in the
+ * selection slot. That category's name sits inside the slot, set vertically, never
+ * outside the wheel. A turn that settles makes it the active category (Home follows);
+ * a tap or Enter on a category turns to it and opens its drawer.
+ *
+ * Each category is one element (its real identity), drawn at its shortest distance round
+ * the loop; it only changes sides while out of view, so the loop has no visible seam.
  */
 export function FloatingCategorySelector({ value, onSelect, overDrawer }: { value: Category; onSelect: (c: Category, how: SelectHow) => void; overDrawer: boolean }) {
   const at = ITEMS.findIndex((c) => c.id === value)
   const [pos, setPos] = useState(at)
   const [moving, setMoving] = useState(false)
-  const posRef = useRef(at)
-  const target = useRef(at)
+  const posRef = useRef<number>(at)
+  const target = useRef<number>(at)
   const raf = useRef(0)
   const lastFrame = useRef(0)
-  const gesture = useRef(false) // a drag or wheel is in charge; its resting place becomes the selection
+  const gesture = useRef(false) // a drag or wheel is in charge; where it rests becomes the selection
   const wheelIdle = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const detent = useRef(at)
   const drag = useRef<{ y: number; from: number; moved: boolean; id: number; trail: { t: number; y: number }[] } | null>(null)
   const swallowClick = useRef(false)
   const group = useRef<HTMLDivElement>(null)
@@ -43,21 +46,18 @@ export function FloatingCategorySelector({ value, onSelect, overDrawer }: { valu
     latest.current = { value, onSelect }
   })
 
-  // the wheel's motion lives in refs and one rAF loop; React only renders the result
-  const engine = useRef<{ goTo: (i: number) => void; nudge: (dItems: number) => void; stop: () => void } | null>(null)
+  // the motion lives in refs and one rAF loop; React only renders the result
+  const engine = useRef<{ goTo: (p: number) => void; nudge: (d: number) => void; stop: () => void } | null>(null)
   useEffect(() => {
     const show = (p: number) => {
       posRef.current = p
       setPos(p)
-      const nearest = clampIndex(Math.round(p))
-      if (gesture.current && nearest !== detent.current) playDetent() // a soft tick as each category passes
-      detent.current = nearest
     }
     const settle = () => {
       setMoving(false)
       if (!gesture.current || wheelIdle.current) return
       gesture.current = false
-      const id = ITEMS[clampIndex(Math.round(posRef.current))]!.id
+      const id = ITEMS[indexAt(posRef.current, N)]!.id
       if (id !== latest.current.value) latest.current.onSelect(id, 'scroll')
     }
     const tick = (t: number) => {
@@ -83,12 +83,12 @@ export function FloatingCategorySelector({ value, onSelect, overDrawer }: { valu
       raf.current = requestAnimationFrame(tick)
     }
     engine.current = {
-      goTo: (i) => {
-        target.current = i
+      goTo: (p) => {
+        target.current = p
         run()
       },
       nudge: (d) => {
-        target.current = Math.max(-0.35, Math.min(N - 1 + 0.35, target.current + d))
+        target.current += d
         run()
       },
       stop: () => {
@@ -103,26 +103,26 @@ export function FloatingCategorySelector({ value, onSelect, overDrawer }: { valu
     }
   }, [])
 
-  // a selection made any other way (tap, keys, Home) turns the wheel to it
+  // a selection made any other way (tap, keys, Home) turns the wheel to it, the short way round
   useEffect(() => {
-    if (drag.current?.moved || gesture.current || target.current === at) return
-    engine.current?.goTo(at)
+    if (drag.current?.moved || gesture.current || indexAt(target.current, N) === at) return
+    engine.current?.goTo(nearestPosFor(at, target.current, N))
   }, [at])
 
-  // mouse wheel and trackpad: a notch (100px) is one category; the wheel settles when input stops
+  // mouse wheel and trackpad: a notch (100px) is one category; it settles when input stops
   useEffect(() => {
     const el = group.current
     if (!el) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * HEIGHT : e.deltaY
+      const dy = e.deltaMode === 1 ? e.deltaY * 33 : e.deltaMode === 2 ? e.deltaY * WHEEL_HEIGHT : e.deltaY
       if (!dy) return
       gesture.current = true
       setMoving(true)
       if (wheelIdle.current) clearTimeout(wheelIdle.current)
       wheelIdle.current = setTimeout(() => {
         wheelIdle.current = null
-        engine.current?.goTo(clampIndex(Math.round(target.current)))
+        engine.current?.goTo(Math.round(target.current))
       }, 140)
       engine.current?.nudge(Math.max(-1, Math.min(1, dy / 100)))
     }
@@ -154,12 +154,9 @@ export function FloatingCategorySelector({ value, onSelect, overDrawer }: { valu
       return
     }
     d.trail = [...d.trail.filter((s) => e.timeStamp - s.t < 90), { t: e.timeStamp, y: e.clientY }]
-    const p = resist(d.from - dy / PITCH, N)
+    const p = d.from - dy / PITCH
     posRef.current = p
     setPos(p)
-    const nearest = clampIndex(Math.round(p))
-    if (nearest !== detent.current) playDetent({ haptic: true })
-    detent.current = nearest
   }
   const onPointerEnd = (e: PointerEvent<HTMLDivElement>) => {
     const d = drag.current
@@ -171,26 +168,27 @@ export function FloatingCategorySelector({ value, onSelect, overDrawer }: { valu
     const first = d.trail[0]!
     const dt = Math.max(16, e.timeStamp - first.t)
     const velocity = e.type === 'pointercancel' ? 0 : -(e.clientY - first.y) / dt / PITCH
-    engine.current?.goTo(restingIndex(posRef.current, velocity, N))
+    engine.current?.goTo(restingPos(posRef.current, velocity))
   }
 
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
     const step = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0
     if (!step && e.key !== 'Home' && e.key !== 'End') return
     e.preventDefault()
-    const n = e.key === 'Home' ? 0 : e.key === 'End' ? N - 1 : clampIndex(at + step)
+    // arrows go round (Drinks → All → Breakfast…); Home and End jump to the first and last
+    const n = e.key === 'Home' ? 0 : e.key === 'End' ? N - 1 : mod(at + step, N)
     if (n === at) return
+    if (step) engine.current?.goTo(Math.round(target.current) + step) // keep turning the same way, even across the seam
     refs.current[n]?.focus({ preventScroll: true })
-    playDetent()
     onSelect(ITEMS[n]!.id, 'keyboard')
   }
 
   const active = ITEMS[at]!
-  const settled = !moving && Math.abs(pos - at) < 0.02
+  const settled = !moving && Math.abs(pos - Math.round(pos)) < 0.02 && indexAt(pos, N) === at
 
   return (
     <div
-      className="sel-notch fixed right-0 top-1/2 z-[60] -translate-y-1/2 py-2.5"
+      className="sel-notch fixed right-0 top-1/2 z-[60] -translate-y-1/2 py-3"
       data-over-drawer={overDrawer || undefined}
       style={{ width: 'calc(var(--canvas-m) + var(--notch-depth))', paddingLeft: 'calc((var(--notch-depth) - var(--sel-w)) / 2)', paddingRight: 'calc(var(--canvas-m) + (var(--notch-depth) - var(--sel-w)) / 2)' }}
     >
@@ -205,20 +203,28 @@ export function FloatingCategorySelector({ value, onSelect, overDrawer }: { valu
         onPointerUp={onPointerEnd}
         onPointerCancel={onPointerEnd}
         className="relative touch-none select-none"
-        style={{ width: 'var(--sel-w)', height: HEIGHT }}
+        style={{ width: 'var(--sel-w)', height: WHEEL_HEIGHT }}
       >
-        {/* the selection slot: fixed in the middle; the active name opens out to its left */}
-        <div aria-hidden="true" className="sel-slot pointer-events-none absolute right-[1px] top-1/2 flex h-[46px] w-max -translate-y-1/2 items-center rounded-full bg-accent text-accent-ink shadow-[0_10px_24px_-10px_var(--c-accent)]">
-          <span className="sel-tag" data-on={settled || undefined}>
-            <span>
-              <span key={active.id} className="sel-tag-text block whitespace-nowrap pl-4 pr-1 text-[0.875rem] font-bold tracking-tight">{active.label}</span>
-            </span>
+        {/* the selection slot: fixed in the middle, holding the active icon and its name set vertically */}
+        <div aria-hidden="true" className="sel-slot pointer-events-none absolute inset-x-0 top-1/2 -translate-y-1/2 rounded-full bg-accent shadow-[0_12px_26px_-12px_var(--c-accent)]" style={{ height: SLOT }}>
+          <span className="sel-name" data-on={settled || undefined}>
+            <span key={active.id} className="sel-name-text">{active.label}</span>
           </span>
-          <span className="w-[46px] shrink-0" />
         </div>
-        <div className="sel-wheel absolute inset-0">
+        {/* the slot's lower part opens the active category too (it's part of the same control) */}
+        <span
+          aria-hidden="true"
+          className="absolute inset-x-0 top-1/2"
+          style={{ height: SLOT / 2 - 4, marginTop: -SLOT / 2 + PITCH }}
+          onClick={() => {
+            if (swallowClick.current) return
+            unlockUiSound()
+            onSelect(active.id, 'pointer')
+          }}
+        />
+        <div className="sel-wheel pointer-events-none absolute inset-0">
           {ITEMS.map((c, i) => {
-            const d = i - pos
+            const d = cyclicOffset(i, pos, N)
             const look = itemStyle(d)
             const on = i === at
             const inSlot = Math.abs(d) < 0.5
@@ -237,15 +243,14 @@ export function FloatingCategorySelector({ value, onSelect, overDrawer }: { valu
                 onClick={() => {
                   if (swallowClick.current) return
                   unlockUiSound() // audio may only start from a user gesture
-                  if (!on) playDetent({ haptic: true })
                   onSelect(c.id, 'pointer')
                 }}
                 className={cn(
-                  'absolute left-1/2 top-1/2 flex h-[46px] w-[46px] items-center justify-center rounded-full outline-none transition-colors duration-[var(--dur-micro)] focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--c-bg)]',
+                  'pointer-events-auto absolute left-1/2 top-1/2 flex h-[46px] w-[46px] items-center justify-center rounded-full outline-none transition-colors duration-[var(--dur-micro)] focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--c-bg)]',
                   inSlot ? 'text-accent-ink' : overDrawer ? 'text-on-glass-dark-muted hover:text-on-glass-dark' : 'text-muted hover:text-ink',
                   look.hidden && 'pointer-events-none',
                 )}
-                style={{ transform: `translate(-50%, calc(-50% + ${d * PITCH}px)) scale(${look.scale})`, opacity: look.opacity }}
+                style={{ transform: `translate(-50%, calc(-50% + ${iconY(d)}px)) scale(${look.scale})`, opacity: look.hidden ? 0 : look.opacity }}
               >
                 <Icon name={c.icon} size={21} />
               </button>

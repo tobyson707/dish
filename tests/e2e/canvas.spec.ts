@@ -65,16 +65,14 @@ test('home canvas: selector → drawer → add, featured meal, keyboard, search,
   await expect(page.getByRole('dialog', { name: 'Add a meal' })).toBeVisible()
   await page.keyboard.press('Escape')
 
-  // appearance (in Profile) changes the theme for real
+  // appearance (in App preferences) changes the theme for real
   await page.goto('/profile')
-  await page.getByRole('button', { name: /^Appearance/ }).click()
-  const sheet = page.getByRole('dialog', { name: 'Appearance' })
+  await page.getByRole('link', { name: /^App preferences/ }).click()
+  const sheet = page.getByRole('radiogroup', { name: 'Appearance' })
   await sheet.getByRole('radio', { name: /Dark/ }).click()
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark')
   await sheet.getByRole('radio', { name: /Light/ }).click()
   await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('light')
-  await sheet.getByRole('button', { name: 'Close' }).click()
-  await expect(sheet).toBeHidden()
   void uid
   expect(errors).toEqual([])
 })
@@ -110,11 +108,9 @@ test('section actions: plan, diary, shopping dock, discover preview, profile app
   await expect(page.getByRole('dialog')).toBeVisible()
   await page.keyboard.press('Escape')
 
-  // Profile: Appearance opens the sheet
-  await page.goto('/profile')
-  await page.getByRole('button', { name: /^Appearance/ }).click()
-  await expect(page.getByRole('dialog', { name: 'Appearance' }).getByRole('radio', { name: /System Default/ })).toHaveAttribute('aria-checked', 'true')
-  await page.keyboard.press('Escape')
+  // App preferences: the appearance choice is shown as chosen
+  await page.goto('/profile/settings')
+  await expect(page.getByRole('radiogroup', { name: 'Appearance' }).getByRole('radio', { name: /System default/ })).toHaveAttribute('aria-checked', 'true')
 
   expect(errors).toEqual([])
 })

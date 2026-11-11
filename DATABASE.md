@@ -165,3 +165,11 @@ No tables of its own. Disabled unless the function's environment has `DISH_DEV_T
 - `meal_plans.cover_crop jsonb`: the cover's framing, `{x, y, zoom}` (focal point 0..1, zoom 1..4), checked by a constraint. The image in `plan-covers` is kept whole; every view renders the same framing from this. Adjusting it is logged in the activity history ("Adjusted the cover image").
 - `community_plans()` now also returns `cover_path`, `cover_crop` and `diets` (dietary tags that every meal in the plan carries; none are inferred). The published cover is readable through the existing `plan cover read` storage policy.
 - `my_saved_plans()`: the caller's saves, newest first, with details only while the plan is still published (`available`); the count is the number of stored saves.
+
+## Sound preferences and account deletion (migration `20261112000100_account_deletion.sql`)
+
+- `profiles.ui_sounds`, `profiles.ui_sound_volume` (0..1): interface sound preferences, synced across devices.
+- `account_deletion_requests`: one row per request (`scheduled` → `processing` → `completed`, or `cancelled`, or `failed` and retried). No foreign key to the account, so the row remains as a record after deletion; it holds only the opaque account id, timestamps and status. Readable by its owner; changed only by `request_account_deletion()` (requires a sign-in within 15 minutes, schedules 30 days out, revokes unused invitations), `cancel_account_deletion()` (before the deadline) and the purge job.
+- Triggers refuse new invitations and new publishing while a deletion is pending.
+- `purge_account_data(uid)` (service role only): anonymises the person in other people's `plan_activity` and remix credits and returns their plan cover paths. Deleting the auth user then removes everything they own (plans they own, shared or published, go too; collaborators lose access; remixes others made stay, credited to "a former DISH member").
+- Backups: the hosting provider's encrypted backups expire on its own schedule and are never used to restore a deleted account.

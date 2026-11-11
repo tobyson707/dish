@@ -220,7 +220,8 @@ test('planned vs eaten, locking, regenerate, grocery list, and offline sync', as
   await page.waitForTimeout(1500) // let the persisted cache settle
   await context.setOffline(true)
   await page.getByRole('checkbox', { name: /Tick off Bottled water/ }).click()
-  await expect(page.getByText(/Offline · \d+ change/)).toBeVisible()
+  await expect(page.getByText("You're offline")).toBeVisible()
+  await expect(page.getByText(/\d+ changes? saved on this device/)).toBeVisible()
   await page.getByRole('button', { name: /^Navigation/ }).click()
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Diary' }).click()
   await page.getByRole('link', { name: 'Add food' }).first().click()
@@ -232,7 +233,7 @@ test('planned vs eaten, locking, regenerate, grocery list, and offline sync', as
   await expect(page.getByText(/waiting to sync/).first()).toBeVisible()
   await page.screenshot({ path: shots('offline'), fullPage: true })
   await context.setOffline(false)
-  await expect(page.getByText(/Offline ·|waiting to sync|Syncing/)).toHaveCount(0, { timeout: 20_000 })
+  await expect(page.getByText(/You're offline|waiting to sync|Syncing/)).toHaveCount(0, { timeout: 20_000 }) // back online: it goes quietly
   await page.reload()
   await expect(page.getByText('Offline puff-puff')).toBeVisible()
   await page.goto('/grocery')
