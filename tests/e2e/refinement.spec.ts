@@ -62,8 +62,8 @@ test('motion: press feedback survives utility transitions, the nav button morphs
   expect(await link.evaluate((el) => getComputedStyle(el).transitionProperty)).toContain('scale')
   // the three lines fold into a close mark; the panel grows out of the button
   await expect(page.getByRole('button', { name: 'Close navigation' })).toHaveAttribute('data-open', 'true')
-  const panel = page.locator('.nav-pop')
-  expect(await panel.evaluate((el) => getComputedStyle(el).animationName)).toBe('nav-pop')
+  const panel = page.locator('.nav-panel')
+  expect(await panel.evaluate((el) => getComputedStyle(el).animationName)).toBe('nav-unfold')
   expect(await panel.evaluate((el) => getComputedStyle(el).transformOrigin)).toMatch(/^0px \d/) // bottom left
   await shot(page, 'nav-open')
   await page.keyboard.press('Escape')
@@ -98,13 +98,13 @@ test('saved: per-kind counts from stored saves, kept after a reload; a failed sa
   for (const pass of [0, 1]) {
     if (pass) await page.reload()
     await page.getByRole('button', { name: /^Navigation/ }).click()
-    const saved = page.locator('.nav-pop').getByRole('link', { name: /^Saved/ })
+    const saved = page.locator('.nav-panel').getByRole('link', { name: /^Saved/ })
     await expect(saved).toContainText('1 meal')
     await expect(saved).toContainText('0 plans')
     await page.keyboard.press('Escape')
   }
   await page.getByRole('button', { name: /^Navigation/ }).click()
-  await page.locator('.nav-pop').getByRole('link', { name: /^Saved/ }).click()
+  await page.locator('.nav-panel').getByRole('link', { name: /^Saved/ }).click()
   await expect(page).toHaveURL(/\/saved$/)
   await expect(page.getByRole('tab', { name: /Meals\s*1/ })).toHaveAttribute('aria-selected', 'true')
   await expect(page.getByRole('list', { name: 'Saved meals' }).getByText(name)).toBeVisible()

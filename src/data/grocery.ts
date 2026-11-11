@@ -103,6 +103,13 @@ export function useGroceryItemMutations(listId: string) {
       local((rows) => rows.filter((r) => r.id !== item.id))
       await enqueue({ kind: 'delete', table: 'grocery_items', id: item.id }, { label: `Remove ${item.name}`, invalidate: [key] })
     },
+    /** Undo a removal: the same item (same id, quantity, ticked state) goes back on the list. */
+    restore: async (item: GroceryItem) => {
+      local((rows) => (rows.some((r) => r.id === item.id) ? rows : [...rows, item]))
+      const { _pending: _p, ...row } = item
+      void _p
+      await enqueue({ kind: 'upsert', table: 'grocery_items', row: { ...row, client_updated_at: stamp() } }, { label: `Put back ${item.name}`, invalidate: [key] })
+    },
   }
 }
 

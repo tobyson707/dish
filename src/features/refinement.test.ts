@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { checkForUpdates, compareVersions, RELEASE } from '@/lib/release'
 import { cyclicOffset, follow, iconY, indexAt, itemStyle, nearestPosFor, PITCH, restingPos, SLOT } from '@/components/canvas/wheel'
 import { DEFAULT_CROP, dragCrop, normaliseCrop, placement, sourceRect } from '@/features/plans/coverCrop'
 import { coverage, markLabel, toDayMarks, weekRangeLabel } from '@/components/ui/Calendar'
@@ -140,5 +141,38 @@ describe('shopping list export', () => {
   it('names files from the list', () => {
     expect(shoppingFilename('Week of 9 Nov!', 'csv')).toBe('dish-week-of-9-nov.csv')
     expect(shoppingFilename('', 'png', { n: 2, of: 3 })).toBe('dish-shopping-list-2-of-3.png')
+  })
+})
+
+describe('release and update check', () => {
+  it('compares semantic versions, including pre-releases', () => {
+    expect(compareVersions('1.0.1', '1.0.0')).toBe(1)
+    expect(compareVersions('1.0.0', '1.0.0')).toBe(0)
+    expect(compareVersions('1.2.0', '1.10.0')).toBe(-1) // numbers, not text
+    expect(compareVersions('1.0.0', '1.0.0-beta.2')).toBe(1)
+    expect(compareVersions('1.0.0-beta.10', '1.0.0-beta.2')).toBe(1)
+    expect(compareVersions('v2.0.0', '1.9.9')).toBe(1)
+  })
+  const respond = (body: unknown, status = 200) => (async () => new Response(JSON.stringify(body), { status })) as unknown as typeof fetch
+  it('reports an update only when a newer version is published', async () => {
+    expect((await checkForUpdates(respond({ version: RELEASE.version }), 'web')).status).toBe('current')
+    expect((await checkForUpdates(respond({ version: '0.0.1' }), 'web')).status).toBe('current')
+    const r = await checkForUpdates(respond({ version: '99.0.0' }), 'web')
+    expect(r.status).toBe('available')
+    if (r.status === 'available') expect(r.action.kind).toBe('reload')
+  })
+  it('never invents a store link: without one, the app says it is not connected yet', async () => {
+    const r = await checkForUpdates(respond({ version: '99.0.0', stores: { ios: null } }), 'ios')
+    expect(r.status === 'available' && r.action.kind).toBe('unavailable')
+    const s = await checkForUpdates(respond({ version: '99.0.0', stores: { android: 'https://play.google.com/store/apps/details?id=example' } }), 'android')
+    expect(s.status === 'available' && s.action.kind).toBe('store')
+  })
+  it('fails loudly on errors and bad data, so the screen can say it couldn’t check', async () => {
+    await expect(checkForUpdates(respond({}, 503), 'web')).rejects.toThrow()
+    await expect(checkForUpdates(respond({ version: 'nonsense' }), 'web')).rejects.toThrow()
+  })
+  it('ships as 1.0.0 beta', () => {
+    expect(RELEASE.version).toBe('1.0.0')
+    expect(RELEASE.channel).toBe('beta')
   })
 })

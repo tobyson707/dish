@@ -138,7 +138,9 @@ export function SaveToggle({ on, onToggle, label, savedMessage = 'Saved', remove
     if (ok && next) play('confirm')
     if (ok) {
       const msg = next ? savedMessage : removedMessage
-      if (msg) toast.show(msg, { tone: 'success', duration: 1800 })
+      // removing can be taken back for a few seconds (the save is simply made again)
+      if (msg && !next) toast.show(msg, { duration: 5000, action: { label: 'Undo', onClick: () => void onToggle(true).then(() => play('confirm'), () => toast.error('Couldn’t restore it. Please try again.')) } })
+      else if (msg) toast.show(msg, { tone: 'success', duration: 1800 })
     }
   }
   return (

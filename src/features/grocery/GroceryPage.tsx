@@ -145,6 +145,7 @@ export function GroceryPage() {
 
 function Row({ item, listId, onEdit }: { item: GroceryItem; listId: string; onEdit: () => void }) {
   const m = useGroceryItemMutations(listId)
+  const toast = useToast()
   return (
     <li className="flex items-center gap-3 py-2.5 transition-opacity duration-200">
       <button
@@ -177,7 +178,10 @@ function Row({ item, listId, onEdit }: { item: GroceryItem; listId: string; onEd
           {item._pending && ' · waiting to sync'}
         </span>
       </button>
-      <IconButton icon="trash" label={`Remove ${item.name}`} size={40} onClick={() => void m.remove(item)} />
+      <IconButton icon="trash" label={`Remove ${item.name}`} size={40} onClick={() => {
+        void m.remove(item)
+        toast.show(`Removed ${item.name}.`, { duration: 6000, action: { label: 'Undo', onClick: () => void m.restore(item) } })
+      }} />
     </li>
   )
 }

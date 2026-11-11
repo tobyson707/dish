@@ -25,7 +25,7 @@ export function useBackToClose(open: boolean, close: () => void, tag = 'dishDraw
     }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
-  }, [open])
+  }, [open, tag])
   return () => {
     if (pushed.current && window.history.state?.[tag]) window.history.back()
     else latest.current()

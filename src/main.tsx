@@ -13,6 +13,7 @@ import { UpdatePrompt } from '@/app/UpdatePrompt'
 import { ThemeProvider } from '@/theme/ThemeProvider'
 import { ThemeSync } from '@/theme/ThemeSync'
 import { BootSplash } from '@/app/BootSplash'
+import { SoundSync } from '@/app/SoundSync'
 
 const queryClient = makeQueryClient()
 installPressSounds() // one listener for the whole app: unlocks audio on the first gesture, soft click on presses
@@ -27,6 +28,7 @@ createRoot(document.getElementById('root')!).render(
         <AuthProvider>
           <BootSplash />
           <ThemeSync />
+          <SoundSync />
           <ToastProvider>
             <App />
             <UpdatePrompt />
