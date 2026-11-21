@@ -155,7 +155,7 @@ export function RecipeDetail() {
               </li>
             ))}
           </ol>
-          <p className="mt-4 text-xs text-muted">Recipe: {recipe.source === 'AI-generated' ? 'written by AI for you, checked automatically by DISH' : recipe.source}.</p>
+          <p className="mt-4 text-xs text-muted">Recipe: {recipe.source === 'AI-generated' || recipe.source === 'Recipe suggestion' ? 'suggested for you, checked automatically by DISH' : recipe.source}.</p>
         </Section>
       ) : (
         <Section title="Method"><p className="text-sm text-muted">{incomplete ? "The method for this dish isn't recorded yet. We only add recipes we can source, so nothing here is guessed." : "This is usually bought ready-made, so there's no recipe here."}</p></Section>
@@ -209,11 +209,11 @@ function PriceSheet({ open, onClose, foodId, current, currency, hasOverride }: {
   )
 }
 
-/** What an AI recipe has beyond the catalogue fields: tradition, equipment, storage, variations, DISH's notes. */
+/** What a suggested recipe has beyond the catalogue fields: tradition, equipment, storage, variations, DISH's notes. */
 function AiDetails({ food }: { food: FoodItem }) {
   const d = food.ai_details ?? {}
   return (
-    <section aria-label="About this AI recipe" className="mt-3 rounded-lg bg-elevated p-4 text-sm">
+    <section aria-label="About this recipe suggestion" className="mt-3 rounded-lg bg-elevated p-4 text-sm">
       <div className="flex flex-wrap items-center gap-1.5">
         {food.ai_kind && <span className="inline-flex h-6 items-center rounded-full bg-surface px-2.5 text-micro font-semibold text-ink-2 ring-1 ring-inset ring-line">{KIND_LABEL[food.ai_kind]}</span>}
         {d.difficulty && <span className="text-footnote text-muted">{d.difficulty[0]!.toUpperCase() + d.difficulty.slice(1)}</span>}

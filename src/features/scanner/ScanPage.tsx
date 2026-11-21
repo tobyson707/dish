@@ -17,6 +17,7 @@ import { Stepper } from '@/components/ui/Inputs'
 import { Notice, Skeleton } from '@/components/ui/States'
 import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
+import { KITCHEN_SECTIONS, PillarTabs } from '@/components/nav/PillarTabs'
 import { cn } from '@/lib/cn'
 
 type Stage = 'pick' | 'preview' | 'uploading' | 'analysing' | 'review'
@@ -131,7 +132,8 @@ export function ScanPage() {
 
   return (
     <div>
-      <PageHeader back eyebrow="Food scanner" title="Scan food" />
+      <PageHeader eyebrow="Food recognition" title="Scan food" />
+      <PillarTabs label="Kitchen" sections={KITCHEN_SECTIONS} />
       <input ref={cameraRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={(e) => { void onFile(e.target.files?.[0]); e.target.value = '' }} />
       <input ref={libraryRef} type="file" accept="image/jpeg,image/png,image/webp,image/heic" className="hidden" onChange={(e) => { void onFile(e.target.files?.[0]); e.target.value = '' }} />
 
@@ -233,7 +235,7 @@ export function ScanPage() {
             <Button variant="secondary" onClick={() => void discard()}>Discard</Button>
             <Button icon="check" loading={saving} onClick={() => void confirm()}>Save to diary</Button>
           </div>
-          <p className="text-center text-xs text-muted">Saved as AI estimates (or “your values” where you edited them).</p>
+          <p className="text-center text-xs text-muted">Saved as estimates (or “your values” where you edited them).</p>
         </div>
       )}
       {ai.isPending && stage === 'pick' && <Skeleton className="mt-4 h-4 w-1/2" />}

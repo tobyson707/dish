@@ -69,9 +69,9 @@ export function fixtureProvider(): AIProvider {
       if (!m || req.task !== 'recipe_generate') throw new AIError('The test provider only answers recipe requests.', 'unavailable')
       const r = JSON.parse(m[1]) as Req
       const notes = r.notes ?? ''
-      if (notes.includes('fixture:rate')) throw new AIError('The AI service is busy. Please try again shortly.', 'rate_limited')
-      if (notes.includes('fixture:timeout')) throw new AIError('The AI service took too long to respond.', 'timeout')
-      if (notes.includes('fixture:garbage')) throw new AIError('The AI returned an unexpected format.', 'bad_output')
+      if (notes.includes('fixture:rate')) throw new AIError('The service is busy. Please try again shortly.', 'rate_limited')
+      if (notes.includes('fixture:timeout')) throw new AIError('That took too long.', 'timeout')
+      if (notes.includes('fixture:garbage')) throw new AIError('The answer couldn’t be read.', 'bad_output')
       const n = Math.max(1, Math.min(3, r.count ?? 1))
       let recipes = Array.from({ length: n }, (_, i) => recipe(r, i))
       // unsafe drafts the server must reject (allergen + undercooked chicken + no method)

@@ -28,9 +28,9 @@ export function anthropicProvider(apiKey: string, textModel: string, visionModel
           betas: ['server-side-fallback-2026-07-01'],
           fallbacks: 'default',
         })
-        if (res.stop_reason === 'refusal') throw new AIError('The AI service declined this request.', 'refused')
-        if (res.stop_reason === 'max_tokens') throw new AIError('The AI response was cut off.', 'bad_output')
-        if (res.parsed_output == null) throw new AIError('The AI returned an unexpected format.', 'bad_output')
+        if (res.stop_reason === 'refusal') throw new AIError('That request couldn’t be completed.', 'refused')
+        if (res.stop_reason === 'max_tokens') throw new AIError('The answer was incomplete.', 'bad_output')
+        if (res.parsed_output == null) throw new AIError('The answer couldn’t be read.', 'bad_output')
         return {
           data: res.parsed_output as z.infer<S>,
           model: res.model,
@@ -40,11 +40,11 @@ export function anthropicProvider(apiKey: string, textModel: string, visionModel
         }
       } catch (e) {
         if (e instanceof AIError) throw e
-        if (e instanceof Anthropic.RateLimitError) throw new AIError('The AI service is busy. Please try again shortly.', 'rate_limited')
-        if (e instanceof Anthropic.APIConnectionTimeoutError) throw new AIError('The AI service took too long to respond.', 'timeout')
-        if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) throw new AIError('AI is not configured correctly on the server.', 'unavailable')
-        if (e instanceof Anthropic.APIError) throw new AIError(`AI provider error (${e.status ?? 'network'}).`, 'provider')
-        throw new AIError('The AI returned an unexpected format.', 'bad_output')
+        if (e instanceof Anthropic.RateLimitError) throw new AIError('The service is busy. Please try again shortly.', 'rate_limited')
+        if (e instanceof Anthropic.APIConnectionTimeoutError) throw new AIError('That took too long.', 'timeout')
+        if (e instanceof Anthropic.AuthenticationError || e instanceof Anthropic.PermissionDeniedError) throw new AIError('This feature isn’t set up correctly on the server.', 'unavailable')
+        if (e instanceof Anthropic.APIError) throw new AIError(`The service had a problem (${e.status ?? 'network'}).`, 'provider')
+        throw new AIError('The answer couldn’t be read.', 'bad_output')
       }
     },
   }

@@ -61,7 +61,7 @@ export const SCREENS: ScreenEntry[] = [
   { id: 'kitchen', name: 'My kitchen (food inventory)', category: 'Food and meal management', path: '/kitchen', keywords: 'inventory pantry leftovers' },
   { id: 'scan', name: 'Food scanner', category: 'Food and meal management', path: '/scan', keywords: 'camera photo' },
   { id: 'surprise', name: 'Surprise me', category: 'Food and meal management', path: '/surprise' },
-  { id: 'create', name: 'AI recipe studio', category: 'Food and meal management', path: '/create' },
+  { id: 'create', name: 'Recipe studio', category: 'Food and meal management', path: '/create' },
   { id: 'budget', name: 'Food budget', category: 'Food and meal management', path: '/budget' },
   { id: 'diary-add', name: 'Add food to diary', category: 'Food and meal management', path: '/diary/add' },
   { id: 'diary-edit', name: 'Edit a diary entry', category: 'Food and meal management', path: '/diary/edit/:entryId', needs: 'diary_entry' },

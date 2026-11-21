@@ -9,7 +9,7 @@ import { useToday } from '@/hooks/useToday'
 import { friendlyError } from '@/lib/errors'
 import { dayLabel } from '@/lib/format'
 import { cn } from '@/lib/cn'
-import { Button, ButtonLink, IconButton } from '@/components/ui/Button'
+import { Button, IconButton } from '@/components/ui/Button'
 import { PageHeader, Section } from '@/components/ui/Layout'
 import { TextField } from '@/components/ui/Field'
 import { Toggle } from '@/components/ui/Inputs'
@@ -18,6 +18,7 @@ import { EmptyState, ErrorState, Notice } from '@/components/ui/States'
 import { KitchenGhost } from '@/components/ui/Ghost'
 import { useToast } from '@/components/ui/Toast'
 import { DateField } from '@/components/ui/DateField'
+import { KITCHEN_SECTIONS, PillarTabs } from '@/components/nav/PillarTabs'
 import { UseWhatYouHave } from './UseWhatYouHave'
 
 export function KitchenPage() {
@@ -33,12 +34,11 @@ export function KitchenPage() {
 
   return (
     <div>
-      <PageHeader back eyebrow="Kitchen assistant" title="What's in my kitchen?" />
-      <p className="-mt-2 mb-5 text-ink-2">Let's see what you can make with what you've got.</p>
-      <div className="flex flex-wrap gap-2">
+      <PageHeader title="Kitchen" large />
+      <PillarTabs label="Kitchen" sections={KITCHEN_SECTIONS} />
+      <div className="grid grid-cols-2 gap-2">
         <Button icon="plus" onClick={() => setEditing('new')}>Add ingredient</Button>
         <Button variant="secondary" icon="pot" onClick={() => setEditing('leftover')}>Add leftovers</Button>
-        {items.length > 0 && <ButtonLink to="/create?mode=use_ingredients" variant="secondary" icon="sparkle">Create a recipe from these</ButtonLink>}
       </div>
 
       {kitchen.isPending ? (

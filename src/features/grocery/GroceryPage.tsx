@@ -24,6 +24,7 @@ import { ShoppingListGhost } from '@/components/ui/Ghost'
 import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
 import { tap } from '@/platform/haptics'
+import { KITCHEN_SECTIONS, PillarTabs } from '@/components/nav/PillarTabs'
 import { ShoppingExportSheet } from './export/ShoppingExportSheet'
 
 export function GroceryPage() {
@@ -63,11 +64,11 @@ export function GroceryPage() {
   return (
     <div>
       <PageHeader
-        back
         eyebrow={list?.range_start ? `${dayLabel(list.range_start, today)} – ${dayLabel(list.range_end!, today)}` : 'Shopping'}
         title={list?.name ?? 'Shopping list'}
         actions={lists.data && lists.data.length > 0 && <IconButton icon="dots" label="Manage lists" onClick={() => setManageOpen(true)} />}
       />
+      <PillarTabs label="Kitchen" sections={KITCHEN_SECTIONS} />
       {lists.isError && !lists.data ? (
         <ErrorState message={friendlyError(lists.error)} onRetry={() => lists.refetch()} />
       ) : !listId ? (

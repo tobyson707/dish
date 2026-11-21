@@ -12,7 +12,7 @@ import { cn } from '@/lib/cn'
 import { PageHeader } from '@/components/ui/Layout'
 import { SearchInput } from '@/components/ui/Field'
 import { FoodImage } from '@/components/ui/FoodImage'
-import { Icon, type IconName } from '@/components/ui/Icon'
+import { Icon } from '@/components/ui/Icon'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { RecipePreviewWorkspace } from '@/components/canvas/RecipePreviewWorkspace'
 import { CATEGORIES, type Category } from '@/components/canvas/categories'
@@ -21,6 +21,7 @@ import { slotFor, useRankedMeals } from '@/components/canvas/useRankedMeals'
 import { SaveToggle } from '@/components/ui/ActionButton'
 import { CommunityPlans } from '@/features/plans/CommunityPage'
 import { MealFeedGhost, REVEAL } from '@/components/ui/Ghost'
+import { SavedMeals } from '@/features/saved/SavedPage'
 
 const PAGE = 8
 
@@ -34,24 +35,27 @@ function shuffled<T extends { id: string }>(items: T[], seed: number): T[] {
   return [...items].sort((a, b) => score(a.id) - score(b.id))
 }
 
-type Tab = 'foryou' | 'plans' | 'recipes'
+type Tab = 'foryou' | 'recipes' | 'saved' | 'plans'
 const TABS: { id: Tab; label: string }[] = [
   { id: 'foryou', label: 'For You' },
-  { id: 'plans', label: 'Meal Plans' },
   { id: 'recipes', label: 'Recipes' },
+  { id: 'saved', label: 'Saved' },
+  { id: 'plans', label: 'Meal plans' },
 ]
 
 /**
- * Discover has three parts: For You (food picked for you), Meal Plans (plans people
- * published, to save or remix) and Recipes (every recipe that fits you, A to Z).
+ * Discover: For You (food picked for you), Recipes (every recipe that fits you, A to Z),
+ * Saved (meals you hearted) and Meal plans (plans people published, kept secondary).
  */
 export function Discover() {
   const [params, setParams] = useSearchParams()
-  const tab: Tab = params.get('tab') === 'plans' ? 'plans' : params.get('tab') === 'recipes' ? 'recipes' : 'foryou'
+  const t = params.get('tab')
+  const tab: Tab = t === 'plans' || t === 'recipes' || t === 'saved' ? t : 'foryou'
+  const favCount = useFavourites().data?.length
   return (
     <div>
       <PageHeader title="Discover" large />
-      <div role="tablist" aria-label="Discover" className="mb-4 grid grid-cols-3 gap-1 rounded-full bg-elevated p-1 ring-1 ring-inset ring-line">
+      <div role="tablist" aria-label="Discover" className="mb-4 grid grid-cols-4 gap-1 rounded-full bg-elevated p-1 ring-1 ring-inset ring-line">
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -62,11 +66,12 @@ export function Discover() {
             className={cn('press h-10 rounded-full text-sm font-bold', tab === t.id ? 'bg-ink text-on-ink shadow-[0_6px_16px_-10px_var(--c-shadow)]' : 'text-ink-2 hover:text-ink')}
           >
             {t.label}
+            {t.id === 'saved' && favCount != null && <span className={cn('num ml-1', tab === t.id ? 'opacity-70' : 'text-muted')}>{favCount}</span>}
           </button>
         ))}
       </div>
       <div key={tab} className="animate-[fade_var(--dur-standard)_var(--ease-enter)_both]">
-        {tab === 'plans' ? <CommunityPlans /> : <FoodFeed mode={tab} />}
+        {tab === 'plans' ? <CommunityPlans /> : tab === 'saved' ? <SavedMeals /> : <FoodFeed mode={tab} />}
       </div>
     </div>
   )
@@ -81,7 +86,6 @@ export function Discover() {
 function FoodFeed({ mode }: { mode: 'foryou' | 'recipes' }) {
   const [category, setCategory] = useState<Category>('all')
   const [q, setQ] = useState('')
-  const [onlyFavs, setOnlyFavs] = useState(false)
   const [seed, setSeed] = useState(() => Math.floor(Math.random() * 1e9))
   const [shown, setShown] = useState(PAGE)
   const [preview, setPreview] = useState<FoodItem | null>(null)
@@ -102,17 +106,16 @@ function FoodFeed({ mode }: { mode: 'foryou' | 'recipes' }) {
       const extra = (cat.data ?? []).filter((f) => !ids.has(f.id) && (!prefs.data || checkAllergy(toCatalogueMeal(f), prefs.data).status !== 'conflict'))
       list = [...list, ...extra].filter((f) => searchText(f).includes(t))
     }
-    if (onlyFavs) list = list.filter((f) => favs.data?.includes(f.id))
     if (mode === 'recipes') return list
     // keep the best matches near the top, but vary the order between sessions
     const head = list.slice(0, 6)
     const unique = new Map<string, FoodItem>()
     for (const f of [...shuffled(head, seed), ...shuffled(list.slice(6), seed)]) unique.set(f.id, f)
     return [...unique.values()]
-  }, [ranked.items, q, onlyFavs, favs.data, seed, cat.data, prefs.data, mode])
+  }, [ranked.items, q, seed, cat.data, prefs.data, mode])
 
   // reset paging when the feed's inputs change
-  const key = `${category}|${q}|${onlyFavs}|${seed}`
+  const key = `${category}|${q}|${seed}`
   const [pagedFor, setPagedFor] = useState(key)
   if (pagedFor !== key) {
     setPagedFor(key)
@@ -134,18 +137,8 @@ function FoodFeed({ mode }: { mode: 'foryou' | 'recipes' }) {
 
   return (
     <div>
-      {mode === 'foryou' && <CreateActions />}
-      {mode === 'foryou' && (
-        <nav aria-label="More ideas" className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          <Shortcut to="/surprise" icon="bowl" label="Pick from DISH" />
-          <Shortcut to="/kitchen" icon="fridge" label="My kitchen" />
-          <Shortcut to="/saved" icon="heart" label="Saved" />
-          <Shortcut to="/budget" icon="wallet" label="Budget" />
-          <Shortcut to="/history" icon="history" label="History" />
-        </nav>
-      )}
-
-      <div className="sticky top-0 z-20 -mx-4 mt-4 bg-bg/95 px-4 pb-3 pt-2 backdrop-blur" style={{ top: 'var(--safe-top)' }}>
+      {mode === 'foryou' && <CreateLink />}
+      <div className="sticky top-0 z-20 -mx-4 bg-bg/95 px-4 pb-3 pt-2 backdrop-blur" style={{ top: 'var(--safe-top)' }}>
         <SearchInput value={q} onChange={setQ} placeholder={mode === 'recipes' ? 'Search recipes' : 'Search meals'} label={mode === 'recipes' ? 'Search recipes' : 'Search meals'} />
         <div className="mt-3 flex items-center gap-1.5">
           <div role="tablist" aria-label="Meal category" className="-mx-1 flex flex-1 gap-1.5 overflow-x-auto px-1">
@@ -155,9 +148,6 @@ function FoodFeed({ mode }: { mode: 'foryou' | 'recipes' }) {
               </button>
             ))}
           </div>
-          <button type="button" aria-pressed={onlyFavs} aria-label="Saved only" title="Saved only" onClick={() => setOnlyFavs(!onlyFavs)} className={cn('press flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors', onlyFavs ? 'bg-accent text-accent-ink' : 'bg-elevated text-ink-2')}>
-            <Icon name="heart" size={17} filled={onlyFavs} />
-          </button>
         </div>
       </div>
 
@@ -167,7 +157,7 @@ function FoodFeed({ mode }: { mode: 'foryou' | 'recipes' }) {
         ) : cat.isError && !cat.data ? (
           <ErrorState message={friendlyError(cat.error)} onRetry={() => cat.refetch()} />
         ) : feed.length === 0 ? (
-           <EmptyState title={onlyFavs ? 'Nothing saved here yet' : 'Nothing matches'} message={onlyFavs ? 'Tap the heart on any meal to save it.' : q ? 'Try another word.' : 'Try another category.'} />
+           <EmptyState title="Nothing matches" message={q ? 'Try another word.' : 'Try another category.'} />
         ) : (
           <>
             <ul className={cn('grid gap-x-5 gap-y-7 sm:grid-cols-2', REVEAL)} aria-label="Meal ideas">
@@ -239,41 +229,23 @@ function FeedItem({ food: f, index, category, favourite, onOpen }: { food: FoodI
   )
 }
 
-/** AI recipe actions: each opens the recipe studio in the right mode (structured, not a chat). */
-function CreateActions() {
-  const actions: { to: string; icon: IconName; label: string; hint: string }[] = [
-    { to: '/create', icon: 'wand', label: 'Generate a recipe', hint: 'From ingredients, a meal or a mood' },
-    { to: '/create?mode=use_ingredients', icon: 'fridge', label: 'Use my ingredients', hint: 'Less waste, fewer extras' },
-    { to: '/create?mode=cuisine', icon: 'globe', label: 'Explore a cuisine', hint: 'Dishes from anywhere' },
-    { to: '/create?mode=surprise', icon: 'sparkle', label: 'Surprise me', hint: 'Something new for you' },
+/** Two quiet ways to something new: a recipe made for your request, or a pick from the catalogue. */
+function CreateLink() {
+  const links = [
+    { to: '/create', icon: 'wand' as const, label: 'Create a recipe', hint: 'From ingredients or a cuisine' },
+    { to: '/surprise', icon: 'sparkle' as const, label: 'Surprise me', hint: 'A pick that fits you' },
   ]
   return (
-    <section aria-labelledby="create-title" className="rounded-xl bg-elevated p-4 ring-1 ring-inset ring-line">
-      <div className="flex items-baseline justify-between gap-2">
-        <h2 id="create-title" className="text-headline">Cook something new</h2>
-        <span className="text-micro font-semibold text-muted">AI recipes, checked by DISH</span>
-      </div>
-      <ul className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
-        {actions.map((a) => (
-          <li key={a.to}>
-            <Link to={a.to} className="press flex h-full items-start gap-3 rounded-lg bg-surface p-3 ring-1 ring-inset ring-line hover:ring-accent-border">
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-ink"><Icon name={a.icon} size={18} /></span>
-              <span className="min-w-0">
-                <span className="block text-sm font-bold leading-tight">{a.label}</span>
-                <span className="mt-0.5 block text-micro text-muted">{a.hint}</span>
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </section>
-  )
-}
-
-function Shortcut({ to, icon, label }: { to: string; icon: IconName; label: string }) {
-  return (
-    <Link to={to} className="press inline-flex h-10 shrink-0 items-center gap-2 rounded-full bg-elevated px-4 text-sm font-semibold ring-1 ring-inset ring-line">
-      <Icon name={icon} size={16} /> {label}
-    </Link>
+    <nav aria-label="Something new" className="grid grid-cols-2 gap-2">
+      {links.map((l) => (
+        <Link key={l.to} to={l.to} className="press flex items-center gap-3 rounded-lg bg-elevated px-3.5 py-3 ring-1 ring-inset ring-line hover:ring-accent-border">
+          <Icon name={l.icon} size={18} className="shrink-0" />
+          <span className="min-w-0">
+            <span className="block truncate text-sm font-bold">{l.label}</span>
+            <span className="block truncate text-micro text-muted">{l.hint}</span>
+          </span>
+        </Link>
+      ))}
+    </nav>
   )
 }

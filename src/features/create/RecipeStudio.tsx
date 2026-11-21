@@ -26,7 +26,6 @@ const MODES: { id: Exclude<RecipeMode, 'alternatives' | 'variation'>; label: str
   { id: 'generate', label: 'Create', icon: 'wand' },
   { id: 'use_ingredients', label: 'My kitchen', icon: 'fridge' },
   { id: 'cuisine', label: 'Cuisine', icon: 'globe' },
-  { id: 'surprise', label: 'Surprise', icon: 'sparkle' },
 ]
 const TITLE: Record<RecipeMode, string> = {
   generate: 'Create a recipe',
@@ -134,18 +133,18 @@ export function RecipeStudio() {
       <PageHeader back eyebrow="Discover" title={mode === 'alternatives' && parent ? `Instead of ${parent.name}` : mode === 'variation' && parent ? `A twist on ${parent.name}` : TITLE[mode]} />
 
       {status.isPending ? (
-        <GhostRegion label="Checking AI"><Ghost className="h-12 rounded-md" /></GhostRegion>
+        <GhostRegion label="Loading"><Ghost className="h-12 rounded-md" /></GhostRegion>
       ) : !configured ? (
         <Notice tone="warning" icon="sparkle">
-          <p className="font-semibold">AI recipes aren't available on this DISH server yet.</p>
-          <p className="mt-1">Whoever runs it needs to add an AI provider key on the server. Everything else in DISH works without it, including every curated recipe.</p>
+          <p className="font-semibold">Recipe suggestions aren't available on this DISH server yet.</p>
+          <p className="mt-1">Whoever runs it needs to finish setting them up on the server. Everything else in DISH works without them, including every recipe in the catalogue.</p>
         </Notice>
       ) : status.data?.recipes_provider === 'fixture' ? (
-        <Notice icon="info">Local test mode: recipes come from DISH's built-in test provider, not a real AI.</Notice>
+        <Notice icon="info">Local test mode: suggestions are fixed test recipes.</Notice>
       ) : null}
 
       {mode !== 'alternatives' && mode !== 'variation' && (
-        <div role="tablist" aria-label="How to start" className="mt-4 grid grid-cols-4 gap-1 rounded-full bg-elevated p-1 ring-1 ring-inset ring-line">
+        <div role="tablist" aria-label="How to start" className="mt-4 grid grid-cols-3 gap-1 rounded-full bg-elevated p-1 ring-1 ring-inset ring-line">
           {MODES.map((m) => (
             <button key={m.id} type="button" role="tab" aria-selected={mode === m.id} onClick={() => setMode(m.id)} className={cn('press flex h-10 items-center justify-center gap-1.5 rounded-full text-sm font-bold', mode === m.id ? 'bg-ink text-on-ink' : 'text-ink-2 hover:text-ink')}>
               <Icon name={m.icon} size={15} className="hidden sm:block" /> {m.label}
@@ -223,7 +222,7 @@ export function RecipeStudio() {
             <Stepper label="Servings" value={servings} onChange={setServings} min={1} max={12} step={1} />
             <div>
               <Segmented label="Budget" value={budget} onChange={setBudget} options={[{ value: 'any', label: 'Any' }, { value: 'thrifty', label: 'Thrifty' }, { value: 'moderate', label: 'Moderate' }]} />
-              <p className="mt-1 text-micro text-muted">A guide for the AI only. DISH has no reliable prices for generated recipes, so no cost is shown.</p>
+              <p className="mt-1 text-micro text-muted">A guide only. DISH has no reliable prices for suggested recipes, so no cost is shown.</p>
             </div>
             <Select label="Diet" value={diet} onChange={(e) => setDiet(e.target.value as DietPattern)} hint={profileDiet !== 'none' ? `Your profile's diet (${DIET_LABEL[profileDiet]}) always applies.` : undefined} options={DIET_PATTERNS.map((d) => ({ value: d, label: d === 'none' ? (profileDiet === 'none' ? 'No restriction' : 'Just my profile diet') : DIET_LABEL[d] }))} />
             <TagInput label="Leave out" placeholder="e.g. mushrooms" value={avoid} onChange={setAvoid} max={15} tone="danger" />
@@ -277,7 +276,7 @@ export function RecipeStudio() {
 function Results({ generation: g, cached, onFresh, onVariation }: { generation: RecipeGeneration; cached: boolean; onFresh: () => void; onVariation: (id: string) => void }) {
   const rejected = g.validation?.rejected ?? []
   return (
-    <section aria-label="Your recipes" className={REVEAL}>
+    <section aria-label="Suggested recipes" className={REVEAL}>
       {cached && (
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-lg bg-surface px-4 py-3 text-sm">
           <span className="text-ink-2">You asked for this before, so here it is again.</span>
@@ -296,7 +295,7 @@ function Results({ generation: g, cached, onFresh, onVariation }: { generation: 
         <div className="flex flex-col gap-4">
           {g.recipes.map((_r, i) => <SavedAware key={`${g.id}-${i}`} generation={g} index={i} defaultOpen={g.recipes.length === 1} onVariation={onVariation} />)}
           {rejected.length > 0 && <p className="text-footnote text-muted">DISH left out {rejected.length === 1 ? 'one recipe' : `${rejected.length} recipes`} that didn't pass its checks ({[...new Set(rejected.flatMap((r) => r.reasons))].slice(0, 2).join('; ')}).</p>}
-          <p className="text-micro text-muted">Recipes are written by AI and checked automatically by DISH for your allergies, diet and safe cooking. They aren't checked by a person, and nothing is stored until you save, plan or shop for one.</p>
+          <p className="text-micro text-muted">Suggested recipes are checked automatically by DISH for your allergies, diet and safe cooking. They aren't checked by a person, and nothing is stored until you save, plan or shop for one.</p>
         </div>
       )}
     </section>
@@ -318,7 +317,7 @@ function History({ uid, onOpen }: { uid: string; onOpen: (g: RecipeGeneration) =
   const own = (mine.data ?? []).filter((f) => f.owner_id === uid)
   return (
     <>
-      <Section title="Your AI recipes" action={own.length ? <span className="num text-footnote text-muted">{own.length}</span> : undefined}>
+      <Section title="Your recipes" action={own.length ? <span className="num text-footnote text-muted">{own.length}</span> : undefined}>
         {mine.isPending ? <Ghost className="h-14 rounded-lg" /> : own.length === 0 ? (
           <p className="text-sm text-muted">Recipes you save, plan or shop for appear here. Only you can see them.</p>
         ) : (

@@ -168,8 +168,8 @@ export const KIND_LABEL: Record<CheckedRecipe['kind'], string> = {
   original: 'New idea',
 }
 export const KIND_HELP: Record<CheckedRecipe['kind'], string> = {
-  traditional: 'Written in the style the dish is commonly made, by AI. Home cooks make it many ways.',
-  adaptation: 'A known dish, changed by AI for your request.',
-  fusion: 'AI combined more than one food tradition.',
-  original: 'A new dish written by AI.',
+  traditional: 'In the style the dish is commonly made. Home cooks make it many ways.',
+  adaptation: 'A known dish, changed for your request.',
+  fusion: 'Combines more than one food tradition.',
+  original: 'A new dish suggested for you.',
 }

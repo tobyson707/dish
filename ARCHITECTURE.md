@@ -145,8 +145,8 @@ Device access is isolated in `src/platform/*` (camera, notifications, haptics). 
 
 ## Floating navigation (`src/components/nav/FloatingNavigation.tsx`)
 
-- There is no bottom bar or side rail. One floating button (60px, `--nav-btn`, a raised ink surface whose three lines fold into a close mark) sits at the bottom-left of every screen (inset by `--canvas-m` and the safe areas). It opens a compact panel that grows from the button: Home, Plan, Diary, Discover and Profile (the current one in accent), a **Saved** row with real per-kind counts ("3 meals · 1 plan", from `favourite_meals` and `my_saved_plans()`), plus four shortcuts (Shopping, Kitchen, Scan, Surprise).
-- `/saved` (`src/features/saved/SavedPage.tsx`) lists saved meals (the one existing favourites list; a meal and its recipe are the same catalogue record) and saved community plans, each tab with its stored count. A saved plan whose owner made it private again still counts, shown as "no longer shared" with no details.
+- There is no bottom bar or side rail. One floating button (60px, `--nav-btn`, a raised ink surface whose three lines fold into a close mark) sits at the bottom-left of every screen (inset by `--canvas-m` and the safe areas). It opens a compact panel that grows from the button: Home, the four pillars (Discover, Plan, Kitchen, Diary) and, below a divider, Profile. The current one is shown in accent, and a section inside a pillar (for example `/grocery`) marks its pillar. Nothing else is listed: see "Four pillars" below.
+- Saved meals are the **Saved** tab in Discover (`/discover?tab=saved`) and saved community plans are the **Saved** tab of the plan library (`/plans?tab=saved`), each with its stored count. `/saved` and `/saved?tab=plans` forward there. A saved plan whose owner made it private again still counts, shown as "no longer shared" with no details.
 - The panel closes on a choice, a tap outside, or Escape (focus returns to the button). Routes are unchanged.
 - `--nav-h` is now the clearance kept above the button. Toasts, floating action buttons, the shopping-list bar and the Developer Mode launcher already sit above it, and pages end with padding so their last content can scroll clear.
 
@@ -173,7 +173,7 @@ A compact vertical wheel in the right-edge notch: five icon slots visible, a fix
   - It slides in from the right (`--dur-panel` 380 ms in, about 280 ms out) over a dimmed Home that never moves.
   - The selector stays above it, and its notch background fades away, so changing category swaps the content in place.
   - Close: the button, Escape, a tap on Home, a swipe, or Back. Opening pushes a history entry; Back (or the phone's back gesture) closes the drawer instead of leaving Home.
-- **Removed from Home.** Today's menu list and the shortcut grid. Today's meals are in the carousel and on Plan; the shortcuts are in the navigation panel.
+- **Removed from Home.** Today's menu list and the shortcut grid. Today's meals are in the carousel and on Plan; the features they pointed to now live inside their pillar.
 - **Short screens** (phones in landscape): the dish image steps aside and the greeting shrinks, so text and controls never overlap.
 
 ## Meal-plan export (`src/features/plan/export/`)
@@ -287,3 +287,20 @@ PDF (A4, multi-page, headings never stranded at a page end), PNG (one 2480px-wid
 ## AI recipes (`src/features/create/`, `supabase/functions/recipe-generate`)
 
 The recipe studio (`/create`) is a structured form, not a chat. Results are cards (`GeneratedRecipeCard`) showing the full recipe, with save, add to plan, add (missing) to list, servings scaling and variations. A generated recipe is stored as the person's own private `food_items` row only when they act on it, so every existing feature (favourites, plans, the shopping list, the recipe page) works with it unchanged. `useFoods()` (`src/data/aiRecipes.ts`) is curated plus the person's AI recipes and is used for lookups (recipe page, saved, plans, shopping). Discovery and the planner keep using the curated catalogue only. Validation is pure domain code shared with the tests (`_shared/domain/recipeValidation.ts`). See AI_INTEGRATIONS.md for the checks.
+
+## Four pillars
+
+DISH is organised as Discover, Plan, Kitchen and Diary (plus Home and Profile). Every route is unchanged; sections of a pillar are separate routes, tied together by `PillarTabs` (`src/components/nav/PillarTabs.tsx`), so deep links and Back work as before.
+
+| Pillar | Sections (routes) |
+| --- | --- |
+| Discover | For You, Recipes, Saved, Meal plans (`/discover?tab=…`). Also: recipe pages, `/create` (recipe suggestions), `/surprise` (a pick from the catalogue), `/community/:id`. Community plans are the last tab, kept secondary. |
+| Plan | The current schedule (`/plan`, day/week/month) first. The library (`/plans`: Mine, Shared, Saved) is one button away. Also: new plan, plan workspaces, planned meals, invites, exports. |
+| Kitchen | Kitchen (`/kitchen`: inventory, leftovers, Use what you have, "Create a recipe from these"), Shopping (`/grocery`), Scan (`/scan`, food recognition). |
+| Diary | Diary (`/diary`: what was eaten, with planned-but-not-logged meals kept separate, plus a one-line "Spent this week" that adds only recorded spending in the person's currency), Spending (`/budget`), History (`/history`). |
+
+Profile holds only preferences, goals, account, settings and privacy. The navigation shortcut grid, the Saved row, the Discover shortcut row and the Discover "saved only" filter are gone; each feature they pointed to is reachable from its pillar.
+
+### RINE (Recipe Intelligence Engine)
+
+RINE is the internal name for DISH's intelligence layer: the shared domain logic (`supabase/functions/_shared/domain/`: planner, allergens, kitchen matching, recipe validation, budget), the provider-independent AI interface (`_shared/ai/provider.ts`) and the server functions that use them (`plan-generate`, `meal-replace`, `surprise`, `kitchen-suggest`, `scan-food`, `recipe-generate`). It never appears in the interface as a destination, assistant or badge. Copy describes what people get (recommended for you, recipe suggestions, kitchen suggestions, food recognition) and describes rule-based steps (allergy filtering, ingredient matching, budgets) as what they are. Estimated nutrition keeps its own provenance label (Auto estimate, shown as "Automatic estimate" in lists). The privacy policy still states plainly when an AI provider processes data, and catalogue photos made by image generation keep their photo credit.

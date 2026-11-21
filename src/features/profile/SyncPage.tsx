@@ -21,7 +21,7 @@ export function SyncPage() {
         {s.lastSyncedAt && <p className="text-muted">Last synced {new Date(s.lastSyncedAt).toLocaleTimeString()}</p>}
         <Button size="sm" variant="secondary" icon="refresh" className="mt-3" disabled={!s.online || s.syncing} onClick={() => void flush()}>Sync now</Button>
       </div>
-      <Notice icon="info">Offline you can view saved plans, recipes and your recent diary; tick off and edit shopping lists; log food; and update meals. Changes sync automatically when you reconnect. Creating plans, AI suggestions and photo scanning need a connection.</Notice>
+      <Notice icon="info">Offline you can view saved plans, recipes and your recent diary; tick off and edit shopping lists; log food; and update meals. Changes sync automatically when you reconnect. Creating plans, recipe suggestions and food recognition need a connection.</Notice>
       {none ? (
         <EmptyState className="mt-4" title="Nothing needs attention" message="All your changes are safe." />
       ) : (

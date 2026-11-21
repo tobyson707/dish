@@ -8,6 +8,8 @@ import { friendlyError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
 import { ButtonLink } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/Layout'
+import { SavedPlans } from '@/features/saved/SavedPage'
+import { useMySavedPlans } from '@/data/planbook'
 import { SearchInput, Select } from '@/components/ui/Field'
 import { Icon } from '@/components/ui/Icon'
 import { EmptyState, ErrorState } from '@/components/ui/States'
@@ -15,7 +17,7 @@ import { PlanActions } from './PlanActions'
 import { PlanCover } from './PlanCover'
 import { PlanCardsGhost, REVEAL } from '@/components/ui/Ghost'
 
-type Section = 'mine' | 'shared'
+type Section = 'mine' | 'shared' | 'saved'
 type Filter = 'all' | 'active' | 'draft' | 'completed' | 'archived' | 'shared'
 type Sort = 'updated' | 'created' | 'name' | 'start'
 
@@ -43,14 +45,17 @@ export function planState(p: Pick<PlanListItem, 'status' | 'end_date'>, today: s
 const STATE_LABEL = { active: 'Current', draft: 'Draft', completed: 'Completed', archived: 'Archived' } as const
 
 /**
- * The Meal Plan Library: every plan I own (My plans) or was invited to (Shared with me).
+ * The Meal Plan Library: every plan I own (Mine), was invited to (Shared), and community
+ * plans I saved (Saved).
  * Each plan is its own workspace; the archive keeps old ones recoverable.
  */
 export function PlansPage() {
   const today = useToday()
   const plans = useMyPlans()
   const [params, setParams] = useSearchParams()
-  const section = (params.get('tab') as Section) || 'mine'
+  const tabParam = params.get('tab')
+  const section: Section = tabParam === 'shared' || tabParam === 'saved' ? tabParam : 'mine'
+  const saved = useMySavedPlans()
   const setSection = (s: Section) => setParams((p) => (p.set('tab', s), p), { replace: true })
   const [filter, setFilter] = useState<Filter>('all')
   const [sort, setSort] = useState<Sort>('updated')
@@ -86,14 +91,15 @@ export function PlansPage() {
   return (
     <div>
       <PageHeader back="/plan" eyebrow="Library" title="Meal plans" actions={<ButtonLink to="/plan/new" size="sm" icon="plus">New plan</ButtonLink>} />
-      <div role="tablist" aria-label="Library" className="grid grid-cols-2 gap-1 rounded-full bg-elevated p-1">
-        {([['mine', 'My plans', counts.mine], ['shared', 'Shared with me', counts.shared]] as const).map(([id, label, n]) => (
+      <div role="tablist" aria-label="Library" className="grid grid-cols-3 gap-1 rounded-full bg-elevated p-1">
+        {([['mine', 'Mine', counts.mine], ['shared', 'Shared', counts.shared], ['saved', 'Saved', saved.data?.length]] as const).map(([id, label, n]) => (
           <button key={id} type="button" role="tab" aria-selected={section === id} onClick={() => setSection(id)} className={cn('press h-10 rounded-full text-sm font-semibold transition-colors', section === id ? 'bg-ink text-on-ink' : 'text-ink-2 hover:text-ink')}>
-            {label} <span className={cn('num ml-0.5', section === id ? 'opacity-70' : 'text-muted')}>{n}</span>
+            {label} {n != null && <span className={cn('num ml-0.5', section === id ? 'opacity-70' : 'text-muted')}>{n}</span>}
           </button>
         ))}
       </div>
 
+      {section === 'saved' ? <div className="mt-5"><SavedPlans /></div> : <>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
         <SearchInput value={q} onChange={setQ} label="Search plans" placeholder="Search plans" className="flex-1" />
         <Select label="Sort" className="sm:w-56" value={sort} onChange={(e) => setSort(e.target.value as Sort)} options={SORTS} />
@@ -124,6 +130,7 @@ export function PlansPage() {
           </ul>
         )}
       </div>
+      </>}
       <PlanActions plan={menu} onClose={() => setMenu(null)} />
     </div>
   )

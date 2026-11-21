@@ -94,25 +94,22 @@ test('saved: per-kind counts from stored saves, kept after a reload; a failed sa
   await expect(page.getByRole('button', { name: `Remove ${name} from saved` })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
   expect(await rest<unknown[]>(`favourite_meals?user_id=eq.${uid}&select=food_item_id`)).toHaveLength(1)
-  // the navigation shows the count by kind, and it survives a reload
+  // Saved lives in Discover: the count is the stored saves, and it survives a reload
   for (const pass of [0, 1]) {
     if (pass) await page.reload()
-    await page.getByRole('button', { name: /^Navigation/ }).click()
-    const saved = page.locator('.nav-panel').getByRole('link', { name: /^Saved/ })
-    await expect(saved).toContainText('1 meal')
-    await expect(saved).toContainText('0 plans')
-    await page.keyboard.press('Escape')
+    await expect(page.getByRole('tab', { name: /^Saved\s*1$/ })).toBeVisible()
   }
-  await page.getByRole('button', { name: /^Navigation/ }).click()
-  await page.locator('.nav-panel').getByRole('link', { name: /^Saved/ }).click()
-  await expect(page).toHaveURL(/\/saved$/)
-  await expect(page.getByRole('tab', { name: /Meals\s*1/ })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('tab', { name: /^Saved/ }).click()
+  await expect(page).toHaveURL(/\/discover\?tab=saved$/)
   await expect(page.getByRole('list', { name: 'Saved meals' }).getByText(name)).toBeVisible()
-  await expect(page.getByRole('tab', { name: /Meal plans\s*0/ })).toBeVisible()
+  // the old address still works
+  await page.goto('/saved')
+  await expect(page).toHaveURL(/\/discover\?tab=saved$/)
+  await expect(page.getByRole('list', { name: 'Saved meals' }).getByText(name)).toBeVisible()
   await shot(page, 'saved')
   // removing from Saved: gone once the server confirms, and the count follows
   await page.getByRole('button', { name: `Remove ${name} from saved` }).click()
-  await expect(page.getByRole('tab', { name: /Meals\s*0/ })).toBeVisible()
+  await expect(page.getByRole('tab', { name: /^Saved\s*0$/ })).toBeVisible()
   expect(await rest<unknown[]>(`favourite_meals?user_id=eq.${uid}&select=food_item_id`)).toHaveLength(0)
   await expectNoHorizontalScroll(page)
   expect(errors.filter((e) => !/500|boom|Failed to load resource/.test(e))).toEqual([])
@@ -260,8 +257,9 @@ test('cover framing, publishing and Discover: one composition everywhere, privat
   await expect(theirCard.getByRole('button', { name: `Remove ${title} from saved` })).toHaveAttribute('aria-pressed', 'true')
   expect(await rest<unknown[]>(`plan_saves?user_id=eq.${otherUser.uid}&select=plan_id`)).toHaveLength(1)
   await shot(other, 'discover-plans')
-  await other.goto('/saved?tab=plans')
-  await expect(other.getByRole('tab', { name: /Meal plans\s*1/ })).toHaveAttribute('aria-selected', 'true')
+  await other.goto('/saved?tab=plans') // old address: saved plans now live in the Plan library
+  await expect(other).toHaveURL(/\/plans\?tab=saved$/)
+  await expect(other.getByRole('tab', { name: /^Saved\s*1$/ })).toHaveAttribute('aria-selected', 'true')
   await expect(other.getByRole('list', { name: 'Saved meal plans' }).locator('img').first()).toBeVisible()
   await ctx.close()
 })

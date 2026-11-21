@@ -37,10 +37,10 @@ test('floating navigation replaces the bottom bar and reaches every destination 
   expect(vp.height - (b.y + b.height)).toBeLessThan(48)
   expect(b.width).toBeGreaterThanOrEqual(56) // a substantial control
   expect(b.width).toBeLessThanOrEqual(64)
-  // 3. it opens a compact panel with the five destinations, Home marked as current
+  // 3. it opens a compact panel: Home, the four pillars and Profile, Home marked as current
   await btn.click()
   const nav = page.getByRole('navigation', { name: 'Main' })
-  for (const name of ['Home', 'Plan', 'Diary', 'Discover', 'Profile']) await expect(nav.getByRole('link', { name })).toBeVisible()
+  for (const name of ['Home', 'Discover', 'Plan', 'Kitchen', 'Diary', 'Profile']) await expect(nav.getByRole('link', { name })).toBeVisible()
   await expect(nav.getByRole('link', { name: 'Home' })).toHaveAttribute('aria-current', 'page')
   const panel = (await nav.boundingBox())!
   expect(panel.width).toBeLessThan(vp.width * 0.9) // never full screen
@@ -53,7 +53,7 @@ test('floating navigation replaces the bottom bar and reaches every destination 
   await page.mouse.click(vp.width - 12, vp.height * 0.15) // outside the panel (it is taller on short phones)
   await expect(page.getByRole('navigation', { name: 'Main' })).toHaveCount(0)
   // 4. each destination navigates
-  for (const [name, path] of [['Plan', '/plan'], ['Diary', '/diary'], ['Discover', '/discover'], ['Profile', '/profile'], ['Home', '/']] as const) {
+  for (const [name, path] of [['Plan', '/plan'], ['Kitchen', '/kitchen'], ['Diary', '/diary'], ['Discover', '/discover'], ['Profile', '/profile'], ['Home', '/']] as const) {
     await page.getByRole('button', { name: /^Navigation/ }).click()
     await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name }).click()
     await expect(page).toHaveURL(new RegExp(`${path === '/' ? '/$' : `${path}$`}`))

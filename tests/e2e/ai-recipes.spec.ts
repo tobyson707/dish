@@ -33,16 +33,15 @@ test.describe('AI recipes', () => {
     // 1. Discover offers the actions (no chat box anywhere)
     await page.goto('/discover')
     await appReady(page)
-    const actions = page.getByRole('region', { name: 'Cook something new' })
-    await expect(actions.getByRole('link', { name: /Generate a recipe/ })).toBeVisible()
-    await expect(actions.getByRole('link', { name: /Use my ingredients/ })).toBeVisible()
-    await expect(actions.getByRole('link', { name: /Explore a cuisine/ })).toBeVisible()
+    const actions = page.getByRole('navigation', { name: 'Something new' })
+    await expect(actions.getByRole('link', { name: /Create a recipe/ })).toBeVisible()
     await expect(actions.getByRole('link', { name: /Surprise me/ })).toBeVisible()
+    await expect(page.getByText(/\bAI\b/)).toHaveCount(0)
     await expect(page.getByRole('textbox', { name: /chat|message|ask/i })).toHaveCount(0)
     await shot(page, 'discover')
 
     // 2. a structured request: ingredients, cuisine, meal, servings; profile allergy shown as always applied
-    await actions.getByRole('link', { name: /Generate a recipe/ }).click()
+    await actions.getByRole('link', { name: /Create a recipe/ }).click()
     await expect(page.getByRole('heading', { name: 'Create a recipe' })).toBeVisible()
     await expect(page.getByText('Local test mode')).toBeVisible()
     await expect(page.getByText(/Always left out, from your profile/)).toContainText('Shellfish')
@@ -60,12 +59,12 @@ test.describe('AI recipes', () => {
     // 3. a structured recipe, labelled as AI and with a kind, safety notes from DISH
     const card = page.getByTestId('generated-recipe').first()
     await expect(card).toBeVisible({ timeout: 30_000 })
-    await expect(card.getByText('AI-generated')).toBeVisible()
+    await expect(card.getByText(/\bAI\b/)).toHaveCount(0) // no AI badge; the kind and DISH's checks are shown instead
     await expect(card.getByText('New idea')).toBeVisible()
     await expect(card).toContainText('Serves 3')
     await expect(card.getByRole('heading', { name: 'Method' })).toBeVisible()
     await expect(card).toContainText(/75°C/) // poultry handling note added by DISH
-    await expect(card).toContainText('Nutrition (AI estimate, per serving)')
+    await expect(card).toContainText('Nutrition (estimate, per serving)')
     await shot(page, 'result')
 
     // nothing is stored until the person acts on it
@@ -119,8 +118,9 @@ test.describe('AI recipes', () => {
     // 9. the saved recipe opens as a full recipe page, clearly AI and private; variation from there
     await page.goto(`/recipes/${saved[0]!.slug}`)
     await appReady(page)
-    await expect(page.getByText('AI-generated', { exact: true })).toBeVisible()
+    await expect(page.getByText('Recipe suggestion', { exact: true })).toBeVisible()
     await expect(page.getByText(/private to you/)).toBeVisible()
+    await expect(page.getByText(/\bAI\b/)).toHaveCount(0)
     await expect(page.getByText(/DISH has no reliable price for this recipe/)).toBeVisible()
     await shot(page, 'recipe-page')
     await page.getByRole('link', { name: 'Make a variation' }).click()
@@ -138,7 +138,7 @@ test.describe('AI recipes', () => {
     await expect(recent.getByRole('button')).toHaveCount(2)
     await recent.getByRole('button').last().click()
     await expect(page.getByTestId('generated-recipe').first()).toContainText('Serves 3')
-    await expect(page.getByRole('region', { name: 'Your AI recipes' })).toContainText(String(saved[0]!.name))
+    await expect(page.getByRole('region', { name: 'Your recipes' })).toContainText(String(saved[0]!.name))
 
     // curated and AI stay apart: the public catalogue never includes it, and nobody else can read it
     const anon = await (await fetch(`${API}/rest/v1/food_items?select=id&origin=eq.ai`, { headers: { apikey: ANON_KEY, authorization: `Bearer ${ANON_KEY}` } })).json()
@@ -163,11 +163,11 @@ test.describe('AI recipes', () => {
     // provider problems are reported plainly, with a retry
     await page.getByLabel('Anything else').fill('fixture:rate')
     await page.getByRole('button', { name: 'Generate a recipe' }).click()
-    await expect(page.getByText('The AI service is busy right now')).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText('Recipe suggestions are busy right now')).toBeVisible({ timeout: 30_000 })
     await expect(page.getByRole('button', { name: 'Try again' })).toBeVisible()
     await page.getByLabel('Anything else').fill('fixture:garbage')
     await page.getByRole('button', { name: 'Generate a recipe' }).click()
-    await expect(page.getByText("The AI's answer couldn't be used")).toBeVisible({ timeout: 30_000 })
+    await expect(page.getByText("That suggestion couldn't be used")).toBeVisible({ timeout: 30_000 })
   })
 
   test('use my ingredients lists what is still to buy and skips unsafe leftovers', async ({ page }) => {
@@ -212,7 +212,7 @@ test.describe('AI recipes', () => {
     const [jollof] = await rows('food_items?select=id,slug,name&slug=eq.jollof-rice-chicken')
     await page.goto(`/recipes/${jollof!.slug}`)
     await appReady(page)
-    await expect(page.getByText('AI-generated', { exact: true })).toHaveCount(0)
+    await expect(page.getByText('Recipe suggestion', { exact: true })).toHaveCount(0)
     await page.getByRole('link', { name: 'Find alternatives' }).click()
     await expect(page.getByRole('heading', { name: `Instead of ${jollof!.name}` })).toBeVisible()
     await page.getByRole('button', { name: 'Find alternatives' }).click()

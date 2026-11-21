@@ -20,6 +20,7 @@ import { Sheet } from '@/components/ui/Sheet'
 import { EmptyState, ErrorState, Notice } from '@/components/ui/States'
 import { BudgetGhost } from '@/components/ui/Ghost'
 import { useToast } from '@/components/ui/Toast'
+import { DIARY_SECTIONS, PillarTabs } from '@/components/nav/PillarTabs'
 import { DateField } from '@/components/ui/DateField'
 
 const CATS: { value: BudgetRecord['category']; label: string }[] = [
@@ -64,7 +65,8 @@ export function BudgetPage() {
 
   return (
     <div>
-      <PageHeader back title="Food budget" actions={<Button size="sm" icon="plus" onClick={() => setAdding(true)}>Record spending</Button>} />
+      <PageHeader eyebrow="Spending" title="Food budget" actions={<Button size="sm" icon="plus" onClick={() => setAdding(true)}>Record spending</Button>} />
+      <PillarTabs label="Diary" sections={DIARY_SECTIONS} />
       <Segmented label="Budget period" hideLabel value={period} onChange={setPeriod} options={[{ value: 'day', label: 'Daily' }, { value: 'week', label: 'Weekly' }, { value: 'month', label: 'Monthly' }]} />
       <p className="num mt-3 text-footnote text-muted" aria-live="polite">
         {dateRange(from, to)}

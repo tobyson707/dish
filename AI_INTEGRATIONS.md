@@ -1,5 +1,7 @@
 # AI integrations
 
+Internally this layer is called RINE (Recipe Intelligence Engine). It is never named in the interface; see ARCHITECTURE.md, "Four pillars".
+
 AI in DISH is **optional and server-side only**. Every AI-backed feature works without it: the deterministic planner handles plans, replacements, Surprise Me and kitchen ideas, and scanning offers manual entry. No API keys ever reach the browser.
 
 ## Provider interface
@@ -61,7 +63,7 @@ For local development, put the same keys in `supabase/functions/.env` (git-ignor
 
 ## AI recipes (`recipe-generate`)
 
-Structured recipes, never chat. Entry points: Discover ("Cook something new": Generate a recipe, Use my ingredients, Explore a cuisine, Surprise me), the Kitchen ("Create a recipe from these"), and every recipe page ("Find alternatives", "Make a variation"). All of them open the recipe studio at `/create?mode=…`.
+Structured recipes, never chat. Entry points: Discover ("Create a recipe"), the Kitchen ("Create a recipe from these") and every recipe page ("Find alternatives", "Make a variation"). All of them open the recipe studio at `/create?mode=…` (Create, My kitchen, Cuisine; `mode=surprise` still works by link). In the interface these are "recipe suggestions": cards show their kind (Traditional style, Adapted, Fusion, New idea) and DISH's checks, not an AI badge, and the recipe page labels the record "Recipe suggestion" with its plain-language status.
 
 **Request** (`action: 'generate'`): mode (`generate`, `use_ingredients`, `cuisine`, `surprise`, `alternatives`, `variation`), and any of: ingredients, cuisine, country, meal (breakfast, lunch, dinner, snack, drink), diet, extra things to leave out, ready-in minutes, difficulty, servings, budget level (`thrifty` or `moderate`: a hint to the AI only, because DISH has no reliable prices for generated recipes, so no cost is ever shown), notes, parent recipe, variation, count (1 to 3). The profile's allergies, custom allergies, diet and excluded foods are always added on the server. A request can add restrictions but never remove them.
 

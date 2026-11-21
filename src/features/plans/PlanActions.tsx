@@ -78,7 +78,7 @@ export function PlanActions({ plan, onClose, from = 'list', initial = 'menu' }: 
           {owner && <Primary icon="share" label="Share" onClick={() => { close(); nav(`/plans/${plan.id}?panel=share`) }} />}
           <Primary icon="download" label="Export" onClick={() => setDialog('export')} />
           {owner && plan.status !== 'archived' && <Primary icon="archive" label="Archive" onClick={() => setDialog('archive')} />}
-          {owner && plan.status === 'archived' && <Primary icon="refresh" label="Restore" onClick={() => void run(() => setStatus.mutateAsync({ id: plan.id, status: 'draft' }), 'Restored. It’s back in My plans as a draft.')} />}
+          {owner && plan.status === 'archived' && <Primary icon="refresh" label="Restore" onClick={() => void run(() => setStatus.mutateAsync({ id: plan.id, status: 'draft' }), 'Restored. It’s back in your plan library as a draft.')} />}
           {!owner && <Primary icon="copy" label="Duplicate" onClick={() => setDialog('copy')} />}
         </ul>
         <button type="button" aria-expanded={more} onClick={() => setMore(!more)} className="press mt-3 flex w-full items-center justify-between rounded-[14px] px-2 py-3 text-left font-semibold text-ink-2 hover:text-ink">

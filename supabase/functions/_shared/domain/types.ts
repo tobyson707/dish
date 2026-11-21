@@ -113,7 +113,7 @@ export type NutritionSource = (typeof NUTRITION_SOURCES)[number]
 export const NUTRITION_SOURCE_LABEL: Record<NutritionSource, string> = {
   verified: 'Verified',
   reference_estimate: 'Reference estimate',
-  ai_estimate: 'AI estimate',
+  ai_estimate: 'Automatic estimate',
   user: 'Entered by you',
   imported: 'Imported',
 }

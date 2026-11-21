@@ -44,12 +44,12 @@ type In = z.infer<typeof Input>
 
 const CACHE_DAYS = 7
 const AI_HTTP: Record<AIError['kind'], [number, string]> = {
-  rate_limited: [429, 'The AI service is busy right now. Please try again in a minute.'],
-  timeout: [504, 'The AI took too long to answer. Please try again.'],
-  unavailable: [503, "AI recipes aren't available right now."],
-  refused: [422, "The AI couldn't write a recipe for that request. Try changing it."],
-  bad_output: [502, "The AI's answer couldn't be used. Please try again."],
-  provider: [502, 'The AI service had a problem. Please try again.'],
+  rate_limited: [429, 'Recipe suggestions are busy right now. Please try again in a minute.'],
+  timeout: [504, 'That took too long. Please try again.'],
+  unavailable: [503, "Recipe suggestions aren't available right now."],
+  refused: [422, "No recipe could be suggested for that request. Try changing it."],
+  bad_output: [502, "That suggestion couldn't be used. Please try again."],
+  provider: [502, 'Recipe suggestions had a problem. Please try again.'],
 }
 
 async function sha256(s: string): Promise<string> {
@@ -66,7 +66,7 @@ Deno.serve(
 
     await checkRequestBurst(user.id, 'recipe_generate', 8)
     const provider = getProvider('recipes')
-    if (!provider) throw new HttpError(503, "AI recipes aren't set up on this DISH server yet. Your administrator needs to add an AI provider key.", 'ai_unavailable')
+    if (!provider) throw new HttpError(503, "Recipe suggestions aren't set up on this DISH server yet.", 'ai_unavailable')
 
     const ctx = await loadUserContext(db, user.id)
     const input = body.input
@@ -276,11 +276,11 @@ async function save(db: ReturnType<typeof admin>, userId: string, generationId: 
     fat_g: r.nutrition.fat_g,
     nutrition_source: 'ai_estimate',
     nutrition_is_estimate: true,
-    nutrition_notes: r.nutrition.calories == null ? null : 'Estimated by AI from the listed ingredients. Not measured.',
+    nutrition_notes: r.nutrition.calories == null ? null : 'Estimated automatically from the listed ingredients. Not measured.',
     is_sample: false,
     countries: r.country_codes,
     verification_status: 'ai_generated',
-    provenance: `Generated with ${gen.model ?? 'an AI model'} on ${new Date(gen.created_at).toISOString().slice(0, 10)}.`,
+    provenance: `Suggested for you on ${new Date(gen.created_at).toISOString().slice(0, 10)}.`,
     source_refs: [],
     origin: 'ai',
     owner_id: userId,
@@ -298,7 +298,7 @@ async function save(db: ReturnType<typeof admin>, userId: string, generationId: 
     throw e1
   }
   try {
-    const { data: rec, error: e2 } = await a.from('recipes').insert({ food_item_id: id, servings: r.servings, steps: r.steps, tips: r.tips, source: 'AI-generated' }).select('id').single()
+    const { data: rec, error: e2 } = await a.from('recipes').insert({ food_item_id: id, servings: r.servings, steps: r.steps, tips: r.tips, source: 'Recipe suggestion' }).select('id').single()
     if (e2) throw e2
     const { error: e3 } = await a.from('recipe_ingredients').insert(
       r.ingredients.map((i, k) => {

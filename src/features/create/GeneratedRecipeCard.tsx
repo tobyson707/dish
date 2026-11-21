@@ -46,12 +46,11 @@ export function GeneratedRecipeCard({ recipe: r, generationId, index, savedId, d
   const diet = r.dietary_tags.find((t) => t === 'vegan') ?? r.dietary_tags.find((t) => t === 'vegetarian') ?? r.dietary_tags.find((t) => t === 'pescatarian')
 
   return (
-    <article className="rounded-xl bg-elevated ring-1 ring-inset ring-line" aria-label={r.name} data-testid="generated-recipe">
+    <article className="rounded-xl bg-elevated ring-1 ring-inset ring-line" aria-label={r.name} data-testid="generated-recipe" data-origin="suggestion">
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="inline-flex h-6 items-center gap-1 rounded-full bg-accent-soft px-2.5 text-micro font-bold text-ink ring-1 ring-inset ring-accent-border"><Icon name="sparkle" size={12} /> AI-generated</span>
               <span className="inline-flex h-6 items-center rounded-full bg-surface px-2.5 text-micro font-semibold text-ink-2 ring-1 ring-inset ring-line" title={KIND_HELP[r.kind]}>{KIND_LABEL[r.kind]}</span>
             </div>
             <h3 className="mt-2 text-title-2 leading-tight">{r.name}</h3>
@@ -150,7 +149,7 @@ export function GeneratedRecipeCard({ recipe: r, generationId, index, savedId, d
             </div>
           )}
           <div className="mt-4 rounded-lg bg-surface p-3 text-footnote text-ink-2">
-            <p><span className="font-semibold text-ink">Nutrition (AI estimate, per serving):</span> {r.nutrition.calories == null ? 'not available.' : `${formatKcal(r.nutrition.calories)}, protein ${r.nutrition.protein_g ?? '–'}g, carbs ${r.nutrition.carbs_g ?? '–'}g, fat ${r.nutrition.fat_g ?? '–'}g. Not measured; it varies with brands and portions.`}</p>
+            <p><span className="font-semibold text-ink">Nutrition (estimate, per serving):</span> {r.nutrition.calories == null ? 'not available.' : `${formatKcal(r.nutrition.calories)}, protein ${r.nutrition.protein_g ?? '–'}g, carbs ${r.nutrition.carbs_g ?? '–'}g, fat ${r.nutrition.fat_g ?? '–'}g. Not measured; it varies with brands and portions.`}</p>
             <p className="mt-1">Allergens were worked out by DISH from the listed ingredients. Check the labels of what you buy.</p>
             {r.warnings.length > 0 && <p className="mt-1">{r.warnings.join(' ')}</p>}
           </div>

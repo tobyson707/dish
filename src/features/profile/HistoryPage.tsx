@@ -10,6 +10,7 @@ import { dayLabel } from '@/lib/format'
 import { PageHeader, Section } from '@/components/ui/Layout'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { ButtonLink } from '@/components/ui/Button'
+import { DIARY_SECTIONS, PillarTabs } from '@/components/nav/PillarTabs'
 import { GhostRegion, ListRowsGhost } from '@/components/ui/Ghost'
 
 export function HistoryPage() {
@@ -34,7 +35,8 @@ export function HistoryPage() {
 
   return (
     <div>
-      <PageHeader back eyebrow="Last 30 days" title="History" />
+      <PageHeader eyebrow="Last 30 days" title="History" />
+      <PillarTabs label="Diary" sections={DIARY_SECTIONS} />
       <Section title="Recently eaten" className="mt-0">
         {diary.isPending ? <GhostRegion label="Loading history"><ListRowsGhost rows={3} /></GhostRegion> : (diary.data ?? []).length === 0 ? <p className="text-sm text-muted">Nothing logged in the last 30 days.</p> : (
           <ul className="divide-y divide-line rounded-lg bg-elevated px-4">

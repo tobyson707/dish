@@ -23,6 +23,8 @@ import { EmptyState, ErrorState } from '@/components/ui/States'
 import { DiaryGhost } from '@/components/ui/Ghost'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Icon } from '@/components/ui/Icon'
+import { DIARY_SECTIONS, PillarTabs } from '@/components/nav/PillarTabs'
+import { SpendingLine } from './SpendingLine'
 import { useToast } from '@/components/ui/Toast'
 
 const toRows = (es: DiaryEntry[]) => es.map((e) => ({ ...(e.nutrition ?? { calories: null, protein_g: null, carbs_g: null, fat_g: null }), servings: e.servings, source: e.nutrition?.source, is_estimate: e.nutrition?.is_estimate, local_date: e.local_date }))
@@ -52,6 +54,7 @@ export function DiaryPage() {
   return (
     <div>
       <PageHeader eyebrow={dayLabel(date, today)} title="Food diary" actions={<IconButton icon="plan" label="Choose a date" onClick={() => setPicking(true)} />} />
+      <PillarTabs label="Diary" sections={DIARY_SECTIONS} />
       <Sheet open={picking} onClose={() => setPicking(false)} title="Choose a date">
         <DishCalendar today={today} value={date} max={today} onChange={(d) => { setDate(d); setPicking(false) }} />
       </Sheet>
@@ -127,6 +130,7 @@ export function DiaryPage() {
               </p>
             </div>
           </Section>
+          <SpendingLine />
         </>
       )}
       <FloatingActions>
