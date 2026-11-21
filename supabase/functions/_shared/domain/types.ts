@@ -202,7 +202,7 @@ export interface CatalogueMeal extends Macros {
   /** how many the recipe serves (ingredient quantities are for this many) */
   recipe_servings?: number
   /** incomplete / unverified records are discoverable but never planned */
-  verification_status?: 'verified' | 'partial' | 'awaiting_review' | 'incomplete' | 'unverified'
+  verification_status?: 'verified' | 'partial' | 'awaiting_review' | 'incomplete' | 'unverified' | 'ai_generated'
 }
 
 export interface PreferenceSnapshot {

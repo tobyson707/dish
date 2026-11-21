@@ -4,7 +4,8 @@ import { ALLERGEN_LABEL, SLOT_LABEL, type Allergen } from '@domain/types.ts'
 import { checkAllergy } from '@domain/allergens.ts'
 import { formatQuantity } from '@domain/units.ts'
 import { usePlannedMeal, useSetMealStatus } from '@/data/plans'
-import { useCatalogue, toCatalogueMeal } from '@/data/catalogue'
+import { toCatalogueMeal, lineName } from '@/data/catalogue'
+import { useFoods } from '@/data/aiRecipes'
 import { usePreferences } from '@/data/profile'
 import { useToday } from '@/hooks/useToday'
 import { dayLabel, formatKcal, formatMinutes, formatMoney } from '@/lib/format'
@@ -28,7 +29,7 @@ export function PlannedMealPage() {
   const uid = useUserId()
   // a meal in a saved plan follows that plan's roles (someone else's plan, or a draft)
   const plan = usePlan(meal.data?.plan_id ?? undefined)
-  const catalogue = useCatalogue()
+  const catalogue = useFoods()
   const prefs = usePreferences()
   const today = useToday()
   const status = useSetMealStatus()
@@ -126,7 +127,7 @@ export function PlannedMealPage() {
           <ul className="divide-y divide-line rounded-lg bg-elevated px-4">
             {food.recipe.recipe_ingredients.map((ri) => (
               <li key={ri.id} className="flex justify-between gap-3 py-2.5 text-sm">
-                <span>{ri.ingredient.name}{ri.optional && <span className="text-muted"> (optional)</span>}</span>
+                <span>{lineName(ri)}{ri.optional && <span className="text-muted"> (optional)</span>}</span>
                 <span className="num text-muted">{formatQuantity(ri.quantity, ri.unit)}</span>
               </li>
             ))}

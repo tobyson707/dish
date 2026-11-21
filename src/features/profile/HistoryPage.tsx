@@ -4,7 +4,7 @@ import { addDays } from '@domain/dates.ts'
 import { useDiary } from '@/data/diary'
 import { usePlannedMeals } from '@/data/plans'
 import { useFavourites } from '@/data/favourites'
-import { useCatalogue } from '@/data/catalogue'
+import { useFoods } from '@/data/aiRecipes'
 import { useToday } from '@/hooks/useToday'
 import { dayLabel } from '@/lib/format'
 import { PageHeader, Section } from '@/components/ui/Layout'
@@ -18,7 +18,7 @@ export function HistoryPage() {
   const diary = useDiary(from, today)
   const planned = usePlannedMeals(from, today)
   const favs = useFavourites()
-  const cat = useCatalogue()
+  const cat = useFoods()
   const byId = useMemo(() => new Map((cat.data ?? []).map((f) => [f.id, f])), [cat.data])
   const recentRecipes = useMemo(() => {
     const seen = new Set<string>()

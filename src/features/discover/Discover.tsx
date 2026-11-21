@@ -134,9 +134,10 @@ function FoodFeed({ mode }: { mode: 'foryou' | 'recipes' }) {
 
   return (
     <div>
+      {mode === 'foryou' && <CreateActions />}
       {mode === 'foryou' && (
-        <nav aria-label="More ideas" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
-          <Shortcut to="/surprise" icon="sparkle" label="Surprise me" />
+        <nav aria-label="More ideas" className="-mx-4 mt-4 flex gap-2 overflow-x-auto px-4 pb-1">
+          <Shortcut to="/surprise" icon="bowl" label="Pick from DISH" />
           <Shortcut to="/kitchen" icon="fridge" label="My kitchen" />
           <Shortcut to="/saved" icon="heart" label="Saved" />
           <Shortcut to="/budget" icon="wallet" label="Budget" />
@@ -235,6 +236,37 @@ function FeedItem({ food: f, index, category, favourite, onOpen }: { food: FoodI
         </button>
       </div>
     </li>
+  )
+}
+
+/** AI recipe actions: each opens the recipe studio in the right mode (structured, not a chat). */
+function CreateActions() {
+  const actions: { to: string; icon: IconName; label: string; hint: string }[] = [
+    { to: '/create', icon: 'wand', label: 'Generate a recipe', hint: 'From ingredients, a meal or a mood' },
+    { to: '/create?mode=use_ingredients', icon: 'fridge', label: 'Use my ingredients', hint: 'Less waste, fewer extras' },
+    { to: '/create?mode=cuisine', icon: 'globe', label: 'Explore a cuisine', hint: 'Dishes from anywhere' },
+    { to: '/create?mode=surprise', icon: 'sparkle', label: 'Surprise me', hint: 'Something new for you' },
+  ]
+  return (
+    <section aria-labelledby="create-title" className="rounded-xl bg-elevated p-4 ring-1 ring-inset ring-line">
+      <div className="flex items-baseline justify-between gap-2">
+        <h2 id="create-title" className="text-headline">Cook something new</h2>
+        <span className="text-micro font-semibold text-muted">AI recipes, checked by DISH</span>
+      </div>
+      <ul className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
+        {actions.map((a) => (
+          <li key={a.to}>
+            <Link to={a.to} className="press flex h-full items-start gap-3 rounded-lg bg-surface p-3 ring-1 ring-inset ring-line hover:ring-accent-border">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent-soft text-ink"><Icon name={a.icon} size={18} /></span>
+              <span className="min-w-0">
+                <span className="block text-sm font-bold leading-tight">{a.label}</span>
+                <span className="mt-0.5 block text-micro text-muted">{a.hint}</span>
+              </span>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }
 

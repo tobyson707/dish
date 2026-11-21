@@ -16,7 +16,7 @@ import {
 } from '@/data/planbook'
 import { usePlanLive } from '@/data/planLive'
 import { useGeneratePlan } from '@/data/ai'
-import { useCatalogue } from '@/data/catalogue'
+import { useFoods } from '@/data/aiRecipes'
 import { useGenerateGroceryList } from '@/data/grocery'
 import { usePreferences } from '@/data/profile'
 import { sortPlanned } from '@/data/plans'
@@ -317,7 +317,7 @@ function PlanGrocerySheet({ plan, open, onClose }: { plan: MealPlan; open: boole
   const nav = useNavigate()
   const toast = useToast()
   const today = useToday()
-  const catalogue = useCatalogue()
+  const catalogue = useFoods()
   const gen = useGenerateGroceryList()
   const total = Math.round((Date.parse(plan.end_date) - Date.parse(plan.start_date)) / 864e5) + 1
   const weekFrom = clamp(today, plan)

@@ -97,7 +97,7 @@ export function CategoryWorkspace({ category, open, onClose }: { category: Categ
   const items = useMemo(() => {
     let list = ranked.items
     if (tab === 'quick') list = list.filter((f) => (f.can_cook && f.prep_minutes + f.cook_minutes <= 20) || (!f.can_cook && f.can_buy))
-    if (tab === 'healthy') list = list.filter((f) => f.calories != null && f.calories <= 550 && f.richness <= 1 && (f.recipe?.recipe_ingredients ?? []).some((ri) => ri.ingredient.category === 'produce'))
+    if (tab === 'healthy') list = list.filter((f) => f.calories != null && f.calories <= 550 && f.richness <= 1 && (f.recipe?.recipe_ingredients ?? []).some((ri) => ri.ingredient?.category === 'produce'))
     return list.slice(0, 12)
   }, [ranked.items, tab])
 

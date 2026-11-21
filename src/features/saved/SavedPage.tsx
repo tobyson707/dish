@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { PLAN_DURATION_LABEL } from '@domain/types.ts'
 import type { FoodItem } from '@/types/db'
 import { useFavourites, useToggleFavourite } from '@/data/favourites'
-import { useCatalogue } from '@/data/catalogue'
+import { useFoods } from '@/data/aiRecipes'
 import { useMySavedPlans, useToggleSave, type SavedPlan } from '@/data/planbook'
 import { friendlyError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
@@ -56,7 +56,7 @@ export function SavedPage() {
 
 function SavedMeals() {
   const favs = useFavourites()
-  const cat = useCatalogue()
+  const cat = useFoods()
   const toggle = useToggleFavourite()
   const [preview, setPreview] = useState<FoodItem | null>(null)
   const items = useMemo(() => {

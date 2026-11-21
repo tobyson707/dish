@@ -5,7 +5,7 @@ import { checkAllergy } from '@domain/allergens.ts'
 import { formatQuantity } from '@domain/units.ts'
 import { SLOT_LABEL, type MealSlot } from '@domain/types.ts'
 import type { FoodItem } from '@/types/db'
-import { toCatalogueMeal } from '@/data/catalogue'
+import { toCatalogueMeal, lineName } from '@/data/catalogue'
 import { usePreferences } from '@/data/profile'
 import { useCurrency } from '@/hooks/useToday'
 import { formatCostRange } from '@/lib/format'
@@ -78,7 +78,7 @@ function Preview({ f, onClose }: { f: FoodItem; onClose: () => void }) {
           <ul className="mt-2 divide-y divide-white/10 text-sm">
             {ingredients.slice(0, 10).map((ri) => (
               <li key={ri.id} className="flex justify-between gap-3 py-2">
-                <span className="text-on-glass-dark">{ri.ingredient.name}{ri.optional && <span className="text-on-glass-dark-muted"> (optional)</span>}</span>
+                <span className="text-on-glass-dark">{lineName(ri)}{ri.optional && <span className="text-on-glass-dark-muted"> (optional)</span>}</span>
                 {ri.quantity != null && <span className="num shrink-0 text-on-glass-dark-muted">{formatQuantity(ri.quantity, ri.unit)}</span>}
               </li>
             ))}

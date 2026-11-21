@@ -8,7 +8,8 @@ import { useQueryClient } from '@tanstack/react-query'
 import { formatTime } from '@/lib/time'
 import { useDeletePlannedMeal, useRestorePlannedMeal, useSetMealStatus, useUpdatePlannedMeal } from '@/data/plans'
 import { invokeFn, useReplaceMeal, type Suggestion } from '@/data/ai'
-import { useCatalogue, toCatalogueMeal } from '@/data/catalogue'
+import { toCatalogueMeal } from '@/data/catalogue'
+import { useFoods } from '@/data/aiRecipes'
 import { useAddIngredientsToList } from '@/data/grocery'
 import { useFavourites, useToggleFavourite } from '@/data/favourites'
 import { Button } from '@/components/ui/Button'
@@ -190,7 +191,7 @@ function Menu({ meal, onPanel, onClose }: { meal: PlannedMeal; onPanel: (p: Pane
   // eating and skipping are the plan owner's; viewers only look
   const canTick = !scope || scope.role === 'owner'
   const canEdit = !scope || scope.role !== 'viewer'
-  const catalogue = useCatalogue()
+  const catalogue = useFoods()
   const addToList = useAddIngredientsToList()
   const favs = useFavourites()
   const toggleFav = useToggleFavourite()

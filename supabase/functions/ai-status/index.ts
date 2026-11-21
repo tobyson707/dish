@@ -9,11 +9,15 @@ Deno.serve(
   handler(async (req) => {
     const { db } = await authenticate(req)
     const p = getProvider()
+    const r = getProvider('recipes')
     return json({
+      // recipe generation (may be the local test provider on a developer's machine)
+      recipes_configured: !!r,
+      recipes_provider: r?.name ?? null,
       ai_configured: !!p,
       vision_configured: !!p?.visionModel,
       provider: p?.name ?? null,
-      remaining_this_hour: p ? await checkAiQuota(db, false) : null,
+      remaining_this_hour: p || r ? await checkAiQuota(db, false) : null,
     })
   }),
 )

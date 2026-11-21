@@ -9,7 +9,7 @@ import { useToday } from '@/hooks/useToday'
 import { friendlyError } from '@/lib/errors'
 import { dayLabel } from '@/lib/format'
 import { cn } from '@/lib/cn'
-import { Button, IconButton } from '@/components/ui/Button'
+import { Button, ButtonLink, IconButton } from '@/components/ui/Button'
 import { PageHeader, Section } from '@/components/ui/Layout'
 import { TextField } from '@/components/ui/Field'
 import { Toggle } from '@/components/ui/Inputs'
@@ -38,6 +38,7 @@ export function KitchenPage() {
       <div className="flex flex-wrap gap-2">
         <Button icon="plus" onClick={() => setEditing('new')}>Add ingredient</Button>
         <Button variant="secondary" icon="pot" onClick={() => setEditing('leftover')}>Add leftovers</Button>
+        {items.length > 0 && <ButtonLink to="/create?mode=use_ingredients" variant="secondary" icon="sparkle">Create a recipe from these</ButtonLink>}
       </div>
 
       {kitchen.isPending ? (

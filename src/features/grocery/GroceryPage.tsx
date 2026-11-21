@@ -6,7 +6,8 @@ import { GROCERY_CATEGORIES, GROCERY_CATEGORY_LABEL, type GroceryCategory } from
 import { formatQuantity } from '@domain/units.ts'
 import type { GroceryItem } from '@/types/db'
 import { useCreateList, useGenerateGroceryList, useGroceryItemMutations, useGroceryItems, useGroceryLists, useRenameOrArchiveList } from '@/data/grocery'
-import { useCatalogue, useIngredients } from '@/data/catalogue'
+import { useIngredients } from '@/data/catalogue'
+import { useFoods } from '@/data/aiRecipes'
 import { useToday } from '@/hooks/useToday'
 import { useSyncState } from '@/offline/useSync'
 import { friendlyError } from '@/lib/errors'
@@ -250,7 +251,7 @@ function AddItem({ listId }: { listId: string }) {
 
 function GenerateSheet({ open, onClose, listId, onDone }: { open: boolean; onClose: () => void; listId?: string; onDone: (id: string) => void }) {
   const today = useToday()
-  const catalogue = useCatalogue()
+  const catalogue = useFoods()
   const gen = useGenerateGroceryList()
   const toast = useToast()
   const { online } = useSyncState()

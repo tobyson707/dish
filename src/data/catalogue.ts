@@ -5,17 +5,17 @@ import type { FoodItem, Ingredient } from '@/types/db'
 import { qk } from './keys'
 import { countryByCode } from '@/lib/geo'
 
-const SELECT =
-  '*, recipe:recipes(id, food_item_id, servings, steps, tips, source, recipe_ingredients(id, quantity, unit, note, optional, sort, prep_state, substitutions, ingredient:ingredients(id, slug, name, category, allergens, default_unit)))'
+export const FOOD_SELECT =
+  '*, recipe:recipes(id, food_item_id, servings, steps, tips, source, recipe_ingredients(id, quantity, unit, note, optional, sort, prep_state, substitutions, name, category, allergens, ingredient:ingredients(id, slug, name, category, allergens, default_unit)))'
 
-/** Whole public catalogue. Small, stable and cached offline. */
+/** Whole public (curated) catalogue. Small, stable and cached offline. A person's own AI recipes are loaded separately (useMyRecipes). */
 export function useCatalogue() {
   return useQuery({
     queryKey: qk.catalogue(),
     meta: { persist: true, public: true },
     staleTime: 1000 * 60 * 30,
     queryFn: async () => {
-      const { data, error } = await supabase.from('food_items').select(SELECT).order('name')
+      const { data, error } = await supabase.from('food_items').select(FOOD_SELECT).is('owner_id', null).order('name')
       if (error) throw error
       const items = (data ?? []) as FoodItem[]
       for (const f of items) f.recipe?.recipe_ingredients.sort((a, b) => a.sort - b.sort)
@@ -65,17 +65,20 @@ export function toCatalogueMeal(f: FoodItem): CatalogueMeal {
     verification_status: f.verification_status,
     recipe_servings: f.recipe?.servings ?? 1,
     ingredients: (f.recipe?.recipe_ingredients ?? []).map((ri) => ({
-      ingredient_id: ri.ingredient.id,
-      name: ri.ingredient.name,
-      category: ri.ingredient.category,
+      ingredient_id: ri.ingredient?.id ?? null,
+      name: ri.ingredient?.name ?? ri.name ?? '',
+      category: ri.ingredient?.category ?? ri.category ?? 'other',
       quantity: ri.quantity,
       unit: ri.unit,
       optional: ri.optional,
-      allergens: ri.ingredient.allergens,
+      allergens: [...new Set([...(ri.ingredient?.allergens ?? []), ...(ri.allergens ?? [])])],
       substitutions: ri.substitutions ?? [],
     })),
   }
 }
+
+/** An ingredient line's display name (catalogue record, else the line's own name). */
+export const lineName = (ri: { ingredient: { name: string } | null; name?: string | null }) => ri.ingredient?.name ?? ri.name ?? ''
 
 /** Everything a person might search a dish by: name, other names, cuisine, origin. */
 export function searchText(f: Pick<FoodItem, 'name' | 'cuisine' | 'description' | 'alt_names' | 'countries' | 'region'>): string {

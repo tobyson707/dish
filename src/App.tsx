@@ -34,6 +34,7 @@ const ScanPage = L(() => import('@/features/scanner/ScanPage'), 'ScanPage')
 const Discover = L(() => import('@/features/discover/Discover'), 'Discover')
 const Surprise = L(() => import('@/features/discover/Surprise'), 'Surprise')
 const RecipeDetail = L(() => import('@/features/recipes/RecipeDetail'), 'RecipeDetail')
+const RecipeStudio = L(() => import('@/features/create/RecipeStudio'), 'RecipeStudio')
 const ImageStudio = L(() => import('@/features/admin/ImageStudio'), 'ImageStudio')
 const KitchenPage = L(() => import('@/features/kitchen/KitchenPage'), 'KitchenPage')
 const BudgetPage = L(() => import('@/features/budget/BudgetPage'), 'BudgetPage')
@@ -101,6 +102,7 @@ const router = createBrowserRouter([
       { path: '/discover', element: <Discover /> },
       { path: '/surprise', element: <Surprise /> },
       { path: '/recipes/:slug', element: <RecipeDetail /> },
+      { path: '/create', element: <RecipeStudio /> },
       { path: '/kitchen', element: <KitchenPage /> },
       { path: '/budget', element: <BudgetPage /> },
       { path: '/profile', element: <ProfilePage /> },
