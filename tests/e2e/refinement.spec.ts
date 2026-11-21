@@ -86,12 +86,12 @@ test('saved: per-kind counts from stored saves, kept after a reload; a failed sa
   await first.click()
   await expect(page.getByRole('alert')).toBeVisible()
   await expect(page.getByRole('alert').getByRole('button', { name: 'Retry' })).toBeVisible()
-  await expect(page.getByRole('button', { name: `Save ${name}` })).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByRole('button', { name: `Save ${name}`, exact: true })).toHaveAttribute('aria-pressed', 'false')
   expect(await rest<unknown[]>(`favourite_meals?user_id=eq.${uid}&select=food_item_id`)).toHaveLength(0)
   await page.unroute('**/rest/v1/favourite_meals*')
   // the real save: busy, then saved once stored
-  await page.getByRole('button', { name: `Save ${name}` }).click()
-  await expect(page.getByRole('button', { name: `Remove ${name} from saved` })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: `Save ${name}`, exact: true }).click()
+  await expect(page.getByRole('button', { name: `Remove ${name} from saved`, exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
   expect(await rest<unknown[]>(`favourite_meals?user_id=eq.${uid}&select=food_item_id`)).toHaveLength(1)
   // Saved lives in Discover: the count is the stored saves, and it survives a reload
@@ -108,7 +108,7 @@ test('saved: per-kind counts from stored saves, kept after a reload; a failed sa
   await expect(page.getByRole('list', { name: 'Saved meals' }).getByText(name)).toBeVisible()
   await shot(page, 'saved')
   // removing from Saved: gone once the server confirms, and the count follows
-  await page.getByRole('button', { name: `Remove ${name} from saved` }).click()
+  await page.getByRole('button', { name: `Remove ${name} from saved`, exact: true }).click()
   await expect(page.getByRole('tab', { name: /^Saved\s*0$/ })).toBeVisible()
   expect(await rest<unknown[]>(`favourite_meals?user_id=eq.${uid}&select=food_item_id`)).toHaveLength(0)
   await expectNoHorizontalScroll(page)

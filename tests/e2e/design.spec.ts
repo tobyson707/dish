@@ -67,7 +67,7 @@ test('budget: remaining, spent and total are clear and correct for the period @r
   await expect(summary.getByText(/1,500/).first()).toBeVisible()
   // an older record in another currency is never added in (no conversion)
   const other = currency === 'USD' ? 'EUR' : 'USD'
-  await fetch(`${API}/rest/v1/budget_records`, { method: 'POST', headers: h, body: JSON.stringify({ user_id: uid, amount: 99, currency: other, spent_on: new Date().toISOString().slice(0, 10), category: 'other' }) })
+  await fetch(`${API}/rest/v1/budget_records`, { method: 'POST', headers: h, body: JSON.stringify({ user_id: uid, amount: 99, currency: other, spent_on: new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date()), category: 'other' }) })
   await page.reload()
   await page.getByRole('radio', { name: 'Daily' }).click()
   await expect(page.getByText(/1 record is in another currency/)).toBeVisible()

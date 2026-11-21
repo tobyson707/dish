@@ -38,7 +38,7 @@ test('navigation: Home, the four pillars and Profile; nothing else competes @res
 test('kitchen: inventory, shopping and scanning are one place; diary holds spending and history @responsive', async ({ page }) => {
   const uid = await setUp(page, 'pillkit')
   await fetch(`${API}/rest/v1/kitchen_inventory`, { method: 'POST', headers: h, body: JSON.stringify([{ user_id: uid, name: 'eggs' }]) })
-  const today = new Date().toISOString().slice(0, 10)
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date()) // the profile's own day
   await fetch(`${API}/rest/v1/budget_records`, { method: 'POST', headers: h, body: JSON.stringify([{ user_id: uid, spent_on: today, amount: 1200, currency: 'USD', category: 'groceries' }]) }).then(async (r) => expect(r.ok, await r.text()).toBe(true))
 
   await page.goto('/kitchen')
