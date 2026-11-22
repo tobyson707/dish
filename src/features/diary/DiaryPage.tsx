@@ -23,6 +23,10 @@ import { EmptyState, ErrorState } from '@/components/ui/States'
 import { DiaryGhost } from '@/components/ui/Ghost'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Icon } from '@/components/ui/Icon'
+import { DIARY_SECTIONS, PillarTabs } from '@/components/nav/PillarTabs'
+import { SpendingLine } from './SpendingLine'
+import { enabled } from '@/lib/v1'
+import { StreakChip } from '@/components/canvas/FloatingToolbar'
 import { useToast } from '@/components/ui/Toast'
 
 const toRows = (es: DiaryEntry[]) => es.map((e) => ({ ...(e.nutrition ?? { calories: null, protein_g: null, carbs_g: null, fat_g: null }), servings: e.servings, source: e.nutrition?.source, is_estimate: e.nutrition?.is_estimate, local_date: e.local_date }))
@@ -51,7 +55,8 @@ export function DiaryPage() {
 
   return (
     <div>
-      <PageHeader eyebrow={dayLabel(date, today)} title="Food diary" actions={<IconButton icon="plan" label="Choose a date" onClick={() => setPicking(true)} />} />
+      <PageHeader eyebrow={dayLabel(date, today)} title="Food diary" actions={<><StreakChip /><IconButton icon="plan" label="Choose a date" onClick={() => setPicking(true)} /></>} />
+      <PillarTabs label="Diary" sections={DIARY_SECTIONS} />
       <Sheet open={picking} onClose={() => setPicking(false)} title="Choose a date">
         <DishCalendar today={today} value={date} max={today} onChange={(d) => { setDate(d); setPicking(false) }} />
       </Sheet>
@@ -84,7 +89,7 @@ export function DiaryPage() {
           )}
 
           {dayEntries.length === 0 ? (
-            <EmptyState className="mt-4" title="Nothing logged yet" message="Let's see what's on your plate. Add what you ate, or snap a photo." action={<div className="flex flex-wrap justify-center gap-2"><ButtonLink to={`/diary/add?date=${date}`} icon="plus">Add food</ButtonLink><ButtonLink to="/scan" variant="secondary" icon="camera">Scan food</ButtonLink></div>} />
+            <EmptyState className="mt-4" title="Nothing logged yet" message={enabled('scan') ? "Let's see what's on your plate. Add what you ate, or snap a photo." : 'Add what you ate, or mark a planned meal as eaten.'} action={<div className="flex flex-wrap justify-center gap-2"><ButtonLink to={`/diary/add?date=${date}`} icon="plus">Add food</ButtonLink>{enabled('scan') && <ButtonLink to="/scan" variant="secondary" icon="camera">Scan food</ButtonLink>}</div>} />
           ) : (
             MEAL_SLOTS.filter((s) => dayEntries.some((e) => e.slot === s)).map((s) => (
               <Section key={s} title={SLOT_LABEL[s]}>
@@ -127,10 +132,11 @@ export function DiaryPage() {
               </p>
             </div>
           </Section>
+          {enabled('spending') && <SpendingLine />}
         </>
       )}
       <FloatingActions>
-        <FloatingLink to="/scan" icon="camera" label="Scan food" />
+        {enabled('scan') && <FloatingLink to="/scan" icon="camera" label="Scan food" />}
         <FloatingLink to={`/diary/add?date=${date}`} icon="plus" label="Add food" primary />
       </FloatingActions>
       <ConfirmDialog open={!!deleting} title="Delete this entry?" message={`${deleting?.name ?? ''} will be removed from your diary.${deleting?.planned_meal_id ? ' The planned meal stays in your plan.' : ''}`} confirmLabel="Delete" danger onCancel={() => setDeleting(null)} onConfirm={async () => { await del.mutateAsync(deleting!); setDeleting(null); toast.show('Deleted.') }} />

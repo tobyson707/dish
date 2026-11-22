@@ -6,7 +6,7 @@ import { addDays, todayInTimeZone } from './domain/dates.ts'
 import { HttpError } from './http.ts'
 
 const CATALOGUE_SELECT =
-  'id, slug, name, description, cuisine, meal_types, food_type, dietary_tags, allergens, ingredients_complete, spice_level, richness, prep_minutes, cook_minutes, can_cook, can_buy, est_cost_min, est_cost_max, cost_currency, calories, protein_g, carbs_g, fat_g, nutrition_source, verification_status, image_path, recipe:recipes(servings, recipe_ingredients(quantity, unit, optional, ingredient:ingredients(id, name, category, allergens)))'
+  'id, slug, name, description, cuisine, meal_types, food_type, dietary_tags, allergens, ingredients_complete, spice_level, richness, prep_minutes, cook_minutes, can_cook, can_buy, est_cost_min, est_cost_max, cost_currency, calories, protein_g, carbs_g, fat_g, nutrition_source, verification_status, image_path, recipe:recipes(servings, recipe_ingredients(quantity, unit, optional, name, category, allergens, ingredient:ingredients(id, name, category, allergens)))'
 
 // deno-lint-ignore no-explicit-any
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -19,7 +19,8 @@ export interface CatalogueRow extends CatalogueMeal {
 }
 
 export async function loadCatalogue(db: SupabaseClient): Promise<CatalogueRow[]> {
-  const { data, error } = await db.from('food_items').select(CATALOGUE_SELECT)
+  // curated catalogue only: a person's private AI recipes are never planned or suggested to anyone
+  const { data, error } = await db.from('food_items').select(CATALOGUE_SELECT).is('owner_id', null)
   if (error) throw error
   return (data as Row[]).map((f) => ({
     ...f,
@@ -30,13 +31,13 @@ export async function loadCatalogue(db: SupabaseClient): Promise<CatalogueRow[]>
     fat_g: f.fat_g == null ? null : Number(f.fat_g),
     recipe_servings: f.recipe?.servings ?? 1,
     ingredients: (f.recipe?.recipe_ingredients ?? []).map((ri: Row) => ({
-      ingredient_id: ri.ingredient.id,
-      name: ri.ingredient.name,
-      category: ri.ingredient.category,
+      ingredient_id: ri.ingredient?.id ?? null,
+      name: ri.ingredient?.name ?? ri.name,
+      category: ri.ingredient?.category ?? ri.category ?? 'other',
       quantity: ri.quantity == null ? null : Number(ri.quantity),
       unit: ri.unit,
       optional: ri.optional,
-      allergens: ri.ingredient.allergens,
+      allergens: [...new Set([...(ri.ingredient?.allergens ?? []), ...(ri.allergens ?? [])])],
     })),
   }))
 }

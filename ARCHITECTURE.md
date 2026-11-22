@@ -145,8 +145,8 @@ Device access is isolated in `src/platform/*` (camera, notifications, haptics). 
 
 ## Floating navigation (`src/components/nav/FloatingNavigation.tsx`)
 
-- There is no bottom bar or side rail. One floating button (60px, `--nav-btn`, a raised ink surface whose three lines fold into a close mark) sits at the bottom-left of every screen (inset by `--canvas-m` and the safe areas). It opens a compact panel that grows from the button: Home, Plan, Diary, Discover and Profile (the current one in accent), a **Saved** row with real per-kind counts ("3 meals · 1 plan", from `favourite_meals` and `my_saved_plans()`), plus four shortcuts (Shopping, Kitchen, Scan, Surprise).
-- `/saved` (`src/features/saved/SavedPage.tsx`) lists saved meals (the one existing favourites list; a meal and its recipe are the same catalogue record) and saved community plans, each tab with its stored count. A saved plan whose owner made it private again still counts, shown as "no longer shared" with no details.
+- There is no bottom bar or side rail. One floating button (60px, `--nav-btn`, a raised ink surface whose three lines fold into a close mark) sits at the bottom-left of every screen (inset by `--canvas-m` and the safe areas). It opens a compact panel that grows from the button: Home, the four pillars (Discover, Plan, Kitchen, Diary) and, below a divider, Profile. The current one is shown in accent, and a section inside a pillar (for example `/grocery`) marks its pillar. Nothing else is listed: see "Four pillars" below.
+- Saved meals are the **Saved** tab in Discover (`/discover?tab=saved`) and saved community plans are the **Saved** tab of the plan library (`/plans?tab=saved`), each with its stored count. `/saved` and `/saved?tab=plans` forward there. A saved plan whose owner made it private again still counts, shown as "no longer shared" with no details.
 - The panel closes on a choice, a tap outside, or Escape (focus returns to the button). Routes are unchanged.
 - `--nav-h` is now the clearance kept above the button. Toasts, floating action buttons, the shopping-list bar and the Developer Mode launcher already sit above it, and pages end with padding so their last content can scroll clear.
 
@@ -173,7 +173,7 @@ A compact vertical wheel in the right-edge notch: five icon slots visible, a fix
   - It slides in from the right (`--dur-panel` 380 ms in, about 280 ms out) over a dimmed Home that never moves.
   - The selector stays above it, and its notch background fades away, so changing category swaps the content in place.
   - Close: the button, Escape, a tap on Home, a swipe, or Back. Opening pushes a history entry; Back (or the phone's back gesture) closes the drawer instead of leaving Home.
-- **Removed from Home.** Today's menu list and the shortcut grid. Today's meals are in the carousel and on Plan; the shortcuts are in the navigation panel.
+- **Removed from Home.** Today's menu list and the shortcut grid. Today's meals are in the carousel and on Plan; the features they pointed to now live inside their pillar.
 - **Short screens** (phones in landscape): the dish image steps aside and the greeting shrinks, so text and controls never overlap.
 
 ## Meal-plan export (`src/features/plan/export/`)
@@ -283,3 +283,43 @@ PDF (A4, multi-page, headings never stranded at a page end), PNG (one 2480px-wid
 - **About DISH**: version from `package.json` (1.0.0) plus `release.json` (channel Beta, date, notes, store links), compiled in as `__DISH_RELEASE__` and published with every deploy as `/version.json` (never precached). "Check for updates" fetches the live `/version.json`, compares semantic versions, and offers a reload into the new version on the web; in store builds it opens the listing once a URL is set in `release.json` (none is invented; until then it says the listing isn't connected). It never claims an update was installed.
 - **Quiet sync**: online, nothing is shown (not even while syncing). Offline: a small "You're offline" note with how many changes are kept on this device. Repeated failures: a discreet warning with Retry. Undo now covers removing a meal, a shopping item, a saved meal or plan, and archiving a plan.
 - **Account deletion** (Privacy & security): needs the password again (a fresh sign-in; the server checks the sign-in time), is scheduled 30 days ahead on the server, signs other devices out, pauses new invitations and publishing (enforced by database triggers), shows a banner on every screen, and can be cancelled until the date. A daily GitHub Action (`.github/workflows/account-purge.yml`) runs `account-purge`, which re-checks each request, claims it atomically, removes the person's files, anonymises their name in other people's plan history and remix credits, then deletes the account (all their rows cascade). Failures are retried (up to 5 attempts) and recorded. The old `account-delete` endpoint now only schedules.
+
+## AI recipes (`src/features/create/`, `supabase/functions/recipe-generate`)
+
+The recipe studio (`/create`) is a structured form, not a chat. Results are cards (`GeneratedRecipeCard`) showing the full recipe, with save, add to plan, add (missing) to list, servings scaling and variations. A generated recipe is stored as the person's own private `food_items` row only when they act on it, so every existing feature (favourites, plans, the shopping list, the recipe page) works with it unchanged. `useFoods()` (`src/data/aiRecipes.ts`) is curated plus the person's AI recipes and is used for lookups (recipe page, saved, plans, shopping). Discovery and the planner keep using the curated catalogue only. Validation is pure domain code shared with the tests (`_shared/domain/recipeValidation.ts`). See AI_INTEGRATIONS.md for the checks.
+
+## Four pillars
+
+DISH is organised as Discover, Plan, Kitchen and Diary (plus Home and Profile). Every route is unchanged; sections of a pillar are separate routes, tied together by `PillarTabs` (`src/components/nav/PillarTabs.tsx`), so deep links and Back work as before.
+
+| Pillar | Sections (routes) |
+| --- | --- |
+| Discover | For You, Recipes, Saved, Meal plans (`/discover?tab=…`). Also: recipe pages, `/create` (recipe suggestions), `/surprise` (a pick from the catalogue), `/community/:id`. Community plans are the last tab, kept secondary. |
+| Plan | The current schedule (`/plan`, day/week/month) first. The library (`/plans`: Mine, Shared, Saved) is one button away. Also: new plan, plan workspaces, planned meals, invites, exports. |
+| Kitchen | Kitchen (`/kitchen`: inventory, leftovers, Use what you have, "Create a recipe from these"), Shopping (`/grocery`), Scan (`/scan`, food recognition). |
+| Diary | Diary (`/diary`: what was eaten, with planned-but-not-logged meals kept separate, plus a one-line "Spent this week" that adds only recorded spending in the person's currency), Spending (`/budget`), History (`/history`). |
+
+Profile holds only preferences, goals, account, settings and privacy. The navigation shortcut grid, the Saved row, the Discover shortcut row and the Discover "saved only" filter are gone; each feature they pointed to is reachable from its pillar.
+
+### RINE (Recipe Intelligence Engine)
+
+RINE is the internal name for DISH's intelligence layer: the shared domain logic (`supabase/functions/_shared/domain/`: planner, allergens, kitchen matching, recipe validation, budget), the provider-independent AI interface (`_shared/ai/provider.ts`) and the server functions that use them (`plan-generate`, `meal-replace`, `surprise`, `kitchen-suggest`, `scan-food`, `recipe-generate`). It never appears in the interface as a destination, assistant or badge. Copy describes what people get (recommended for you, recipe suggestions, kitchen suggestions, food recognition) and describes rule-based steps (allergy filtering, ingredient matching, budgets) as what they are. Estimated nutrition keeps its own provenance label (Auto estimate, shown as "Automatic estimate" in lists). The privacy policy still states plainly when an AI provider processes data, and catalogue photos made by image generation keep their photo credit.
+
+## DISH v1 scope (`src/lib/v1.ts`)
+
+v1 is a scope reduction, not a rebuild. Deferred features are switched off by flags in `src/lib/v1.ts`. Their routes, components, data, RLS policies and server functions all stay, so turning one back on is a one-line change. No table, record or policy was removed.
+
+| Area | v1 | Deferred (flag) |
+| --- | --- | --- |
+| Navigation | Home, Plan, Diary, Discover, Profile. Kitchen and the shopping list open from Home (fridge button) and from Plan (shopping list), and sit under Plan in the menu. | |
+| Home | Today's meals or suggestions, search, add a meal, kitchen, streak | |
+| Discover | Recipes (browse, search, category filter), Saved, recipe pages, save/unsave | For You feed and community Meal plans (`community`), Create a recipe / alternatives / variations (`recipeSuggestions`), Surprise me (`surprise`) |
+| Plan | Create a plan (a day or a week), add, edit, replace, remove meals, day and week views, your plan library, export, per-plan shopping list | Plans longer than a week (`longPlans`, existing ones still open), month and custom views (`monthView`), sharing, invites, people, activity, versions (`collaboration`), publishing, remixing, saved community plans (`community`) |
+| Kitchen | Inventory, leftovers, quantities, Use what you have, shopping lists, add missing to list | Food scanning (`scan`) |
+| Diary | Log, edit and delete meals, planned vs eaten, weekly summary, History | Spending and budget reports (`spending`) |
+| Profile | Account, food preferences, allergies and diet, goals, settings, privacy, My progress | |
+| Progress | Streak (a day counts when you log or plan), activity counts (meals logged, plans created, recipes saved, achievements), next milestones, achievement badges, streak and achievement notes | XP and levels (`xp`; still recorded by the database, never shown) |
+
+Deferred addresses (`/community`, `/community/:id`, `/invite/:token`, `/scan`, `/budget`, `/surprise`, `/create`) still resolve. `Deferred` (`src/app/Deferred.tsx`) shows a short notice with a way back, never a 404, and says anything saved before is kept. `/saved` forwards to Discover → Saved, and `/saved?tab=plans` to the plan library.
+
+Activity counts (`useActivityStats`) are exact counts of the person's own rows (`food_diary_entries`, `meal_plans`, `favourite_meals`, filtered to `user_id`). Milestones (`milestoneFor` in `_shared/domain/gamification.ts`) are derived from those counts only. Streaks and achievements come from the existing database triggers, so progress can't move without a real action.

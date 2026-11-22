@@ -19,6 +19,7 @@ import { Stepper } from '@/components/ui/Inputs'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { Icon } from '@/components/ui/Icon'
 import { Notice } from '@/components/ui/States'
+import { enabled } from '@/lib/v1'
 import { useToast } from '@/components/ui/Toast'
 
 /**
@@ -77,7 +78,7 @@ export function UseWhatYouHave({ items, onEdit }: { items: KitchenItemRow[]; onE
         })}
       </div>
 
-      <div className="mt-4 grid grid-cols-2 items-end gap-3">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 sm:items-end">
         <Select label="For" value={slot} onChange={(e) => setSlot(e.target.value as MealSlot | '')} options={[{ value: '', label: 'Any meal' }, ...MEAL_SLOTS.map((s) => ({ value: s, label: SLOT_LABEL[s] }))]} />
         <Stepper label="Servings" value={servings} onChange={setServings} min={1} max={12} step={1} />
       </div>
@@ -113,6 +114,11 @@ export function UseWhatYouHave({ items, onEdit }: { items: KitchenItemRow[]; onE
           )}
         </div>
       )}
+      {enabled('recipeSuggestions') && <Link to="/create?mode=use_ingredients" className="press mt-5 flex items-center gap-3 rounded-lg bg-elevated px-4 py-3 text-sm ring-1 ring-inset ring-line hover:ring-accent-border">
+        <Icon name="wand" size={18} className="shrink-0" />
+        <span className="min-w-0 flex-1"><span className="font-bold">Create a recipe from these</span><span className="text-muted"> with as few extras as possible</span></span>
+        <Icon name="right" size={16} className="shrink-0 text-muted" />
+      </Link>}
     </section>
   )
 }

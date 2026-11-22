@@ -3,6 +3,7 @@ import { createBrowserRouter, Outlet, RouterProvider } from 'react-router'
 import { DevMode } from '@/dev/DevMode'
 import { AppShell } from '@/app/AppShell'
 import { RedirectIfAuthed, RequireAuth, RequireOnboarded } from '@/app/Guards'
+import { Deferred } from '@/app/Deferred'
 import { NotFound } from '@/app/NotFound'
 
 // Route-level code splitting: each screen loads on demand.
@@ -34,6 +35,7 @@ const ScanPage = L(() => import('@/features/scanner/ScanPage'), 'ScanPage')
 const Discover = L(() => import('@/features/discover/Discover'), 'Discover')
 const Surprise = L(() => import('@/features/discover/Surprise'), 'Surprise')
 const RecipeDetail = L(() => import('@/features/recipes/RecipeDetail'), 'RecipeDetail')
+const RecipeStudio = L(() => import('@/features/create/RecipeStudio'), 'RecipeStudio')
 const ImageStudio = L(() => import('@/features/admin/ImageStudio'), 'ImageStudio')
 const KitchenPage = L(() => import('@/features/kitchen/KitchenPage'), 'KitchenPage')
 const BudgetPage = L(() => import('@/features/budget/BudgetPage'), 'BudgetPage')
@@ -88,21 +90,22 @@ const router = createBrowserRouter([
       { path: '/plan/new', element: <NewPlan /> },
       { path: '/plans', element: <PlansPage /> },
       { path: '/plans/:id', element: <PlanDetail /> },
-      { path: '/invite/:token', element: <InvitePage /> },
-      { path: '/community', element: <CommunityPage /> },
-      { path: '/community/:id', element: <CommunityPlanPage /> },
+      { path: '/invite/:token', element: <Deferred feature="collaboration" title="Shared plans are coming later" back="/plans" backLabel="Your plans"><InvitePage /></Deferred> },
+      { path: '/community', element: <Deferred feature="community" title="Community plans are coming later" back="/discover" backLabel="Discover recipes"><CommunityPage /></Deferred> },
+      { path: '/community/:id', element: <Deferred feature="community" title="Community plans are coming later" back="/discover" backLabel="Discover recipes"><CommunityPlanPage /></Deferred> },
       { path: '/meal/:id', element: <PlannedMealPage /> },
       { path: '/grocery', element: <GroceryPage /> },
       { path: '/grocery/:listId', element: <GroceryPage /> },
       { path: '/diary', element: <DiaryPage /> },
       { path: '/diary/add', element: <AddFood /> },
       { path: '/diary/edit/:entryId', element: <AddFood /> },
-      { path: '/scan', element: <ScanPage /> },
+      { path: '/scan', element: <Deferred feature="scan" title="Food scanning is coming later" back="/diary/add" backLabel="Add food"><ScanPage /></Deferred> },
       { path: '/discover', element: <Discover /> },
-      { path: '/surprise', element: <Surprise /> },
+      { path: '/surprise', element: <Deferred feature="surprise" title="Surprise me is coming later" back="/discover" backLabel="Discover recipes"><Surprise /></Deferred> },
       { path: '/recipes/:slug', element: <RecipeDetail /> },
+      { path: '/create', element: <Deferred feature="recipeSuggestions" title="Recipe suggestions are coming later" back="/discover" backLabel="Discover recipes"><RecipeStudio /></Deferred> },
       { path: '/kitchen', element: <KitchenPage /> },
-      { path: '/budget', element: <BudgetPage /> },
+      { path: '/budget', element: <Deferred feature="spending" title="Spending is coming later" back="/diary" backLabel="Your diary"><BudgetPage /></Deferred> },
       { path: '/profile', element: <ProfilePage /> },
       { path: '/profile/preferences', element: <PreferencesPage /> },
       { path: '/profile/goals', element: <GoalsPage /> },

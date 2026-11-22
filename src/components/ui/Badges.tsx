@@ -6,7 +6,7 @@ import { Icon } from './Icon'
 export function ProvenanceBadge({ source, isEstimate, className }: { source: NutritionSource | null | undefined; isEstimate?: boolean | null; className?: string }) {
   const s = source ?? 'reference_estimate'
   const verified = s === 'verified' && isEstimate === false
-  const label = verified ? 'Verified' : s === 'user' ? 'Your values' : s === 'ai_estimate' ? 'AI estimate' : s === 'imported' ? 'Imported' : 'Estimate'
+  const label = verified ? 'Verified' : s === 'user' ? 'Your values' : s === 'ai_estimate' ? 'Auto estimate' : s === 'imported' ? 'Imported' : 'Estimate'
   return (
     <span
       title={`${NUTRITION_SOURCE_LABEL[s]}${verified ? '' : ' (approximate)'}`}
@@ -16,7 +16,7 @@ export function ProvenanceBadge({ source, isEstimate, className }: { source: Nut
         className,
       )}
     >
-      {verified ? <Icon name="check" size={12} /> : s === 'ai_estimate' ? <Icon name="sparkle" size={12} /> : <span aria-hidden="true">≈</span>}
+      {verified ? <Icon name="check" size={12} /> : <span aria-hidden="true">≈</span>}
       {label}
     </span>
   )

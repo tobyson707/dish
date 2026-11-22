@@ -13,7 +13,7 @@ import { useToast } from '@/components/ui/Toast'
 const PROBLEM: Record<string, { title: string; message: string }> = {
   invalid: { title: 'This link doesn’t work', message: 'Check you have the whole link, or ask the plan owner for a new one.' },
   revoked: { title: 'This invitation was cancelled', message: 'The plan owner cancelled it. Ask them for a new one if you still need access.' },
-  used: { title: 'This invitation has been used', message: 'Each link works once. If it was yours, the plan is in My plans.' },
+  used: { title: 'This invitation has been used', message: 'Each link works once. If it was yours, the plan is in your plan library.' },
   expired: { title: 'This invitation has expired', message: 'Ask the plan owner for a new link.' },
 }
 
@@ -30,7 +30,7 @@ export function InvitePage() {
   const info = peek.data
   if (peek.isError || !info || info.status !== 'valid') {
     const p = PROBLEM[info?.status ?? 'invalid'] ?? PROBLEM.invalid!
-    return <EmptyState className="mt-16" icon="link" title={p.title} message={p.message} action={<ButtonLink to="/plans">My plans</ButtonLink>} />
+    return <EmptyState className="mt-16" icon="link" title={p.title} message={p.message} action={<ButtonLink to="/plans">Plan library</ButtonLink>} />
   }
   if (info.already_member)
     return <EmptyState className="mt-16" icon="users" title="You already have access" message={`“${info.plan_title}” is in your Library.`} action={<ButtonLink to="/plans?tab=shared">Open the Library</ButtonLink>} />

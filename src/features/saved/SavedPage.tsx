@@ -1,62 +1,33 @@
 import { useMemo, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, Navigate, useSearchParams } from 'react-router'
 import { PLAN_DURATION_LABEL } from '@domain/types.ts'
 import type { FoodItem } from '@/types/db'
 import { useFavourites, useToggleFavourite } from '@/data/favourites'
-import { useCatalogue } from '@/data/catalogue'
+import { useFoods } from '@/data/aiRecipes'
 import { useMySavedPlans, useToggleSave, type SavedPlan } from '@/data/planbook'
 import { friendlyError } from '@/lib/errors'
 import { cn } from '@/lib/cn'
-import { PageHeader } from '@/components/ui/Layout'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { SaveToggle } from '@/components/ui/ActionButton'
 import { RecipePreviewWorkspace } from '@/components/canvas/RecipePreviewWorkspace'
 import { PlanCover } from '@/features/plans/PlanCover'
+import { enabled } from '@/lib/v1'
 import { REVEAL, SavedPlansGhost, SquareMealsGhost } from '@/components/ui/Ghost'
 
-type Tab = 'meals' | 'plans'
-
 /**
- * Everything you saved, by kind: meals (and their recipes) you hearted, and community
- * meal plans you saved. The counts are the stored saves, so they match after a refresh.
- * There is one favourites list for meals and one for plans; nothing is duplicated here.
+ * /saved is kept so old links work. Saved meals now live in Discover (Saved) and saved meal
+ * plans in the Plan library (Saved), so this only forwards to the right place.
  */
 export function SavedPage() {
-  const [params, setParams] = useSearchParams()
-  const tab: Tab = params.get('tab') === 'plans' ? 'plans' : 'meals'
-  const favs = useFavourites()
-  const plans = useMySavedPlans()
-  const tabs: { id: Tab; label: string; count: number | undefined }[] = [
-    { id: 'meals', label: 'Meals', count: favs.data?.length },
-    { id: 'plans', label: 'Meal plans', count: plans.data?.length },
-  ]
-  return (
-    <div>
-      <PageHeader title="Saved" large />
-      <div role="tablist" aria-label="Saved items" className="flex gap-1.5">
-        {tabs.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === t.id}
-            onClick={() => setParams((p) => (p.set('tab', t.id), p), { replace: true })}
-            className={cn('press inline-flex h-10 items-center gap-2 rounded-full px-4 text-sm font-semibold', tab === t.id ? 'bg-ink text-on-ink' : 'bg-elevated text-ink-2 hover:text-ink')}
-          >
-            {t.label}
-            {t.count != null && <span className={cn('num rounded-full px-1.5 text-micro', tab === t.id ? 'bg-on-ink/15' : 'bg-bg')}>{t.count}</span>}
-          </button>
-        ))}
-      </div>
-      <div className="mt-5">{tab === 'meals' ? <SavedMeals /> : <SavedPlans />}</div>
-    </div>
-  )
+  const [params] = useSearchParams()
+  return <Navigate to={params.get('tab') === 'plans' ? (enabled('community') ? '/plans?tab=saved' : '/plans') : '/discover?tab=saved'} replace />
 }
 
-function SavedMeals() {
+/** Meals (and their recipes) you hearted: one favourites list, the stored saves. */
+export function SavedMeals() {
   const favs = useFavourites()
-  const cat = useCatalogue()
+  const cat = useFoods()
   const toggle = useToggleFavourite()
   const [preview, setPreview] = useState<FoodItem | null>(null)
   const items = useMemo(() => {
@@ -91,7 +62,8 @@ function SavedMeals() {
   )
 }
 
-function SavedPlans() {
+/** Community meal plans you saved. */
+export function SavedPlans() {
   const plans = useMySavedPlans()
   if (plans.isPending) return <SavedPlansGhost />
   if (plans.isError && !plans.data) return <ErrorState message={friendlyError(plans.error)} onRetry={() => plans.refetch()} />

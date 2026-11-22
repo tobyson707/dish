@@ -3,6 +3,7 @@
 // one new adapter implementing `AIProvider` + a case in getProvider().
 import type { z } from 'zod'
 import { anthropicProvider } from './anthropic.ts'
+import { fixtureAllowed, fixtureProvider } from './fixture.ts'
 
 export interface StructuredRequest<S extends z.ZodType> {
   /** short task id for logs/audit, e.g. "plan_rank" */
@@ -37,9 +38,12 @@ export class AIError extends Error {
   }
 }
 
-export function getProvider(): AIProvider | null {
+/** `feature: 'recipes'` also accepts the local test provider (it only writes recipes). */
+export function getProvider(feature?: 'recipes'): AIProvider | null {
   const name = (Deno.env.get('AI_PROVIDER') ?? '').trim().toLowerCase()
   const key = Deno.env.get('AI_API_KEY') ?? ''
+  // local end-to-end tests only: refused anywhere but a development stack on this machine
+  if (name === 'fixture') return feature === 'recipes' && fixtureAllowed() ? fixtureProvider() : null
   if (!name || !key) return null
   switch (name) {
     case 'anthropic':

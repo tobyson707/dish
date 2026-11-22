@@ -1,4 +1,5 @@
 import { expect, test, type Page } from '@playwright/test'
+import { FEATURES } from '../../src/lib/v1'
 import { API, SERVICE_KEY, collectConsoleErrors, completeOnboardingFor, createUser, expectNoHorizontalScroll, signIn, uniqueEmail } from './helpers'
 
 const shots = (name: string) => `test-results/screens/${test.info().project.name}-${name}.png`
@@ -19,7 +20,7 @@ async function myProgress(page: Page) {
 }
 
 test.describe('gamification', () => {
-  test('logging a meal awards confirmed XP once, unlocks First Serving, and progress persists @responsive', async ({ page }) => {
+  test('logging a meal counts once, unlocks First Serving, and progress persists (XP recorded, not shown in v1) @responsive', async ({ page }) => {
     const errors = collectConsoleErrors(page)
     const email = uniqueEmail('gamui')
     const uid = await createUser(email)
@@ -28,14 +29,13 @@ test.describe('gamification', () => {
     // Home header: compact streak from real data
     await expect(page.getByRole('link', { name: /^0-day streak/ })).toBeVisible()
     const widget = await myProgress(page)
-    await expect(widget).toContainText('Beginner')
-    await expect(widget).toContainText('0 / 100 XP')
-    await expect(widget).toContainText('100 XP to Meal Planner')
+    await expect(widget.getByTestId('activity-stats')).toContainText(/Meals logged\s*0/)
+    await expect(widget).toContainText('0 days')
+    await expect(widget).not.toContainText(/XP|Level \d/)
     await expectNoHorizontalScroll(page)
 
     await page.removeLocatorHandler(page.locator('dialog[data-celebration][open]'))
     await logManualMeal(page, 'Agege bread and tea')
-    await expect(page.getByText('+10 XP')).toBeVisible()
     const celebration = page.getByRole('dialog', { name: 'First Serving' })
     await expect(celebration.getByText('Achievement unlocked')).toBeVisible({ timeout: 10_000 })
     await page.screenshot({ path: shots('xp-feedback') })
@@ -44,24 +44,25 @@ test.describe('gamification', () => {
     await page.goto('/')
     await expect(page.getByRole('link', { name: /^1-day streak/ })).toBeVisible() // header updates from the server-recorded streak
     await myProgress(page)
-    await expect(widget).toContainText('10 / 100 XP')
-    await expect(widget).toContainText("You're on a 1-day streak.")
+    await expect(widget.getByTestId('activity-stats')).toContainText(/Meals logged\s*1/)
+    await expect(widget).toContainText('1 day')
+    await expect.poll(async () => ((await (await fetch(`${API}/rest/v1/user_gamification?user_id=eq.${uid}&select=total_xp`, { headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` } })).json()) as { total_xp: number }[])[0]!.total_xp).toBe(10) // still recorded
     await page.screenshot({ path: shots('home-progress'), fullPage: true })
     // reloading never replays feedback or re-awards XP
     await page.goto('/')
     await page.reload()
     await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
     await page.waitForTimeout(1500)
-    await expect(page.getByText('+10 XP')).toHaveCount(0)
+    await expect(page.getByText(/\+\d+ XP/)).toHaveCount(0)
     await myProgress(page)
-    await expect(widget).toContainText('10 / 100 XP')
+    await expect(widget.getByTestId('activity-stats')).toContainText(/Meals logged\s*1/) // counted once
 
     // Header streak → Profile → My progress
     await page.goto('/')
     await page.getByRole('link', { name: /^1-day streak/ }).click()
     await expect(page).toHaveURL(/\/profile\?section=progress/)
     await expect(page.getByRole('heading', { name: 'My progress' })).toBeVisible()
-    await expect(page.locator('#progress')).toContainText('Lifetime XP')
+    await expect(page.locator('#progress')).toContainText('Next milestones')
     const first = page.getByRole('button', { name: /First Serving, unlocked/ })
     await expect(first).toBeVisible()
     await expect(page.getByRole('button', { name: /One Week Strong, locked/ })).toBeVisible()
@@ -116,12 +117,12 @@ test.describe('gamification', () => {
     expect(errors).toEqual([])
   })
 
-  test('offline meals sync without duplicate XP; feedback can be turned off', async ({ page, context }) => {
+  test('offline meals sync and count once; feedback can be turned off', async ({ page, context }) => {
     const email = uniqueEmail('gamoff')
     const uid = await createUser(email)
     await completeOnboardingFor(uid)
     await signIn(page, email)
-    await expect(await myProgress(page)).toContainText('0 / 100 XP')
+    await expect((await myProgress(page)).getByTestId('activity-stats')).toContainText(/Meals logged\s*0/)
     await page.goto('/diary/add')
     await page.waitForTimeout(800)
     await context.setOffline(true)
@@ -129,13 +130,12 @@ test.describe('gamification', () => {
     await page.getByLabel('What did you eat?').fill('Offline moi moi')
     await page.getByRole('button', { name: 'Add to diary' }).click()
     await expect(page.getByText(/\d+ changes? saved on this device/)).toBeVisible() // kept locally, said quietly
-    await page.waitForTimeout(800)
-    await expect(page.getByText('+10 XP')).toHaveCount(0) // nothing claimed before the server confirms
     await context.setOffline(false)
-    await expect(page.getByText('+10 XP')).toBeVisible({ timeout: 20_000 })
-    // replaying the queue (another flush, reload) can't award again
+    const xp = () => fetch(`${API}/rest/v1/xp_transactions?user_id=eq.${uid}&select=event_type`, { headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` } }).then(async (res) => ((await res.json()) as { event_type: string }[]).filter((t) => t.event_type === 'meal_logged').length)
+    await expect.poll(xp, { timeout: 20_000 }).toBe(1)
+    // replaying the queue (another flush, reload) can't count it again
     await page.goto('/')
-    await expect(await myProgress(page)).toContainText('10 / 100 XP')
+    await expect((await myProgress(page)).getByTestId('activity-stats')).toContainText(/Meals logged\s*1/)
     const r = await fetch(`${API}/rest/v1/xp_transactions?user_id=eq.${uid}&select=event_type`, { headers: { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}` } })
     expect((await r.json()).filter((t: { event_type: string }) => t.event_type === 'meal_logged')).toHaveLength(1)
 
@@ -145,12 +145,13 @@ test.describe('gamification', () => {
     await expect(page.getByRole('switch', { name: /Progress feedback/ })).toHaveAttribute('aria-checked', 'false')
     await logManualMeal(page, 'Quiet snack')
     await page.waitForTimeout(2500)
-    await expect(page.getByText('+10 XP')).toHaveCount(0)
+    await expect(page.getByRole('status').filter({ hasText: /streak|unlocked/i })).toHaveCount(0)
     await page.goto('/')
-    await expect(await myProgress(page)).toContainText('20 / 100 XP')
+    await expect((await myProgress(page)).getByTestId('activity-stats')).toContainText(/Meals logged\s*2/)
   })
 
   test('top level shows a completed state', async ({ page }) => {
+    test.skip(!FEATURES.xp, 'XP and levels are not shown in v1')
     const email = uniqueEmail('gammax')
     const uid = await createUser(email)
     await completeOnboardingFor(uid)

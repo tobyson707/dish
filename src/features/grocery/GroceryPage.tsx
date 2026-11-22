@@ -6,7 +6,8 @@ import { GROCERY_CATEGORIES, GROCERY_CATEGORY_LABEL, type GroceryCategory } from
 import { formatQuantity } from '@domain/units.ts'
 import type { GroceryItem } from '@/types/db'
 import { useCreateList, useGenerateGroceryList, useGroceryItemMutations, useGroceryItems, useGroceryLists, useRenameOrArchiveList } from '@/data/grocery'
-import { useCatalogue, useIngredients } from '@/data/catalogue'
+import { useIngredients } from '@/data/catalogue'
+import { useFoods } from '@/data/aiRecipes'
 import { useToday } from '@/hooks/useToday'
 import { useSyncState } from '@/offline/useSync'
 import { friendlyError } from '@/lib/errors'
@@ -23,6 +24,7 @@ import { ShoppingListGhost } from '@/components/ui/Ghost'
 import { Icon } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
 import { tap } from '@/platform/haptics'
+import { KITCHEN_SECTIONS, PillarTabs } from '@/components/nav/PillarTabs'
 import { ShoppingExportSheet } from './export/ShoppingExportSheet'
 
 export function GroceryPage() {
@@ -67,6 +69,7 @@ export function GroceryPage() {
         title={list?.name ?? 'Shopping list'}
         actions={lists.data && lists.data.length > 0 && <IconButton icon="dots" label="Manage lists" onClick={() => setManageOpen(true)} />}
       />
+      <PillarTabs label="Kitchen" sections={KITCHEN_SECTIONS} />
       {lists.isError && !lists.data ? (
         <ErrorState message={friendlyError(lists.error)} onRetry={() => lists.refetch()} />
       ) : !listId ? (
@@ -250,7 +253,7 @@ function AddItem({ listId }: { listId: string }) {
 
 function GenerateSheet({ open, onClose, listId, onDone }: { open: boolean; onClose: () => void; listId?: string; onDone: (id: string) => void }) {
   const today = useToday()
-  const catalogue = useCatalogue()
+  const catalogue = useFoods()
   const gen = useGenerateGroceryList()
   const toast = useToast()
   const { online } = useSyncState()

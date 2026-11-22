@@ -4,7 +4,9 @@ import { ALLERGEN_LABEL, SLOT_LABEL, occasionsFor, type Allergen, type MealSlot 
 import { checkAllergy } from '@domain/allergens.ts'
 import { formatQuantity } from '@domain/units.ts'
 import { midCost } from '@domain/budget.ts'
-import { useCatalogue, toCatalogueMeal } from '@/data/catalogue'
+import { toCatalogueMeal, lineName } from '@/data/catalogue'
+import { KIND_HELP, KIND_LABEL, useDeleteAiRecipe, useFoods } from '@/data/aiRecipes'
+import { useUserId } from '@/features/auth/AuthProvider'
 import { usePreferences } from '@/data/profile'
 import { useFavourites, useToggleFavourite } from '@/data/favourites'
 import { SaveToggle } from '@/components/ui/ActionButton'
@@ -14,7 +16,7 @@ import { useSetUserPrice, useUserPrices } from '@/data/budget'
 import { useCurrency, useToday } from '@/hooks/useToday'
 import { formatCostRange, formatKcal, formatMinutes, formatMoney } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
-import { Button } from '@/components/ui/Button'
+import { Button, ButtonLink } from '@/components/ui/Button'
 import { PageHeader, Section } from '@/components/ui/Layout'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { ProvenanceBadge, Tag } from '@/components/ui/Badges'
@@ -26,10 +28,13 @@ import { MealDetailGhost } from '@/components/ui/Ghost'
 import { useToast } from '@/components/ui/Toast'
 import { DateField } from '@/components/ui/DateField'
 import { RecordStatus, isIncomplete } from './RecordStatus'
+import { Icon } from '@/components/ui/Icon'
+import { enabled } from '@/lib/v1'
+import type { FoodItem } from '@/types/db'
 
 export function RecipeDetail() {
   const { slug } = useParams()
-  const cat = useCatalogue()
+  const cat = useFoods()
   const prefs = usePreferences()
   const favs = useFavourites()
   const fav = useToggleFavourite()
@@ -41,7 +46,10 @@ export function RecipeDetail() {
   const [servings, setServings] = useState<number | null>(null)
   const [planOpen, setPlanOpen] = useState(false)
   const [priceOpen, setPriceOpen] = useState(false)
-  const food = useMemo(() => cat.data?.find((f) => f.slug === slug), [cat.data, slug])
+  const [deleting, setDeleting] = useState(false)
+  const uid = useUserId()
+  const del = useDeleteAiRecipe()
+  const food = useMemo(() => cat.data?.find((f) => f.slug === slug || f.id === slug), [cat.data, slug])
 
   if (cat.isPending) return <MealDetailGhost aspect="aspect-[4/5] max-h-[62dvh] sm:aspect-[16/10] sm:max-h-none" label="Loading recipe" />
   if (cat.isError && !cat.data) return <div className="pt-16"><ErrorState message={friendlyError(cat.error)} onRetry={() => cat.refetch()} /></div>
@@ -74,6 +82,7 @@ export function RecipeDetail() {
       {food.image_credit && <p className="mt-1 text-micro text-muted">Photo: {food.image_credit}</p>}
       <p className="mt-4 text-ink-2">{food.description}</p>
       <RecordStatus food={food} />
+      {food.origin === 'ai' && <AiDetails food={food} />}
       <div className="mt-4 flex flex-wrap gap-2">
         {food.can_cook && !incomplete && <Tag>{formatMinutes(food.prep_minutes + food.cook_minutes)}</Tag>}
         {food.can_buy && <Tag>Can buy ready-made</Tag>}
@@ -85,6 +94,11 @@ export function RecipeDetail() {
         <Button icon="plus" onClick={() => setPlanOpen(true)}>Add to plan</Button>
         <Button variant="secondary" icon="cart" disabled={!recipe?.recipe_ingredients.length} loading={addToList.isPending} onClick={() => void addIngredients()}>Add to list</Button>
       </div>
+      <nav aria-label="More from this recipe" className="mt-2 flex flex-wrap gap-2">
+        {enabled('recipeSuggestions') && <ButtonLink size="sm" variant="ghost" icon="swap" to={`/create?mode=alternatives&parent=${food.id}`}>Find alternatives</ButtonLink>}
+        {enabled('recipeSuggestions') && !incomplete && recipe && recipe.recipe_ingredients.length > 0 && <ButtonLink size="sm" variant="ghost" icon="wand" to={`/create?mode=variation&parent=${food.id}`}>Make a variation</ButtonLink>}
+        {food.origin === 'ai' && food.owner_id === uid && <Button size="sm" variant="ghost" icon="trash" onClick={() => setDeleting(true)}>Delete</Button>}
+      </nav>
 
       {verdict?.status === 'conflict' && <div className="mt-4"><Notice tone="error">Contains something you listed as an allergy: {verdict.hits.map((h) => ALLERGEN_LABEL[h as Allergen] ?? h).join(', ')}.</Notice></div>}
       <div className="mt-4">
@@ -103,9 +117,15 @@ export function RecipeDetail() {
         {food.nutrition_notes && <p className="mt-2 text-xs text-muted">{food.nutrition_notes}</p>}
       </Section>
 
-      <Section title="Cost per serving" action={<button type="button" className="text-sm font-semibold underline" onClick={() => setPriceOpen(true)}>Edit my price</button>}>
-        <p className="num text-title-3 font-bold">{myPrice ? formatMoney(myPrice.amount, myPrice.currency) : formatCostRange(food.est_cost_min, food.est_cost_max, food.cost_currency)}</p>
-        <p className="text-xs text-muted">{myPrice ? 'Your price, used in your plans and budget.' : 'Rough estimate only. Prices vary by city, vendor and season.'}</p>
+      <Section title="Cost per serving" action={<button type="button" className="text-sm font-semibold underline" onClick={() => setPriceOpen(true)}>{food.origin === 'ai' && !myPrice ? 'Add my price' : 'Edit my price'}</button>}>
+        {food.origin === 'ai' && !myPrice ? (
+          <p className="text-sm text-muted">DISH has no reliable price for this recipe, so none is shown. Add what it costs you to use it in your budget.</p>
+        ) : (
+          <>
+            <p className="num text-title-3 font-bold">{myPrice ? formatMoney(myPrice.amount, myPrice.currency) : formatCostRange(food.est_cost_min, food.est_cost_max, food.cost_currency)}</p>
+            <p className="text-xs text-muted">{myPrice ? 'Your price, used in your plans and budget.' : 'Rough estimate only. Prices vary by city, vendor and season.'}</p>
+          </>
+        )}
       </Section></>}
 
       {recipe && recipe.recipe_ingredients.length > 0 && (
@@ -114,7 +134,7 @@ export function RecipeDetail() {
             {recipe.recipe_ingredients.map((ri) => (
               <li key={ri.id} className="flex justify-between gap-3 py-2.5 text-sm">
                 <span>
-                  {ri.ingredient.name}
+                  {lineName(ri)}
                   {ri.prep_state && <span className="text-muted">, {ri.prep_state}</span>}
                   {ri.optional && <span className="text-muted"> (optional)</span>}
                   {ri.note && <span className="block text-footnote text-muted">{ri.note}</span>}
@@ -136,20 +156,23 @@ export function RecipeDetail() {
               </li>
             ))}
           </ol>
-          <p className="mt-4 text-xs text-muted">Recipe: {recipe.source}.</p>
+          <p className="mt-4 text-xs text-muted">Recipe: {recipe.source === 'AI-generated' || recipe.source === 'Recipe suggestion' ? 'suggested for you, checked automatically by DISH' : recipe.source}.</p>
         </Section>
       ) : (
         <Section title="Method"><p className="text-sm text-muted">{incomplete ? "The method for this dish isn't recorded yet. We only add recipes we can source, so nothing here is guessed." : "This is usually bought ready-made, so there's no recipe here."}</p></Section>
       )}
       <AddToPlanSheet open={planOpen} onClose={() => setPlanOpen(false)} foodId={food.id} />
+      <Sheet open={deleting} onClose={() => setDeleting(false)} title="Delete this recipe?" description="It's removed from your recipes and saved meals. Meals you already planned keep their name." footer={<Button variant="danger" block loading={del.isPending} onClick={() => del.mutate(food.id, { onSuccess: () => { toast.show('Recipe deleted.'); nav('/create', { replace: true }) }, onError: (e) => toast.error(friendlyError(e)) })}>Delete recipe</Button>}>
+        <p className="text-sm text-ink-2">This can't be undone. You can always generate a new one.</p>
+      </Sheet>
       <PriceSheet open={priceOpen} onClose={() => setPriceOpen(false)} foodId={food.id} current={myPrice?.amount ?? midCost(food.est_cost_min, food.est_cost_max)} currency={currency} hasOverride={!!myPrice} />
     </div>
   )
 }
 
-function AddToPlanSheet({ open, onClose, foodId }: { open: boolean; onClose: () => void; foodId: string }) {
+export function AddToPlanSheet({ open, onClose, foodId }: { open: boolean; onClose: () => void; foodId: string }) {
   const today = useToday()
-  const cat = useCatalogue()
+  const cat = useFoods()
   const plan = useActivePlan()
   const create = useCreatePlannedMeal()
   const toast = useToast()
@@ -184,5 +207,24 @@ function PriceSheet({ open, onClose, foodId, current, currency, hasOverride }: {
         {hasOverride && <Button variant="ghost" block onClick={async () => { await set.mutateAsync({ food_item_id: foodId, amount: null, currency }); onClose() }}>Use DISH's estimate again</Button>}
       </div>
     </Sheet>
+  )
+}
+
+/** What a suggested recipe has beyond the catalogue fields: tradition, equipment, storage, variations, DISH's notes. */
+function AiDetails({ food }: { food: FoodItem }) {
+  const d = food.ai_details ?? {}
+  return (
+    <section aria-label="About this recipe suggestion" className="mt-3 rounded-lg bg-elevated p-4 text-sm">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {food.ai_kind && <span className="inline-flex h-6 items-center rounded-full bg-surface px-2.5 text-micro font-semibold text-ink-2 ring-1 ring-inset ring-line">{KIND_LABEL[food.ai_kind]}</span>}
+        {d.difficulty && <span className="text-footnote text-muted">{d.difficulty[0]!.toUpperCase() + d.difficulty.slice(1)}</span>}
+      </div>
+      {food.ai_kind && <p className="mt-2 text-ink-2">{KIND_HELP[food.ai_kind]}</p>}
+      {d.origin_note && <p className="mt-2 text-ink-2">{d.origin_note}</p>}
+      {!!d.equipment?.length && <p className="mt-2"><span className="font-semibold">You'll need:</span> <span className="text-ink-2">{d.equipment.join(', ')}</span></p>}
+      {d.storage && <p className="mt-2"><span className="font-semibold">Storing:</span> <span className="text-ink-2">{d.storage}</span></p>}
+      {!!d.variations?.length && <div className="mt-2"><p className="font-semibold">Variations</p><ul className="mt-1 list-disc pl-5 text-ink-2">{d.variations.map((v) => <li key={v}>{v}</li>)}</ul></div>}
+      {!!d.warnings?.length && <ul className="mt-3 flex flex-col gap-1 text-footnote text-muted">{d.warnings.map((w) => <li key={w} className="flex gap-1.5"><Icon name="shield" size={14} className="mt-0.5 shrink-0" />{w}</li>)}</ul>}
+    </section>
   )
 }

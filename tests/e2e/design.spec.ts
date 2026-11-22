@@ -1,3 +1,4 @@
+import { FEATURES } from '../../src/lib/v1'
 import { expect, test } from '@playwright/test'
 import { API, SERVICE_KEY, collectConsoleErrors, completeOnboardingFor, createUser, pickDate, signIn, uniqueEmail } from './helpers'
 
@@ -48,6 +49,7 @@ test('drinks are drinks: Zobo is under Drinks (never Snacks) and can only be pla
 })
 
 test('budget: remaining, spent and total are clear and correct for the period @responsive', async ({ page }) => {
+  test.skip(!FEATURES.spending, 'deferred in v1 (spending)')
   const errors = collectConsoleErrors(page)
   const uid = await user(page, 'budget', { budget_amount: 2000, budget_period: 'day' })
   const currency = ((await (await fetch(`${API}/rest/v1/profiles?id=eq.${uid}&select=currency`, { headers: h })).json()) as { currency: string }[])[0]!.currency
@@ -67,7 +69,7 @@ test('budget: remaining, spent and total are clear and correct for the period @r
   await expect(summary.getByText(/1,500/).first()).toBeVisible()
   // an older record in another currency is never added in (no conversion)
   const other = currency === 'USD' ? 'EUR' : 'USD'
-  await fetch(`${API}/rest/v1/budget_records`, { method: 'POST', headers: h, body: JSON.stringify({ user_id: uid, amount: 99, currency: other, spent_on: new Date().toISOString().slice(0, 10), category: 'other' }) })
+  await fetch(`${API}/rest/v1/budget_records`, { method: 'POST', headers: h, body: JSON.stringify({ user_id: uid, amount: 99, currency: other, spent_on: new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Lagos' }).format(new Date()), category: 'other' }) })
   await page.reload()
   await page.getByRole('radio', { name: 'Daily' }).click()
   await expect(page.getByText(/1 record is in another currency/)).toBeVisible()
@@ -82,6 +84,7 @@ test('budget: remaining, spent and total are clear and correct for the period @r
 })
 
 test('the DISH calendar: plan month view shows real meal markers and navigates months @responsive', async ({ page }) => {
+  test.skip(!FEATURES.monthView, 'deferred in v1 (monthView)')
   await user(page, 'calendar')
   await page.goto('/plan/new')
   await page.getByRole('radio', { name: /^One week/ }).click()

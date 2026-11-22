@@ -113,7 +113,7 @@ export type NutritionSource = (typeof NUTRITION_SOURCES)[number]
 export const NUTRITION_SOURCE_LABEL: Record<NutritionSource, string> = {
   verified: 'Verified',
   reference_estimate: 'Reference estimate',
-  ai_estimate: 'AI estimate',
+  ai_estimate: 'Automatic estimate',
   user: 'Entered by you',
   imported: 'Imported',
 }
@@ -202,7 +202,7 @@ export interface CatalogueMeal extends Macros {
   /** how many the recipe serves (ingredient quantities are for this many) */
   recipe_servings?: number
   /** incomplete / unverified records are discoverable but never planned */
-  verification_status?: 'verified' | 'partial' | 'awaiting_review' | 'incomplete' | 'unverified'
+  verification_status?: 'verified' | 'partial' | 'awaiting_review' | 'incomplete' | 'unverified' | 'ai_generated'
 }
 
 export interface PreferenceSnapshot {

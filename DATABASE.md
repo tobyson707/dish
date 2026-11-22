@@ -173,3 +173,12 @@ No tables of its own. Disabled unless the function's environment has `DISH_DEV_T
 - Triggers refuse new invitations and new publishing while a deletion is pending.
 - `purge_account_data(uid)` (service role only): anonymises the person in other people's `plan_activity` and remix credits and returns their plan cover paths. Deleting the auth user then removes everything they own (plans they own, shared or published, go too; collaborators lose access; remixes others made stay, credited to "a former DISH member").
 - Backups: the hosting provider's encrypted backups expire on its own schedule and are never used to restore a deleted account.
+
+## AI recipes (migration `20261113000100_ai_recipes.sql`)
+
+- `food_items` gains `origin` (`curated` | `ai`), `owner_id` (null for the catalogue), `ai_kind` (`traditional`, `adaptation`, `fusion`, `original`), `ai_fingerprint` (unique per owner), `ai_generation_id`, `ai_parent_id` and `ai_details` (origin note, equipment, variations, storage, difficulty, DISH's notes). A check keeps them consistent: curated rows have no owner or kind, and AI rows have both plus `verification_status = 'ai_generated'`, a new status.
+- `recipe_ingredients.ingredient_id` is now nullable. A line without a DISH ingredient record carries its own `name`, `category` and `allergens`, and either `ingredient_id` or `name` is required. Clients read the name as `ingredient?.name ?? name`.
+- Read access: curated rows stay public. AI rows are readable by their owner, and by people who can see a plan containing them (`food_item_shared_with_me`, security definer). `recipes` and `recipe_ingredients` follow their food item. Owners may delete their AI recipes; nobody inserts or updates them directly (only `recipe-generate`, with the service role).
+- `recipe_generations`: each request (mode, request summary, hash), the checked recipes, what validation rejected and why, saved food ids, model and prompt version. The owner can read and delete; only the service role writes. It also serves as a 7-day cache by `request_hash`.
+- `ai_generation_jobs.kind` allows `recipe_generate`.
+- Account deletion: `owner_id` and `recipe_generations.user_id` cascade from `auth.users`, and planned meals keep their own snapshot of the name.

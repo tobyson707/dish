@@ -35,3 +35,14 @@ describe('levels', () => {
     for (const m of [streakMessage(0, 3), streakMessage(1, 1), streakMessage(0, 0)]) expect(m).not.toMatch(/fail|lost|break|don't/i)
   })
 })
+
+import { milestoneFor } from './gamification.ts'
+describe('milestones', () => {
+  it('measures progress from the last milestone to the next', () => {
+    expect(milestoneFor(0)).toEqual({ target: 1, reached: 0, remaining: 1, fraction: 0 })
+    expect(milestoneFor(7)).toMatchObject({ target: 10, reached: 5, remaining: 3 })
+    expect(milestoneFor(7).fraction).toBeCloseTo(0.4)
+    expect(milestoneFor(10)).toMatchObject({ target: 25, reached: 10, remaining: 15, fraction: 0 })
+    expect(milestoneFor(5000)).toEqual({ target: null, reached: 1000, remaining: 0, fraction: 1 })
+  })
+})

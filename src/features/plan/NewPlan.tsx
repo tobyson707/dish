@@ -4,7 +4,7 @@ import { MEAL_SLOTS, PLAN_DURATIONS, PLAN_DURATION_LABEL, SLOT_LABEL, type MealS
 import { usePreferences } from '@/data/profile'
 import { addDays, planEndDate } from '@domain/dates.ts'
 import { useActivePlan, usePlannedMeals } from '@/data/plans'
-import { useAIStatus, useGeneratePlan } from '@/data/ai'
+import { useGeneratePlan } from '@/data/ai'
 import type { MealPlan } from '@/types/db'
 import { daysSaved, isComplete, planDays, usePlanFill } from './usePlanFill'
 import { useToday } from '@/hooks/useToday'
@@ -19,6 +19,7 @@ import { PageHeader } from '@/components/ui/Layout'
 import { Notice } from '@/components/ui/States'
 import { Toggle } from '@/components/ui/Inputs'
 import { useToast } from '@/components/ui/Toast'
+import { enabled } from '@/lib/v1'
 import { useSyncState } from '@/offline/useSync'
 
 const HINT: Record<PlanDuration, string> = {
@@ -37,7 +38,6 @@ export function NewPlan() {
   const nav = useNavigate()
   const toast = useToast()
   const active = useActivePlan()
-  const ai = useAIStatus()
   const gen = useGeneratePlan()
   const { online } = useSyncState()
   const [duration, setDuration] = useState<PlanDuration>('week')
@@ -113,7 +113,7 @@ export function NewPlan() {
           {!online && <Notice tone="warning" icon="offline">Creating a plan needs an internet connection.</Notice>}
           {err && <Notice tone="error">{err}</Notice>}
           <div role="radiogroup" aria-label="Plan length" className="grid gap-2 sm:grid-cols-2">
-            {PLAN_DURATIONS.map((d) => (
+            {PLAN_DURATIONS.filter((d) => enabled('longPlans') || d === 'day' || d === 'week').map((d) => (
               <ChoiceCard key={d} selected={duration === d} onClick={() => setDuration(d)} title={PLAN_DURATION_LABEL[d]} description={HINT[d]} />
             ))}
           </div>
@@ -130,10 +130,9 @@ export function NewPlan() {
               {overlap} day{overlap > 1 ? 's' : ''} in this period already {overlap > 1 ? 'have' : 'has'} meals. {replace && active.data ? 'Your current plan becomes a draft and its meals leave the calendar; eaten and skipped meals stay. Nothing is deleted.' : replace ? 'New meals are added only where a slot is free; nothing you have is overwritten.' : 'This plan is saved as a draft, so your calendar does not change until you make it current.'}
             </Notice>
           )}
-          {active.data && <Toggle label="Make it my current plan" description={replace ? `“${active.data.title}” becomes a draft. You can switch back any time in My plans.` : 'Saved as a draft in My plans. Your calendar stays as it is.'} checked={replace} onChange={setReplace} />}
-          <Notice icon="sparkle">
-            Meals come from DISH's catalogue, filtered by your allergies, preferences, budget and cooking time.{' '}
-            {ai.data?.ai_configured ? 'AI helps rank the options for variety.' : 'AI ranking isn\'t set up on this server, so DISH uses its built-in planner.'} You can replace or lock any meal afterwards.
+          {active.data && <Toggle label="Make it my current plan" description={replace ? `“${active.data.title}” becomes a draft. You can switch back any time in your plan library.` : 'Saved as a draft in your plan library. Your calendar stays as it is.'} checked={replace} onChange={setReplace} />}
+          <Notice icon="info">
+            Meals come from DISH's catalogue, filtered by your allergies, preferences, budget and cooking time, then chosen for variety. You can replace or lock any meal afterwards.
           </Notice>
           <div className="flex flex-col gap-2">
             <span className="text-sm font-semibold">Meals to plan</span>

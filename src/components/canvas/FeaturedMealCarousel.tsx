@@ -50,12 +50,12 @@ export function FeaturedMealCarousel({ items, loading, footer }: { items: Featur
     <>
       {/* the featured meal's own colours, softly, behind everything */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-        {cur && img && (
+        {cur && img?.path && (
           <div key={cur.key} className="feat-wash absolute inset-[-12%]">
             <FoodImage path={img.path} slug={img.slug} name={nameOf(cur)} shape="square" width={320} className="h-full w-full scale-110 opacity-70 blur-[56px] saturate-[1.4] dark:opacity-45" />
           </div>
         )}
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,var(--c-elevated)_0%,color-mix(in_oklab,var(--c-elevated)_72%,transparent)_38%,color-mix(in_oklab,var(--c-elevated)_40%,transparent)_70%,color-mix(in_oklab,var(--c-elevated)_82%,transparent)_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_oklab,var(--c-elevated)_45%,transparent)_0%,color-mix(in_oklab,var(--c-elevated)_20%,transparent)_38%,transparent_70%,color-mix(in_oklab,var(--c-elevated)_25%,transparent)_100%)]" />
       </div>
 
       {/* the dish */}

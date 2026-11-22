@@ -8,6 +8,7 @@ export const STATUS_LABEL: Record<VerificationStatus, string> = {
   awaiting_review: 'Awaiting review',
   incomplete: 'Incomplete',
   unverified: 'Unverified',
+  ai_generated: 'Recipe suggestion',
 }
 
 const STATUS_HELP: Record<VerificationStatus, string> = {
@@ -16,6 +17,7 @@ const STATUS_HELP: Record<VerificationStatus, string> = {
   awaiting_review: 'A complete DISH recipe that has not yet been checked against a published source.',
   incomplete: "We know this dish, but its ingredients, quantities and method aren't recorded yet. It won't be added to generated plans.",
   unverified: "Nothing in this record has been checked yet. It won't be added to generated plans.",
+  ai_generated: "Suggested for you and checked automatically for your allergies, diet and safe cooking. It hasn't been checked by a person or against a published recipe. It's private to you, unless you put it in a plan you share.",
 }
 
 /** A dish whose recipe isn't recorded: discoverable, never planned, allergens unknown. */

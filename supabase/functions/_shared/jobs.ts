@@ -6,7 +6,7 @@ import { admin } from './supabase.ts'
 import { aiRateLimitPerHour } from './ai/provider.ts'
 import { HttpError } from './http.ts'
 
-export type JobKind = 'plan_block' | 'replace_meal' | 'surprise' | 'kitchen' | 'scan_food' | 'recipe_assist'
+export type JobKind = 'plan_block' | 'replace_meal' | 'surprise' | 'kitchen' | 'scan_food' | 'recipe_assist' | 'recipe_generate'
 
 export async function startJob(userId: string, kind: JobKind, engine: string, opts: { model?: string | null; promptVersion?: string | null; summary?: Record<string, unknown>; usesAi: boolean }): Promise<string> {
   const { data, error } = await admin()
@@ -40,7 +40,7 @@ export async function checkAiQuota(db: SupabaseClient, throwIfNone = true): Prom
   const { data, error } = await db.rpc('ai_jobs_last_hour')
   if (error) throw error
   const remaining = Math.max(0, aiRateLimitPerHour() - Number(data ?? 0))
-  if (remaining <= 0 && throwIfNone) throw new HttpError(429, "You've used DISH's AI a lot in the last hour. Please try again a little later.", 'rate_limited')
+  if (remaining <= 0 && throwIfNone) throw new HttpError(429, "You've asked for a lot of suggestions in the last hour. Please try again a little later.", 'rate_limited')
   return remaining
 }
 

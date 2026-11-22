@@ -28,7 +28,7 @@ export function SearchWorkspace({ open, onClose }: { open: boolean; onClose: () 
     const ing = (ingredients.data ?? []).filter((i) => norm(i.name).includes(t))
     const ids = new Set(ing.map((i) => i.id))
     const seen = new Set(meals.map((m) => m.id))
-    const byIngredient = cat.data.filter((f) => !seen.has(f.id) && (f.recipe?.recipe_ingredients ?? []).some((ri) => ids.has(ri.ingredient.id))).slice(0, 15)
+    const byIngredient = cat.data.filter((f) => !seen.has(f.id) && (f.recipe?.recipe_ingredients ?? []).some((ri) => !!ri.ingredient && ids.has(ri.ingredient.id))).slice(0, 15)
     return { meals, byIngredient, matchedIngredients: ing.slice(0, 4).map((i) => i.name) }
   }, [q, cat.data, ingredients.data])
 

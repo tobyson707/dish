@@ -51,9 +51,6 @@ export function ProfilePage() {
         <Group title="Your food">
           <Item to="/profile/preferences" icon="leaf" title="Food preferences" sub="Diet, allergies, cuisines, dislikes, spice, meal times" />
           <Item to="/profile/goals" icon="flame" title="Goals & targets" sub="Meal-planning goals, optional calorie target" />
-          <Item to="/saved" icon="heart" title="Saved" sub="Meals and meal plans you saved" />
-          <Item to="/history" icon="history" title="History" sub="Eaten meals and leftovers" />
-          <Item to="/budget" icon="wallet" title="Food budget" sub="Estimated vs actual spending" />
         </Group>
         <Group title="Settings">
           <Item to="/profile/account" icon="user" title="Account" sub="Email, password, sign out" />

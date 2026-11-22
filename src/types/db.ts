@@ -86,7 +86,11 @@ export interface RecipeIngredientRow {
   /** e.g. chopped, soaked overnight, cooked */
   prep_state?: string | null
   substitutions?: string[]
-  ingredient: Ingredient
+  /** null for an AI recipe line DISH has no ingredient record for; name/category/allergens then come from the line */
+  ingredient: Ingredient | null
+  name?: string | null
+  category?: Ingredient['category'] | null
+  allergens?: string[]
 }
 
 export interface Recipe {
@@ -150,10 +154,32 @@ export interface FoodItem {
   provenance?: string | null
   source_refs?: SourceRef[]
   last_reviewed_at?: string | null
+  /** 'curated' = the DISH catalogue; 'ai' = generated for (and private to) owner_id */
+  origin?: 'curated' | 'ai'
+  owner_id?: string | null
+  ai_kind?: AiRecipeKind | null
+  ai_parent_id?: string | null
+  ai_fingerprint?: string | null
+  ai_generation_id?: string | null
+  ai_details?: AiRecipeDetails
   recipe?: Recipe | null
 }
 
-export type VerificationStatus = 'verified' | 'partial' | 'awaiting_review' | 'incomplete' | 'unverified'
+export type AiRecipeKind = 'traditional' | 'adaptation' | 'fusion' | 'original'
+/** The parts of an AI recipe that have no catalogue column (all optional, all AI-written). */
+export interface AiRecipeDetails {
+  origin_note?: string | null
+  equipment?: string[]
+  variations?: string[]
+  storage?: string | null
+  difficulty?: 'easy' | 'medium' | 'hard'
+  nutrition_note?: string | null
+  warnings?: string[]
+  model?: string | null
+  generated_at?: string
+}
+
+export type VerificationStatus = 'verified' | 'partial' | 'awaiting_review' | 'incomplete' | 'unverified' | 'ai_generated'
 export interface SourceRef {
   label: string
   url?: string

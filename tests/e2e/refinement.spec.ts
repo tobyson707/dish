@@ -1,3 +1,4 @@
+import { FEATURES } from '../../src/lib/v1'
 // Product refinement: motion, floating navigation and Saved, meal and plan menus with undo
 // and swipe, week and month calendars, cover framing, publishing to Discover, shopping-list
 // export and honest action feedback. Real accounts and stored records; no mocks except a
@@ -86,33 +87,30 @@ test('saved: per-kind counts from stored saves, kept after a reload; a failed sa
   await first.click()
   await expect(page.getByRole('alert')).toBeVisible()
   await expect(page.getByRole('alert').getByRole('button', { name: 'Retry' })).toBeVisible()
-  await expect(page.getByRole('button', { name: `Save ${name}` })).toHaveAttribute('aria-pressed', 'false')
+  await expect(page.getByRole('button', { name: `Save ${name}`, exact: true })).toHaveAttribute('aria-pressed', 'false')
   expect(await rest<unknown[]>(`favourite_meals?user_id=eq.${uid}&select=food_item_id`)).toHaveLength(0)
   await page.unroute('**/rest/v1/favourite_meals*')
   // the real save: busy, then saved once stored
-  await page.getByRole('button', { name: `Save ${name}` }).click()
-  await expect(page.getByRole('button', { name: `Remove ${name} from saved` })).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('button', { name: `Save ${name}`, exact: true }).click()
+  await expect(page.getByRole('button', { name: `Remove ${name} from saved`, exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(page.getByRole('status').filter({ hasText: /^Saved$/ })).toBeVisible()
   expect(await rest<unknown[]>(`favourite_meals?user_id=eq.${uid}&select=food_item_id`)).toHaveLength(1)
-  // the navigation shows the count by kind, and it survives a reload
+  // Saved lives in Discover: the count is the stored saves, and it survives a reload
   for (const pass of [0, 1]) {
     if (pass) await page.reload()
-    await page.getByRole('button', { name: /^Navigation/ }).click()
-    const saved = page.locator('.nav-panel').getByRole('link', { name: /^Saved/ })
-    await expect(saved).toContainText('1 meal')
-    await expect(saved).toContainText('0 plans')
-    await page.keyboard.press('Escape')
+    await expect(page.getByRole('tab', { name: /^Saved\s*1$/ })).toBeVisible()
   }
-  await page.getByRole('button', { name: /^Navigation/ }).click()
-  await page.locator('.nav-panel').getByRole('link', { name: /^Saved/ }).click()
-  await expect(page).toHaveURL(/\/saved$/)
-  await expect(page.getByRole('tab', { name: /Meals\s*1/ })).toHaveAttribute('aria-selected', 'true')
+  await page.getByRole('tab', { name: /^Saved/ }).click()
+  await expect(page).toHaveURL(/\/discover\?tab=saved$/)
   await expect(page.getByRole('list', { name: 'Saved meals' }).getByText(name)).toBeVisible()
-  await expect(page.getByRole('tab', { name: /Meal plans\s*0/ })).toBeVisible()
+  // the old address still works
+  await page.goto('/saved')
+  await expect(page).toHaveURL(/\/discover\?tab=saved$/)
+  await expect(page.getByRole('list', { name: 'Saved meals' }).getByText(name)).toBeVisible()
   await shot(page, 'saved')
   // removing from Saved: gone once the server confirms, and the count follows
-  await page.getByRole('button', { name: `Remove ${name} from saved` }).click()
-  await expect(page.getByRole('tab', { name: /Meals\s*0/ })).toBeVisible()
+  await page.getByRole('button', { name: `Remove ${name} from saved`, exact: true }).click()
+  await expect(page.getByRole('tab', { name: /^Saved\s*0$/ })).toBeVisible()
   expect(await rest<unknown[]>(`favourite_meals?user_id=eq.${uid}&select=food_item_id`)).toHaveLength(0)
   await expectNoHorizontalScroll(page)
   expect(errors.filter((e) => !/500|boom|Failed to load resource/.test(e))).toEqual([])
@@ -173,25 +171,29 @@ test('meal plan workspace: four clear meal actions, remove with undo, swipe to r
   await expect.poll(async () => (await meals()).some((m) => m.id === victim.id)).toBe(false)
   await expect(page.getByText(`Removed ${victim.name}.`)).toBeVisible()
 
-  // month: days with meals are softly filled; partial days carry a small mark
-  await page.getByRole('radio', { name: 'Month' }).click()
-  const grid = page.getByRole('grid')
-  await expect(grid.locator('[data-coverage="full"], [data-coverage="partial"]').first()).toBeVisible()
-  await expect(grid.locator('[data-coverage="partial"]').first()).toBeVisible() // the day we removed a meal from
-  await expect(page.getByRole('list', { name: 'Key' })).toContainText('Partly planned')
-  await shot(page, 'plan-month')
+  // month: days with meals are softly filled; partial days carry a small mark (month view is deferred in v1)
+  if (FEATURES.monthView) {
+    await page.getByRole('radio', { name: 'Month' }).click()
+    const grid = page.getByRole('grid')
+    await expect(grid.locator('[data-coverage="full"], [data-coverage="partial"]').first()).toBeVisible()
+    await expect(grid.locator('[data-coverage="partial"]').first()).toBeVisible() // the day we removed a meal from
+    await expect(page.getByRole('list', { name: 'Key' })).toContainText('Partly planned')
+    await shot(page, 'plan-month')
+  } else await expect(page.getByRole('radio', { name: 'Month' })).toHaveCount(0)
 
   // the plan menu: primary actions first, everything else under More (Delete among them, styled as destructive)
   await page.getByRole('button', { name: 'Plan actions' }).click()
   const menu = page.getByRole('dialog').filter({ has: page.getByRole('list', { name: 'Plan actions' }) })
-  for (const n of ['Rename', 'Share', 'Export', 'Archive']) await expect(menu.getByRole('button', { name: n, exact: true })).toBeVisible()
+  for (const n of ['Rename', ...(FEATURES.collaboration ? ['Share'] : []), 'Export', 'Archive']) await expect(menu.getByRole('button', { name: n, exact: true })).toBeVisible()
+  await expect(menu.getByRole('button', { name: 'Share', exact: true })).toHaveCount(FEATURES.collaboration ? 1 : 0)
   await expect(menu.getByRole('button', { name: /^Delete/ })).toHaveCount(0)
   await menu.getByRole('button', { name: 'More', exact: true }).click()
   await expect(menu.getByRole('button', { name: /^Delete/ })).toHaveClass(/text-error/)
-  for (const n of [/^Duplicate/, /^Add a description/, /^Add a cover image/, /^View activity/]) await expect(menu.getByRole('button', { name: n })).toBeVisible()
+  for (const n of [/^Duplicate/, /^Add a description/, /^Add a cover image/, ...(FEATURES.collaboration ? [/^View activity/] : [])]) await expect(menu.getByRole('button', { name: n })).toBeVisible()
 })
 
 test('cover framing, publishing and Discover: one composition everywhere, private until published, then saved by someone else', async ({ page, browser }) => {
+  test.skip(!FEATURES.community, 'deferred in v1 (community)')
   test.setTimeout(240_000)
   await setUp(page, 'cover', 'Ada Cover')
   const title = `Covered week ${Date.now() % 100000}`
@@ -260,8 +262,9 @@ test('cover framing, publishing and Discover: one composition everywhere, privat
   await expect(theirCard.getByRole('button', { name: `Remove ${title} from saved` })).toHaveAttribute('aria-pressed', 'true')
   expect(await rest<unknown[]>(`plan_saves?user_id=eq.${otherUser.uid}&select=plan_id`)).toHaveLength(1)
   await shot(other, 'discover-plans')
-  await other.goto('/saved?tab=plans')
-  await expect(other.getByRole('tab', { name: /Meal plans\s*1/ })).toHaveAttribute('aria-selected', 'true')
+  await other.goto('/saved?tab=plans') // old address: saved plans now live in the Plan library
+  await expect(other).toHaveURL(/\/plans\?tab=saved$/)
+  await expect(other.getByRole('tab', { name: /^Saved\s*1$/ })).toHaveAttribute('aria-selected', 'true')
   await expect(other.getByRole('list', { name: 'Saved meal plans' }).locator('img').first()).toBeVisible()
   await ctx.close()
 })
@@ -316,6 +319,7 @@ test('shopping list export: PDF, image and CSV from the list as it is now @respo
 })
 
 test('a viewer of a shared plan gets the read-only menu, and the database rejects their removal', async ({ page, browser }) => {
+  test.skip(!FEATURES.collaboration, 'deferred in v1 (collaboration)')
   test.setTimeout(200_000)
   await setUp(page, 'own', 'Ada Owner')
   const plan = await createPlan(page, `Viewer check ${Date.now() % 100000}`)

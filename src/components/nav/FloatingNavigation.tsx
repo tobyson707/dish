@@ -6,55 +6,24 @@ import { Icon, type IconName } from '@/components/ui/Icon'
 import { usePresence } from '@/components/ui/usePresence'
 import { useBackToClose } from '@/hooks/useBackToClose'
 import { play } from '@/lib/uiSound'
-import { useFavourites } from '@/data/favourites'
-import { useMySavedPlans } from '@/data/planbook'
 
-export const NAV: { to: string; label: string; icon: IconName }[] = [
+/** DISH v1: Home, Plan, Diary and Discover. The kitchen and shopping list open from Plan and Home. */
+export const NAV: { to: string; label: string; icon: IconName; also?: string[] }[] = [
   { to: '/', label: 'Home', icon: 'home' },
-  { to: '/plan', label: 'Plan', icon: 'plan' },
-  { to: '/diary', label: 'Diary', icon: 'diary' },
-  { to: '/discover', label: 'Discover', icon: 'discover' },
-  { to: '/profile', label: 'Profile', icon: 'user' },
+  { to: '/plan', label: 'Plan', icon: 'plan', also: ['/plans', '/meal', '/invite', '/kitchen', '/grocery'] },
+  { to: '/diary', label: 'Diary', icon: 'diary', also: ['/history', '/budget', '/scan'] },
+  { to: '/discover', label: 'Discover', icon: 'discover', also: ['/recipes', '/saved', '/surprise', '/create', '/community'] },
 ]
+const PROFILE = { to: '/profile', label: 'Profile', icon: 'user' as IconName }
 
-/** Secondary places that used to crowd Home, one tap away from anywhere. */
-const SHORTCUTS: { to: string; label: string; icon: IconName }[] = [
-  { to: '/grocery', label: 'Shopping', icon: 'cart' },
-  { to: '/kitchen', label: 'Kitchen', icon: 'fridge' },
-  { to: '/scan', label: 'Scan', icon: 'camera' },
-  { to: '/surprise', label: 'Surprise', icon: 'sparkle' },
-]
-
-const isActive = (path: string, to: string) => (to === '/' ? path === '/' : path === to || path.startsWith(`${to}/`) || (to === '/plan' && path.startsWith('/plans')))
-const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
-
-/** Saved meals and saved plans, counted from what is actually stored (shown once known). */
-function SavedLink({ onPick, active, enabled }: { onPick: (e: MouseEvent) => void; active: boolean; enabled: boolean }) {
-  const favs = useFavourites()
-  const plans = useMySavedPlans(enabled)
-  const parts = [favs.data ? plural(favs.data.length, 'meal') : null, plans.data ? plural(plans.data.length, 'plan') : null].filter(Boolean)
-  return (
-    <NavLink
-      to="/saved"
-      onClick={onPick}
-      aria-current={active ? 'page' : undefined}
-      className={cn('press flex h-14 items-center gap-3 rounded-[20px] px-3.5 outline-none focus-visible:ring-2 focus-visible:ring-accent', active ? 'bg-accent text-accent-ink' : 'text-on-glass-dark hover:bg-white/[0.07]')}
-    >
-      <Icon name="heart" size={20} filled={active} />
-      <span className="min-w-0 flex-1">
-        <span className="block text-callout font-semibold leading-tight">Saved</span>
-        {parts.length > 0 && <span className={cn('num block text-micro font-semibold', active ? 'text-accent-ink/80' : 'text-on-glass-dark-muted')}>{parts.join(' · ')}</span>}
-      </span>
-      <Icon name="right" size={16} className="opacity-60" />
-    </NavLink>
-  )
-}
+const under = (path: string, to: string) => path === to || path.startsWith(`${to}/`)
+const isActive = (path: string, n: { to: string; also?: string[] }) => (n.to === '/' ? path === '/' : [n.to, ...(n.also ?? [])].some((p) => under(path, p)))
 
 /**
  * The app's only navigation: one floating button at the bottom-left of every screen. Its
  * mark (four small squares: "all of DISH") folds into a close cross as a compact panel
- * unfolds out of the button itself (Home, Plan, Diary, Discover, Profile, Saved, and a few
- * shortcuts). It never takes layout space. Closes on a choice, a tap outside, Escape or the
+ * unfolds out of the button itself: Home, Plan, Diary, Discover and Profile. Nothing else
+ * competes for a place here. It never takes layout space. Closes on a choice, a tap outside, Escape or the
  * phone's Back; focus returns to the button.
  */
 export function FloatingNavigation() {
@@ -65,7 +34,7 @@ export function FloatingNavigation() {
   const button = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLDivElement>(null)
   const id = useId()
-  const current = NAV.find((n) => isActive(loc.pathname, n.to))
+  const current = [...NAV, PROFILE].find((n) => isActive(loc.pathname, n))
   // Back closes the panel (an entry is pushed while it's open)
   const refocus = useRef(false)
   const close = useBackToClose(open, () => {
@@ -138,19 +107,18 @@ export function FloatingNavigation() {
                 )
               })}
             </ul>
-          </nav>
           <div className="nav-item mx-3 my-2 h-px bg-white/10" style={{ ['--i' as string]: 5 }} />
           <div className="nav-item" style={{ ['--i' as string]: 6 }}>
-            <SavedLink onPick={go('/saved')} active={loc.pathname === '/saved'} enabled={mounted} />
+            <NavLink
+              to={PROFILE.to}
+              aria-current={current === PROFILE ? 'page' : undefined}
+              onClick={go(PROFILE.to)}
+              className={cn('press flex h-12 items-center gap-3 rounded-[18px] px-3.5 text-callout font-semibold outline-none focus-visible:ring-2 focus-visible:ring-accent', current === PROFILE ? 'bg-accent text-accent-ink' : 'text-on-glass-dark hover:bg-white/[0.07]')}
+            >
+              <Icon name={PROFILE.icon} size={20} />
+              {PROFILE.label}
+            </NavLink>
           </div>
-          <div className="nav-item mx-3 my-2 h-px bg-white/10" style={{ ['--i' as string]: 7 }} />
-          <nav aria-label="Shortcuts" className="nav-item grid grid-cols-4 gap-1 px-1 pb-1" style={{ ['--i' as string]: 7 }}>
-            {SHORTCUTS.map((sc) => (
-              <NavLink key={sc.to} to={sc.to} onClick={go(sc.to)} className="press flex flex-col items-center gap-1 rounded-[16px] py-2 text-micro font-semibold text-on-glass-dark-muted outline-none hover:bg-white/[0.07] hover:text-on-glass-dark focus-visible:ring-2 focus-visible:ring-accent">
-                <Icon name={sc.icon} size={18} />
-                {sc.label}
-              </NavLink>
-            ))}
           </nav>
         </div>
       )}

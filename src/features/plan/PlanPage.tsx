@@ -30,6 +30,7 @@ import { ExportSheet } from './export/ExportSheet'
 import { useAutoExtendPlan } from '@/features/home/Home'
 import { useUserId } from '@/features/auth/AuthProvider'
 import { PlanWalkthrough, walkthroughSeen } from './PlanWalkthrough'
+import { enabled } from '@/lib/v1'
 import { daysSaved, isComplete, planDays, usePlanFill } from './usePlanFill'
 
 type View = 'day' | 'week' | 'month'
@@ -37,7 +38,9 @@ type View = 'day' | 'week' | 'month'
 export function PlanPage() {
   const today = useToday()
   const [params, setParams] = useSearchParams()
-  const view = (params.get('view') as View) || 'day'
+  const asked = params.get('view') as View | null
+  // v1: day and week; the month view returns later
+  const view: View = asked === 'week' || (asked === 'month' && enabled('monthView')) ? asked : 'day'
   const date = params.get('date') || today
   const setView = (v: View) => setParams((p) => (p.set('view', v), p), { replace: true })
   const setDate = (d: ISODate) => setParams((p) => (p.set('date', d), p), { replace: true })
@@ -106,7 +109,7 @@ export function PlanPage() {
         }
       />
       {tour && <PlanWalkthrough uid={uid} onDone={() => { setTour(false); setParams((x) => (x.delete('welcome'), x), { replace: true }) }} />}
-      <Segmented label="Calendar view" hideLabel value={view} onChange={setView} options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }]} />
+      <Segmented label="Calendar view" hideLabel value={view} onChange={setView} options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, ...(enabled('monthView') ? [{ value: 'month' as View, label: 'Month' }] : [])]} />
 
       {/* empty only once we know: never while the meals are still on their way */}
       {plan.isSuccess && !p && meals.isSuccess && !meals.data.length ? (

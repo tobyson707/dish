@@ -8,6 +8,7 @@ export const PROMPT_VERSIONS = {
   surprise_rank: 'surprise_rank@2026-11-04.1',
   kitchen_tip: 'kitchen_tip@2026-11-04.1',
   scan_food: 'scan_food@2026-11-04.1',
+  recipe_generate: 'recipe_generate@2026-11-21.1',
 } as const
 
 const RANK_SYSTEM = `You help a meal-planning app choose meals. You may ONLY choose from the candidate IDs provided for each slot. Never invent meals or IDs.
@@ -57,3 +58,57 @@ export const ScanSchema = z.object({
   needs_user_input: z.boolean(),
 })
 export type ScanOutput = z.infer<typeof ScanSchema>
+
+// ── Recipe generation ─────────────────────────────────────────────────────────
+// Structured recipes, never chat. The server re-checks everything that matters
+// (allergens, diet, times, units, handling) from the ingredient list, so the
+// schema stays simple (no numeric bounds) and the prompt asks for honesty.
+export const RECIPE_PROMPT_VERSION = PROMPT_VERSIONS.recipe_generate
+
+export const recipeSystem = `You write home-cooking recipes for DISH, a meal-planning app. Answer only with the requested JSON.
+Rules:
+- Write complete, cookable recipes: every ingredient used in the method is listed with a quantity and a standard unit (g, kg, ml, l, tsp, tbsp, cup, piece, pinch, clove, can, bunch, slice, handful), and every listed ingredient is used in the method. Use null quantity only for "to taste".
+- Steps are short, ordered, imperative and specific (heat level, time, doneness cues). Cook meat, poultry, fish and eggs safely and say how to tell they are done. Never suggest undercooked poultry, pork or mince, leaving cooked food out for hours, or raw kidney beans.
+- Be honest about tradition. kind is "traditional" only for a dish as it is commonly made in a named place, and origin_note then names that place and tradition in one sentence. Use "adaptation" when you change a known dish (for a diet, allergy, time or ingredients), "fusion" when you combine traditions and "original" for a new dish. Never claim authenticity you are not sure of. If you don't know a dish's origin, set origin_note to null.
+- Never cite sources, books, websites, chefs or URLs. Never describe a recipe as allergy-safe, allergen-free, healthy for a condition or medically beneficial.
+- The person's allergies and foods to avoid must not appear anywhere: not as ingredients, substitutions, variations, garnishes or in the method. Respect their diet exactly. When in doubt, leave it out.
+- Nutrition is a rough per-serving estimate for the listed quantities; use null when you can't estimate it reasonably.
+- When ingredients the person has are given, build the recipe around them, keep extra ingredients few and common, and set optional=true only for things the dish is fine without. Do not assume they have anything else, not even salt or oil, unless listed.
+- Prep and cook minutes are realistic for a home cook. Servings match what was asked.
+- Do not repeat any recipe named in "Already has".
+- If the request cannot be met safely (for example the ingredients conflict with an allergy), return fewer recipes, or none, and explain briefly in unable_reason.`
+
+const SLOT = z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'drink'])
+export const DraftRecipeSchema = z.object({
+  name: z.string(),
+  description: z.string().describe('One or two sentences on what the dish is like.'),
+  kind: z.enum(['traditional', 'adaptation', 'fusion', 'original']),
+  cuisine: z.string().describe('e.g. Nigerian, Italian, Mexican, International'),
+  country_codes: z.array(z.string()).describe('ISO 3166-1 alpha-2 codes of where the dish comes from, empty if unknown or new'),
+  origin_note: z.string().nullable(),
+  category: SLOT,
+  prep_minutes: z.number().int(),
+  cook_minutes: z.number().int(),
+  difficulty: z.enum(['easy', 'medium', 'hard']),
+  servings: z.number().int(),
+  ingredients: z.array(z.object({
+    name: z.string().describe('Plain ingredient name without quantity, e.g. "red onion"'),
+    quantity: z.number().nullable(),
+    unit: z.string().nullable(),
+    prep_state: z.string().nullable().describe('e.g. finely chopped'),
+    optional: z.boolean(),
+    substitutions: z.array(z.string()),
+  })),
+  steps: z.array(z.string()),
+  equipment: z.array(z.string()),
+  variations: z.array(z.string()).describe('Up to 3 short ideas for changing the dish'),
+  storage: z.string().nullable().describe('How to store leftovers safely and for how long'),
+  tips: z.string().nullable(),
+  spice_level: z.number().int().describe('0 none to 3 hot'),
+  nutrition: z.object({ calories: z.number().nullable(), protein_g: z.number().nullable(), carbs_g: z.number().nullable(), fat_g: z.number().nullable() }),
+})
+export const RecipeBatchSchema = z.object({
+  recipes: z.array(DraftRecipeSchema),
+  unable_reason: z.string().nullable(),
+})
+export type RecipeBatch = z.infer<typeof RecipeBatchSchema>

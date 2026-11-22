@@ -33,6 +33,9 @@ export async function invokeFn<T>(name: string, body: unknown): Promise<T> {
 }
 
 export interface AIStatus {
+  /** recipe generation (on a developer's machine this may be the local test provider) */
+  recipes_configured?: boolean
+  recipes_provider?: string | null
   ai_configured: boolean
   vision_configured: boolean
   provider: string | null

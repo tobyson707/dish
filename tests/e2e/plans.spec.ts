@@ -1,3 +1,4 @@
+import { FEATURES } from '../../src/lib/v1'
 import { expect, test, type Page } from '@playwright/test'
 import { API, SERVICE_KEY, collectConsoleErrors, completeOnboardingFor, createUser, signIn, uniqueEmail } from './helpers'
 
@@ -32,6 +33,7 @@ const DURATIONS: [string, string, number | null][] = [
 ]
 
 test('every plan length is created, fully saved, retrievable and navigable', async ({ page }) => {
+  test.skip(!FEATURES.longPlans, 'deferred in v1 (longPlans)')
   test.setTimeout(240_000)
   const errors = collectConsoleErrors(page)
   const uid = await setUp(page, 'durations')
@@ -68,6 +70,7 @@ test('every plan length is created, fully saved, retrievable and navigable', asy
 })
 
 test('an interrupted long plan keeps what was saved and resumes without duplicates', async ({ page }) => {
+  test.skip(!FEATURES.longPlans, 'deferred in v1 (longPlans)')
   test.setTimeout(180_000)
   const uid = await setUp(page, 'resume')
   let calls = 0
@@ -91,6 +94,7 @@ test('an interrupted long plan keeps what was saved and resumes without duplicat
 })
 
 test('a partly saved plan can be finished from the Plan screen @responsive', async ({ page }) => {
+  test.skip(!FEATURES.longPlans, 'deferred in v1 (longPlans): needs a plan longer than a week')
   test.setTimeout(120_000)
   const uid = await setUp(page, 'finish')
   // simulate an older plan that only has its first week (as plans were before)
