@@ -1,147 +1,177 @@
-import { useState } from 'react'
-import { Link, useNavigate } from 'react-router'
-import { MEAL_SLOTS, SLOT_LABEL, type MealSlot } from '@domain/types.ts'
-import { midCost } from '@domain/budget.ts'
-import { useSurprise, useReplaceMeal, type Suggestion } from '@/data/ai'
-import { useCreatePlannedMeal, usePlannedMeals, useActivePlan } from '@/data/plans'
-import { useCatalogue, CUISINES } from '@/data/catalogue'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router'
+import { budgetMealsPerDay } from '@domain/budget.ts'
+import { ALLERGEN_LABEL, MEAL_SLOTS, SLOT_LABEL, type Allergen, type MealSlot } from '@domain/types.ts'
+import { formatQuantity } from '@domain/units.ts'
+import { pickSurprise, surprisePool } from '@domain/surprise.ts'
+import { lineName, toCatalogueMeal, useCatalogue } from '@/data/catalogue'
 import { useFavourites, useToggleFavourite } from '@/data/favourites'
-import { SaveToggle } from '@/components/ui/ActionButton'
-import { useCurrency, useToday } from '@/hooks/useToday'
-import { useSyncState } from '@/offline/useSync'
-import { formatCostRange, formatKcal, formatMinutes } from '@/lib/format'
+import { useActiveGoal, usePreferences, useProfile } from '@/data/profile'
+import { DEFAULT_CURRENCY } from '@/lib/geo'
+import { formatKcal, formatMinutes } from '@/lib/format'
 import { friendlyError } from '@/lib/errors'
+import { cn } from '@/lib/cn'
+import { play } from '@/lib/uiSound'
 import { Button } from '@/components/ui/Button'
 import { PageHeader } from '@/components/ui/Layout'
-import { Select, TextField } from '@/components/ui/Field'
-import { Segmented, Toggle } from '@/components/ui/Inputs'
 import { FoodImage } from '@/components/ui/FoodImage'
-import { EmptyState, Notice, Skeleton } from '@/components/ui/States'
-import { useToast } from '@/components/ui/Toast'
+import { SaveToggle } from '@/components/ui/ActionButton'
+import { Icon } from '@/components/ui/Icon'
+import { EmptyState, ErrorState, Notice } from '@/components/ui/States'
+import { MealDetailGhost } from '@/components/ui/Ghost'
+import { slotForNow } from '@/components/canvas/useRankedMeals'
+import { AddToPlanSheet } from '@/features/recipes/RecipeDetail'
 
-function nowSlot(): MealSlot {
-  const h = new Date().getHours()
-  return h < 11 ? 'breakfast' : h < 16 ? 'lunch' : h < 22 ? 'dinner' : 'snack'
-}
-
+/**
+ * Surprise Me: one random meal from the real catalogue, filtered by the person's allergies,
+ * diet and excluded foods (the planner's own rules), never repeated in a session while
+ * there are others to show. Runs on the device from the cached catalogue, so it is instant
+ * and works offline. No AI, no invented recipes.
+ */
 export function Surprise() {
-  const today = useToday()
-  const currency = useCurrency()
-  const surprise = useSurprise()
-  const { online } = useSyncState()
-  const [slot, setSlot] = useState<MealSlot>(nowSlot)
-  const [method, setMethod] = useState<'any' | 'cook' | 'buy'>('any')
-  const [budget, setBudget] = useState('')
-  const [minutes, setMinutes] = useState('')
-  const [cuisine, setCuisine] = useState('')
-  const [useKitchen, setUseKitchen] = useState(false)
-  const [seen, setSeen] = useState<string[]>([])
-  const [data, setData] = useState<{ suggestions: Suggestion[]; message?: string } | null>(null)
-  const [err, setErr] = useState<string | null>(null)
+  const cat = useCatalogue()
+  const prefs = usePreferences()
+  const profile = useProfile()
+  const goal = useActiveGoal()
+  const [slot, setSlot] = useState<MealSlot>(() => slotForNow())
+  const [seen, setSeen] = useState<Record<string, string[]>>({})
+  const [current, setCurrent] = useState<Record<string, string | null>>({})
+  const [cycled, setCycled] = useState(false)
 
-  async function go(fresh: boolean) {
-    setErr(null)
-    const exclude = fresh ? [] : seen
-    try {
-      const r = await surprise.mutateAsync({ slot, method, max_budget: budget ? Number(budget) : null, max_minutes: minutes ? Number(minutes) : null, cuisine: cuisine || null, use_kitchen: useKitchen, exclude, today })
-      setData(r)
-      setSeen([...exclude, ...r.suggestions.map((s) => s.food_item_id)])
-    } catch (e) {
-      setErr(friendlyError(e))
-    }
+  const pool = useMemo(() => {
+    if (!cat.data || !prefs.data) return null
+    const p = prefs.data
+    return surprisePool(cat.data.map(toCatalogueMeal), {
+      prefs: { ...p, budget_amount: p.budget_amount == null ? null : Number(p.budget_amount), currency: profile.data?.currency ?? DEFAULT_CURRENCY, goal: goal.data?.goal ?? null },
+      slot,
+      mealsPerDay: budgetMealsPerDay(p.meal_slots),
+    })
+  }, [cat.data, prefs.data, profile.data?.currency, goal.data?.goal, slot])
+
+  const next = () => {
+    if (!pool) return
+    const shown = new Set(seen[slot] ?? [])
+    const r = pickSurprise(pool.meals, shown, Math.random, current[slot])
+    if (!r.meal) return
+    setCycled(r.cycled)
+    setSeen((s) => ({ ...s, [slot]: r.cycled ? [r.meal!.id] : [...(s[slot] ?? []), r.meal!.id] }))
+    setCurrent((c) => ({ ...c, [slot]: r.meal!.id }))
+    play('select')
   }
+
+  // the first pick for a slot happens as soon as its pool is known
+  const currentId = current[slot]
+  if (pool && pool.meals.length && currentId === undefined) {
+    const r = pickSurprise(pool.meals, new Set(), Math.random)
+    setCurrent((c) => ({ ...c, [slot]: r.meal!.id }))
+    setSeen((s) => ({ ...s, [slot]: [r.meal!.id] }))
+  }
+  const food = currentId ? cat.data?.find((f) => f.id === currentId) ?? null : null
 
   return (
     <div>
       <PageHeader back eyebrow="Can't decide?" title="Surprise me" />
-      <div className="flex flex-col gap-4">
-        {!online && <Notice tone="warning" icon="offline">Surprise Me needs an internet connection.</Notice>}
-        <Segmented label="For" value={slot} onChange={setSlot} options={MEAL_SLOTS.map((s) => ({ value: s, label: SLOT_LABEL[s] }))} />
-        <Segmented label="Cook or buy" value={method} onChange={setMethod} options={[{ value: 'any', label: 'Either' }, { value: 'cook', label: 'Cook' }, { value: 'buy', label: 'Buy' }]} />
-        <div className="grid grid-cols-2 gap-3">
-          <TextField label="Max budget" inputMode="numeric" placeholder="Any" suffix={currency} value={budget} onChange={(e) => setBudget(e.target.value.replace(/[^\d]/g, ''))} />
-          <TextField label="Max time" inputMode="numeric" placeholder="Any" suffix="min" value={minutes} onChange={(e) => setMinutes(e.target.value.replace(/[^\d]/g, ''))} />
-        </div>
-        <Select label="Cuisine" value={cuisine} onChange={(e) => setCuisine(e.target.value)} options={[{ value: '', label: 'Anything' }, ...CUISINES.map((c) => ({ value: c, label: c }))]} />
-        <Toggle label="Use what's in my kitchen" checked={useKitchen} onChange={setUseKitchen} />
-        <Button size="lg" icon="sparkle" loading={surprise.isPending} disabled={!online} onClick={() => void go(true)}>
-          {data ? 'Surprise me again' : 'Surprise me'}
-        </Button>
+      <div role="radiogroup" aria-label="Meal" className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
+        {MEAL_SLOTS.map((s) => (
+          <button key={s} type="button" role="radio" aria-checked={slot === s} onClick={() => { setSlot(s); setCycled(false) }} className={cn('press h-9 shrink-0 rounded-full px-4 text-sm font-semibold transition-colors', slot === s ? 'bg-accent-soft text-ink ring-1 ring-inset ring-accent-border' : 'bg-elevated text-ink-2 hover:text-ink')}>
+            {SLOT_LABEL[s]}
+          </button>
+        ))}
       </div>
 
-      <div className="mt-8" aria-live="polite">
-        {err && <Notice tone="error">{err}</Notice>}
-        {surprise.isPending ? (
-          <div className="flex flex-col gap-3">{[0, 1, 2].map((i) => <Skeleton key={i} className="h-36 rounded-xl" />)}</div>
-        ) : data && data.suggestions.length === 0 ? (
-          <EmptyState title="Nothing fits just now" message={data.message} />
-        ) : data ? (
-          <>
-            <ul className="stagger flex flex-col gap-3">
-              {data.suggestions.map((s) => <SuggestionCard key={s.food_item_id} s={s} slot={slot} today={today} />)}
-            </ul>
-            <Button variant="secondary" icon="refresh" block className="mt-4" loading={surprise.isPending} onClick={() => void go(false)}>
-              See other ideas
-            </Button>
-          </>
+      <div className="mt-5" aria-live="polite">
+        {(cat.isError && !cat.data) || (prefs.isError && !prefs.data) ? (
+          <ErrorState message={friendlyError(cat.error ?? prefs.error)} onRetry={() => { void cat.refetch(); void prefs.refetch() }} />
+        ) : !pool ? (
+          <MealDetailGhost aspect="aspect-[4/3]" label="Finding a meal" />
+        ) : pool.meals.length === 0 ? (
+          <EmptyState
+            icon="leaf"
+            title={`Nothing fits for ${SLOT_LABEL[slot].toLowerCase()}`}
+            message="No recipe in the catalogue fits your allergies, diet and excluded foods for this meal. Try another meal, or review your food preferences."
+            action={<Link to="/profile/preferences" className="press inline-flex h-11 items-center rounded-full bg-ink px-5 text-sm font-bold text-on-ink">Food preferences</Link>}
+          />
+        ) : food ? (
+          <SurpriseCard key={food.id} foodId={food.id} slot={slot} onAnother={next} canRepeat={pool.meals.length > 1} cycled={cycled} relaxed={pool.relaxed} count={pool.meals.length} />
         ) : null}
       </div>
     </div>
   )
 }
 
-function SuggestionCard({ s, slot, today }: { s: Suggestion; slot: MealSlot; today: string }) {
-  const nav = useNavigate()
-  const toast = useToast()
-  const plan = useActivePlan()
-  const todays = usePlannedMeals(today, today)
-  const catalogue = useCatalogue()
-  const create = useCreatePlannedMeal()
-  const replace = useReplaceMeal()
+function SurpriseCard({ foodId, slot, onAnother, canRepeat, cycled, relaxed, count }: { foodId: string; slot: MealSlot; onAnother: () => void; canRepeat: boolean; cycled: boolean; relaxed: boolean; count: number }) {
+  const cat = useCatalogue()
   const favs = useFavourites()
   const fav = useToggleFavourite()
-  const isFav = !!favs.data?.includes(s.food_item_id)
-  const existing = todays.data?.find((m) => m.slot === slot && m.status === 'planned' && !m.locked)
-  const food = catalogue.data?.find((f) => f.id === s.food_item_id)
-
-  async function addToday() {
-    if (!food) return
-    await create.mutateAsync({ date: today, slot, plan_id: plan.data && today >= plan.data.start_date && today <= plan.data.end_date ? plan.data.id : null, name: food.name, food_item_id: food.id, calories: food.calories, protein_g: food.protein_g, carbs_g: food.carbs_g, fat_g: food.fat_g, nutrition_source: food.nutrition_source, est_cost: midCost(food.est_cost_min, food.est_cost_max), est_cost_currency: food.cost_currency, method: s.method })
-    toast.show(`Added to today's ${SLOT_LABEL[slot].toLowerCase()}.`, { tone: 'success', action: { label: 'View', onClick: () => nav('/') } })
-  }
-  async function swap() {
-    if (!existing) return
-    try {
-      await replace.mutateAsync({ planned_meal_id: existing.id, choose_food_item_id: s.food_item_id })
-      toast.success(`Swapped ${existing.name} for ${s.name}.`)
-    } catch (e) {
-      toast.error(friendlyError(e))
-    }
-  }
-
+  const [planOpen, setPlanOpen] = useState(false)
+  const f = cat.data!.find((x) => x.id === foodId)!
+  const recipe = f.recipe
+  const mins = f.prep_minutes + f.cook_minutes
   return (
-    <li className="rounded-xl bg-elevated p-3">
-      <div className="flex gap-3">
-        <Link to={`/recipes/${s.slug}`} className="shrink-0">
-          <FoodImage path={s.image_path} name={s.name} shape="circle" className="h-24 w-24" width={200} />
+    <article aria-label={f.name} data-testid="surprise-meal" className="ghost-reveal">
+      <div className="relative">
+        <Link to={`/recipes/${f.slug}`} aria-label={`Open ${f.name}`} className="press block">
+          <FoodImage path={f.image_path} alt={f.image_alt} name={f.name} slug={f.slug} className="aspect-[4/3] w-full rounded-[28px]" width={900} priority />
         </Link>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <Link to={`/recipes/${s.slug}`} className="text-title-3 font-bold leading-snug">{s.name}</Link>
-            <SaveToggle on={isFav} onToggle={(on) => fav.mutateAsync({ foodItemId: s.food_item_id, on })} label={{ save: 'Save to favourites', remove: 'Remove from favourites' }} className="hover:bg-ink/6" />
-          </div>
-          <p className="num text-footnote text-muted">
-            {s.method === 'cook' ? `Cook · ${formatMinutes(s.prep_minutes + s.cook_minutes)}` : 'Buy'} · {formatCostRange(s.est_cost_min, s.est_cost_max, s.cost_currency ?? 'NGN')}
-            {s.calories != null && ` · ≈ ${formatKcal(s.calories)}`}
-          </p>
-          {s.reasons[0] && <p className="mt-1 text-sm text-ink-2">{s.reasons[0]}</p>}
-        </div>
+        <SaveToggle
+          on={!!favs.data?.includes(f.id)}
+          onToggle={(on) => fav.mutateAsync({ foodItemId: f.id, on })}
+          label={{ save: `Save ${f.name}`, remove: `Remove ${f.name} from saved` }}
+          className="absolute right-3 top-3 bg-glass ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-md"
+        />
       </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button size="sm" icon="plus" loading={create.isPending} onClick={() => void addToday()}>Add to today</Button>
-        {existing && <Button size="sm" variant="secondary" icon="swap" loading={replace.isPending} onClick={() => void swap()}>Replace {existing.name}</Button>}
-        <Button size="sm" variant="ghost" onClick={() => nav(`/recipes/${s.slug}`)}>View</Button>
+      <h2 className="mt-4 text-title-1 leading-tight">{f.name}</h2>
+      <p className="num mt-1 text-footnote text-muted">
+        {[f.cuisine, SLOT_LABEL[slot], f.can_cook ? formatMinutes(mins) : 'Ready to buy', f.calories != null ? `≈ ${formatKcal(f.calories)}` : null].filter(Boolean).join(' · ')}
+      </p>
+      {f.description && <p className="mt-3 text-ink-2">{f.description}</p>}
+
+      <div className="mt-5 grid grid-cols-2 gap-2">
+        <Button icon="plus" onClick={() => setPlanOpen(true)}>Add to plan</Button>
+        <Button variant="secondary" icon="refresh" disabled={!canRepeat} onClick={onAnother}>Another one</Button>
       </div>
-    </li>
+      {cycled && <p className="mt-2 text-center text-footnote text-muted">You've seen all {count} ideas for this meal, so they're coming round again.</p>}
+      {relaxed && <div className="mt-3"><Notice icon="info">Nothing matched every preference, so cooking time, budget and cook-or-buy were set aside. Allergies, diet and excluded foods still apply.</Notice></div>}
+
+      <div className="mt-4">
+        <Notice icon="shield">
+          {f.allergens.length ? <>Listed ingredients include <strong>{f.allergens.map((a) => ALLERGEN_LABEL[a as Allergen] ?? a).join(', ')}</strong>. </> : 'No common allergens in the listed ingredients. '}
+          Brands and cooks vary, so check labels.
+        </Notice>
+      </div>
+
+      {recipe && recipe.recipe_ingredients.length > 0 && (
+        <section aria-label="Ingredients" className="mt-6">
+          <h3 className="text-title-3">Ingredients <span className="text-footnote font-normal text-muted">· serves {recipe.servings}</span></h3>
+          <ul className="mt-2 divide-y divide-line rounded-lg bg-elevated px-4">
+            {recipe.recipe_ingredients.map((ri) => (
+              <li key={ri.id} className="flex justify-between gap-3 py-2.5 text-sm">
+                <span>{lineName(ri)}{ri.optional && <span className="text-muted"> (optional)</span>}</span>
+                <span className="num shrink-0 text-muted">{formatQuantity(ri.quantity, ri.unit)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {recipe && recipe.steps.length > 0 && (
+        <details className="group mt-4 rounded-lg bg-elevated">
+          <summary className="press flex h-12 cursor-pointer list-none items-center justify-between px-4 text-sm font-semibold">
+            Method · {recipe.steps.length} steps <Icon name="down" size={16} className="transition-transform group-open:rotate-180" />
+          </summary>
+          <ol className="flex flex-col gap-3 px-4 pb-4">
+            {recipe.steps.map((s, i) => (
+              <li key={i} className="flex gap-3 text-sm">
+                <span className="num flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-ink text-micro font-bold text-on-ink">{i + 1}</span>
+                <p className="pt-1 leading-relaxed">{s}</p>
+              </li>
+            ))}
+          </ol>
+        </details>
+      )}
+      <Link to={`/recipes/${f.slug}`} className="mt-4 inline-flex items-center gap-1 text-sm font-semibold underline-offset-2 hover:underline">
+        Open the full recipe <Icon name="right" size={14} />
+      </Link>
+      <AddToPlanSheet open={planOpen} onClose={() => setPlanOpen(false)} foodId={f.id} defaultSlot={slot} />
+    </article>
   )
 }

@@ -21,6 +21,7 @@ import { CategoryWorkspace } from '@/components/canvas/CategoryWorkspace'
 import { SearchWorkspace } from '@/components/canvas/SearchWorkspace'
 import { slotFor, useRankedMeals } from '@/components/canvas/useRankedMeals'
 import { CATEGORIES, type Category } from '@/components/canvas/categories'
+import { enabled } from '@/lib/v1'
 import { dayState, emptyCopy, tomorrow, type DayState } from './homeState'
 
 /**
@@ -109,7 +110,7 @@ export function Home() {
             <button type="button" onClick={retry} className="press mt-4 inline-flex h-11 items-center gap-1.5 rounded-full bg-ink px-5 text-sm font-bold text-on-ink">Try again <Icon name="refresh" size={16} /></button>
           </div>
         ) : (
-          <FeaturedMealCarousel items={items} loading={state.kind === 'loading' || (!planned.length && suggestions.pending)} footer={category === 'all' ? <PlanInvite state={state} today={today} /> : null} />
+          <FeaturedMealCarousel items={items} loading={state.kind === 'loading' || (!planned.length && suggestions.pending)} footer={category === 'all' ? <div className="flex flex-col gap-2"><PlanInvite state={state} today={today} /><SurpriseLink /></div> : null} />
         )}
       </section>
 
@@ -134,6 +135,16 @@ function PlanInvite({ state, today }: { state: DayState; today: string }) {
         {label} <Icon name="right" size={14} />
       </Link>
     </p>
+  )
+}
+
+/** Can't decide? One quiet way to a random meal that fits (only when the feature is on). */
+function SurpriseLink() {
+  if (!enabled('surprise')) return null
+  return (
+    <Link to="/surprise" className="press inline-flex w-fit items-center gap-1.5 rounded-full bg-glass px-3.5 py-2 text-footnote font-semibold text-ink ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-md">
+      <Icon name="sparkle" size={14} className="text-accent-strong" /> Can't decide? Surprise me
+    </Link>
   )
 }
 

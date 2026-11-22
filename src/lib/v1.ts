@@ -14,8 +14,8 @@ export const FEATURES = {
   spending: false,
   /** generated recipe suggestions (the recipe studio, alternatives, variations) */
   recipeSuggestions: false,
-  /** "Surprise me" picks */
-  surprise: false,
+  /** "Surprise me": one random meal from the catalogue (approved for v1) */
+  surprise: true,
   /** plans longer than a week (existing long plans still open and work) */
   longPlans: false,
   /** the month calendar view */

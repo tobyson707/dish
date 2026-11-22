@@ -5,6 +5,7 @@ import { cn } from '@/lib/cn'
 import { Icon, type IconName } from '@/components/ui/Icon'
 import { usePresence } from '@/components/ui/usePresence'
 import { useBackToClose } from '@/hooks/useBackToClose'
+import { enabled } from '@/lib/v1'
 import { play } from '@/lib/uiSound'
 
 /** DISH v1: Home, Plan, Diary and Discover. The kitchen and shopping list open from Plan and Home. */
@@ -120,6 +121,13 @@ export function FloatingNavigation() {
             </NavLink>
           </div>
           </nav>
+          {enabled('surprise') && (
+            <nav aria-label="Shortcuts" className="nav-item mt-1 px-1 pb-1" style={{ ['--i' as string]: 7 }}>
+              <NavLink to="/surprise" onClick={go('/surprise')} aria-current={loc.pathname === '/surprise' ? 'page' : undefined} className="press flex h-11 items-center justify-center gap-2 rounded-[16px] bg-white/[0.07] text-sm font-semibold text-on-glass-dark outline-none hover:bg-white/[0.12] focus-visible:ring-2 focus-visible:ring-accent">
+                <Icon name="sparkle" size={16} className="text-accent" /> Surprise me
+              </NavLink>
+            </nav>
+          )}
         </div>
       )}
       <button

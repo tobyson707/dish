@@ -49,7 +49,7 @@ test('deferred features are hidden, and their old addresses still resolve honest
   await page.goto('/discover')
   await appReady(page)
   await expect(page.getByRole('tablist', { name: 'Discover' }).getByRole('tab')).toHaveText([/Recipes/, /Saved/])
-  await expect(page.getByRole('link', { name: /Create a recipe|Surprise me/ })).toHaveCount(0)
+  await expect(page.getByRole('link', { name: /Create a recipe/ })).toHaveCount(0)
   // a recipe page offers no generated alternatives or variations
   await page.goto('/recipes/jollof-rice-chicken')
   await appReady(page)
@@ -67,7 +67,6 @@ test('deferred features are hidden, and their old addresses still resolve honest
     ['/community', 'Community plans are coming later'],
     ['/scan', 'Food scanning is coming later'],
     ['/budget', 'Spending is coming later'],
-    ['/surprise', 'Surprise me is coming later'],
     ['/create', 'Recipe suggestions are coming later'],
     ['/invite/abc', 'Shared plans are coming later'],
   ] as const) {
