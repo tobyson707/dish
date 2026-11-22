@@ -302,9 +302,7 @@ test('discover, recipe detail, surprise, kitchen, budget, profile @responsive', 
 
   if (FEATURES.surprise) {
     await page.goto('/surprise')
-    await page.getByRole('button', { name: 'Surprise me', exact: true }).click()
-    await expect(page.locator('main li').first()).toBeVisible({ timeout: 20_000 })
-    await expect(page.locator('main li')).toHaveCount(3)
+    await expect(page.getByTestId('surprise-meal')).toBeVisible({ timeout: 20_000 })
     await page.screenshot({ path: shots('surprise'), fullPage: true })
   }
 

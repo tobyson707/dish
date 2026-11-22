@@ -93,7 +93,9 @@ export function useActivityStats() {
   return useQuery({
     queryKey: ['activity-stats', uid],
     meta: persistMeta(uid),
-    staleTime: 60_000,
+    // three tiny count queries: always current when progress is shown (the cached value shows meanwhile)
+    staleTime: 0,
+    refetchOnMount: 'always',
     enabled: !!uid,
     queryFn: async (): Promise<ActivityStats> => {
       const count = async (table: string) => {

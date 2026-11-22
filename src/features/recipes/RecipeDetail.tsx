@@ -170,7 +170,7 @@ export function RecipeDetail() {
   )
 }
 
-export function AddToPlanSheet({ open, onClose, foodId }: { open: boolean; onClose: () => void; foodId: string }) {
+export function AddToPlanSheet({ open, onClose, foodId, defaultSlot }: { open: boolean; onClose: () => void; foodId: string; defaultSlot?: MealSlot }) {
   const today = useToday()
   const cat = useFoods()
   const plan = useActivePlan()
@@ -178,7 +178,7 @@ export function AddToPlanSheet({ open, onClose, foodId }: { open: boolean; onClo
   const toast = useToast()
   const food = cat.data?.find((f) => f.id === foodId)
   const [date, setDate] = useState(today)
-  const [slot, setSlot] = useState<MealSlot>(food?.meal_types[0] ?? (food?.food_type === 'beverage' ? 'drink' : 'lunch'))
+  const [slot, setSlot] = useState<MealSlot>(defaultSlot && food?.meal_types.includes(defaultSlot) ? defaultSlot : (food?.meal_types[0] ?? (food?.food_type === 'beverage' ? 'drink' : 'lunch')))
   if (!food) return null
   return (
     <Sheet open={open} onClose={onClose} title="Add to your plan" footer={<Button block loading={create.isPending} onClick={async () => {
