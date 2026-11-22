@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router'
 import { cn } from '@/lib/cn'
+import { enabled } from '@/lib/v1'
 
 export interface PillarSection {
   to: string
@@ -39,12 +40,12 @@ export function PillarTabs({ label, sections, className }: { label: string; sect
 
 export const KITCHEN_SECTIONS: PillarSection[] = [
   { to: '/kitchen', label: 'Kitchen' },
-  { to: '/grocery', label: 'Shopping' },
-  { to: '/scan', label: 'Scan' },
+  { to: '/grocery', label: 'Shopping list' },
+  ...(enabled('scan') ? [{ to: '/scan', label: 'Scan' }] : []),
 ]
 
 export const DIARY_SECTIONS: PillarSection[] = [
   { to: '/diary', label: 'Diary' },
-  { to: '/budget', label: 'Spending' },
+  ...(enabled('spending') ? [{ to: '/budget', label: 'Spending' }] : []),
   { to: '/history', label: 'History' },
 ]

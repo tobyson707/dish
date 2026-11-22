@@ -15,6 +15,7 @@ import { Icon } from '@/components/ui/Icon'
 import { EmptyState, ErrorState } from '@/components/ui/States'
 import { PlanActions } from './PlanActions'
 import { PlanCover } from './PlanCover'
+import { enabled } from '@/lib/v1'
 import { PlanCardsGhost, REVEAL } from '@/components/ui/Ghost'
 
 type Section = 'mine' | 'shared' | 'saved'
@@ -26,7 +27,7 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'active', label: 'Active' },
   { id: 'draft', label: 'Draft' },
   { id: 'completed', label: 'Completed' },
-  { id: 'shared', label: 'Shared' },
+  ...(enabled('collaboration') ? [{ id: 'shared' as Filter, label: 'Shared' }] : []),
   { id: 'archived', label: 'Archived' },
 ]
 const SORTS: { value: Sort; label: string }[] = [
@@ -54,8 +55,10 @@ export function PlansPage() {
   const plans = useMyPlans()
   const [params, setParams] = useSearchParams()
   const tabParam = params.get('tab')
-  const section: Section = tabParam === 'shared' || tabParam === 'saved' ? tabParam : 'mine'
-  const saved = useMySavedPlans()
+  // v1: only your own plans; shared plans and saved community plans return with their features
+  const sections: Section[] = ['mine', ...(enabled('collaboration') ? ['shared' as const] : []), ...(enabled('community') ? ['saved' as const] : [])]
+  const section: Section = sections.find((x) => x === tabParam) ?? 'mine'
+  const saved = useMySavedPlans(enabled('community'))
   const setSection = (s: Section) => setParams((p) => (p.set('tab', s), p), { replace: true })
   const [filter, setFilter] = useState<Filter>('all')
   const [sort, setSort] = useState<Sort>('updated')
@@ -90,14 +93,14 @@ export function PlansPage() {
 
   return (
     <div>
-      <PageHeader back="/plan" eyebrow="Library" title="Meal plans" actions={<ButtonLink to="/plan/new" size="sm" icon="plus">New plan</ButtonLink>} />
-      <div role="tablist" aria-label="Library" className="grid grid-cols-3 gap-1 rounded-full bg-elevated p-1">
-        {([['mine', 'Mine', counts.mine], ['shared', 'Shared', counts.shared], ['saved', 'Saved', saved.data?.length]] as const).map(([id, label, n]) => (
+      <PageHeader back="/plan" eyebrow="Plan" title="Meal plans" actions={<ButtonLink to="/plan/new" size="sm" icon="plus">New plan</ButtonLink>} />
+      {sections.length > 1 && <div role="tablist" aria-label="Library" className="grid gap-1 rounded-full bg-elevated p-1" style={{ gridTemplateColumns: `repeat(${sections.length}, minmax(0, 1fr))` }}>
+        {([['mine', 'Mine', counts.mine], ['shared', 'Shared', counts.shared], ['saved', 'Saved', saved.data?.length]] as const).filter(([id]) => sections.includes(id)).map(([id, label, n]) => (
           <button key={id} type="button" role="tab" aria-selected={section === id} onClick={() => setSection(id)} className={cn('press h-10 rounded-full text-sm font-semibold transition-colors', section === id ? 'bg-ink text-on-ink' : 'text-ink-2 hover:text-ink')}>
             {label} {n != null && <span className={cn('num ml-0.5', section === id ? 'opacity-70' : 'text-muted')}>{n}</span>}
           </button>
         ))}
-      </div>
+      </div>}
 
       {section === 'saved' ? <div className="mt-5"><SavedPlans /></div> : <>
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">

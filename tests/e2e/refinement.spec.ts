@@ -1,3 +1,4 @@
+import { FEATURES } from '../../src/lib/v1'
 // Product refinement: motion, floating navigation and Saved, meal and plan menus with undo
 // and swipe, week and month calendars, cover framing, publishing to Discover, shopping-list
 // export and honest action feedback. Real accounts and stored records; no mocks except a
@@ -189,6 +190,7 @@ test('meal plan workspace: four clear meal actions, remove with undo, swipe to r
 })
 
 test('cover framing, publishing and Discover: one composition everywhere, private until published, then saved by someone else', async ({ page, browser }) => {
+  test.skip(!FEATURES.community, 'deferred in v1 (community)')
   test.setTimeout(240_000)
   await setUp(page, 'cover', 'Ada Cover')
   const title = `Covered week ${Date.now() % 100000}`
@@ -314,6 +316,7 @@ test('shopping list export: PDF, image and CSV from the list as it is now @respo
 })
 
 test('a viewer of a shared plan gets the read-only menu, and the database rejects their removal', async ({ page, browser }) => {
+  test.skip(!FEATURES.collaboration, 'deferred in v1 (collaboration)')
   test.setTimeout(200_000)
   await setUp(page, 'own', 'Ada Owner')
   const plan = await createPlan(page, `Viewer check ${Date.now() % 100000}`)

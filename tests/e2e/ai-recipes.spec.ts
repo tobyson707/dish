@@ -3,6 +3,7 @@
 // built-in test provider (AI_PROVIDER=fixture, development only), so every step is real
 // except the words of the recipe itself. Failure cases are triggered with "fixture:" notes.
 import { expect, test, type Page } from '@playwright/test'
+import { FEATURES } from '../../src/lib/v1'
 import { API, ANON_KEY, SERVICE_KEY, appReady, completeOnboardingFor, createUser, expectNoHorizontalScroll, signIn, uniqueEmail } from './helpers'
 
 const h = { apikey: SERVICE_KEY, authorization: `Bearer ${SERVICE_KEY}`, 'content-type': 'application/json', prefer: 'return=representation' }
@@ -26,6 +27,8 @@ async function rows(path: string) {
 }
 
 test.describe('AI recipes', () => {
+  // deferred in v1 (recipe suggestions are switched off in src/lib/v1.ts; the backend stays)
+  test.skip(!FEATURES.recipeSuggestions, 'recipe suggestions are deferred in v1')
   test('generate, check, save, plan, shop, scale, vary and revisit @responsive', async ({ page }) => {
     test.setTimeout(120_000)
     const { uid } = await user(page, 'airecipe', { allergies: ['shellfish'] })

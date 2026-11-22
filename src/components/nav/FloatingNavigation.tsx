@@ -7,13 +7,12 @@ import { usePresence } from '@/components/ui/usePresence'
 import { useBackToClose } from '@/hooks/useBackToClose'
 import { play } from '@/lib/uiSound'
 
-/** Home, then the four pillars. Everything else lives inside one of them. */
+/** DISH v1: Home, Plan, Diary and Discover. The kitchen and shopping list open from Plan and Home. */
 export const NAV: { to: string; label: string; icon: IconName; also?: string[] }[] = [
   { to: '/', label: 'Home', icon: 'home' },
+  { to: '/plan', label: 'Plan', icon: 'plan', also: ['/plans', '/meal', '/invite', '/kitchen', '/grocery'] },
+  { to: '/diary', label: 'Diary', icon: 'diary', also: ['/history', '/budget', '/scan'] },
   { to: '/discover', label: 'Discover', icon: 'discover', also: ['/recipes', '/saved', '/surprise', '/create', '/community'] },
-  { to: '/plan', label: 'Plan', icon: 'plan', also: ['/plans', '/meal', '/invite'] },
-  { to: '/kitchen', label: 'Kitchen', icon: 'fridge', also: ['/grocery', '/scan'] },
-  { to: '/diary', label: 'Diary', icon: 'diary', also: ['/budget', '/history'] },
 ]
 const PROFILE = { to: '/profile', label: 'Profile', icon: 'user' as IconName }
 
@@ -23,8 +22,8 @@ const isActive = (path: string, n: { to: string; also?: string[] }) => (n.to ===
 /**
  * The app's only navigation: one floating button at the bottom-left of every screen. Its
  * mark (four small squares: "all of DISH") folds into a close cross as a compact panel
- * unfolds out of the button itself: Home, the four pillars (Discover, Plan, Kitchen,
- * Diary) and Profile. Nothing else competes for a place here. It never takes layout space. Closes on a choice, a tap outside, Escape or the
+ * unfolds out of the button itself: Home, Plan, Diary, Discover and Profile. Nothing else
+ * competes for a place here. It never takes layout space. Closes on a choice, a tap outside, Escape or the
  * phone's Back; focus returns to the button.
  */
 export function FloatingNavigation() {

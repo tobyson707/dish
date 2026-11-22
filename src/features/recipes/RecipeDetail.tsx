@@ -29,6 +29,7 @@ import { useToast } from '@/components/ui/Toast'
 import { DateField } from '@/components/ui/DateField'
 import { RecordStatus, isIncomplete } from './RecordStatus'
 import { Icon } from '@/components/ui/Icon'
+import { enabled } from '@/lib/v1'
 import type { FoodItem } from '@/types/db'
 
 export function RecipeDetail() {
@@ -94,8 +95,8 @@ export function RecipeDetail() {
         <Button variant="secondary" icon="cart" disabled={!recipe?.recipe_ingredients.length} loading={addToList.isPending} onClick={() => void addIngredients()}>Add to list</Button>
       </div>
       <nav aria-label="More from this recipe" className="mt-2 flex flex-wrap gap-2">
-        <ButtonLink size="sm" variant="ghost" icon="swap" to={`/create?mode=alternatives&parent=${food.id}`}>Find alternatives</ButtonLink>
-        {!incomplete && recipe && recipe.recipe_ingredients.length > 0 && <ButtonLink size="sm" variant="ghost" icon="wand" to={`/create?mode=variation&parent=${food.id}`}>Make a variation</ButtonLink>}
+        {enabled('recipeSuggestions') && <ButtonLink size="sm" variant="ghost" icon="swap" to={`/create?mode=alternatives&parent=${food.id}`}>Find alternatives</ButtonLink>}
+        {enabled('recipeSuggestions') && !incomplete && recipe && recipe.recipe_ingredients.length > 0 && <ButtonLink size="sm" variant="ghost" icon="wand" to={`/create?mode=variation&parent=${food.id}`}>Make a variation</ButtonLink>}
         {food.origin === 'ai' && food.owner_id === uid && <Button size="sm" variant="ghost" icon="trash" onClick={() => setDeleting(true)}>Delete</Button>}
       </nav>
 

@@ -22,6 +22,7 @@ import { SaveToggle } from '@/components/ui/ActionButton'
 import { CommunityPlans } from '@/features/plans/CommunityPage'
 import { MealFeedGhost, REVEAL } from '@/components/ui/Ghost'
 import { SavedMeals } from '@/features/saved/SavedPage'
+import { enabled } from '@/lib/v1'
 
 const PAGE = 8
 
@@ -36,12 +37,15 @@ function shuffled<T extends { id: string }>(items: T[], seed: number): T[] {
 }
 
 type Tab = 'foryou' | 'recipes' | 'saved' | 'plans'
+// v1: browse and search recipes, and your saved ones. For You (a ranked feed) and community
+// plans stay built but hidden; Home carries today's suggestions.
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'foryou', label: 'For You' },
+  ...(enabled('community') ? [{ id: 'foryou' as Tab, label: 'For You' }] : []),
   { id: 'recipes', label: 'Recipes' },
   { id: 'saved', label: 'Saved' },
-  { id: 'plans', label: 'Meal plans' },
+  ...(enabled('community') ? [{ id: 'plans' as Tab, label: 'Meal plans' }] : []),
 ]
+const DEFAULT_TAB: Tab = enabled('community') ? 'foryou' : 'recipes'
 
 /**
  * Discover: For You (food picked for you), Recipes (every recipe that fits you, A to Z),
@@ -50,19 +54,19 @@ const TABS: { id: Tab; label: string }[] = [
 export function Discover() {
   const [params, setParams] = useSearchParams()
   const t = params.get('tab')
-  const tab: Tab = t === 'plans' || t === 'recipes' || t === 'saved' ? t : 'foryou'
+  const tab: Tab = TABS.find((x) => x.id === t)?.id ?? DEFAULT_TAB
   const favCount = useFavourites().data?.length
   return (
     <div>
       <PageHeader title="Discover" large />
-      <div role="tablist" aria-label="Discover" className="mb-4 grid grid-cols-4 gap-1 rounded-full bg-elevated p-1 ring-1 ring-inset ring-line">
+      <div role="tablist" aria-label="Discover" style={{ gridTemplateColumns: `repeat(${TABS.length}, minmax(0, 1fr))` }} className="mb-4 grid gap-1 rounded-full bg-elevated p-1 ring-1 ring-inset ring-line">
         {TABS.map((t) => (
           <button
             key={t.id}
             type="button"
             role="tab"
             aria-selected={tab === t.id}
-            onClick={() => setParams((p) => (t.id === 'foryou' ? p.delete('tab') : p.set('tab', t.id), p), { replace: true })}
+            onClick={() => setParams((p) => (t.id === DEFAULT_TAB ? p.delete('tab') : p.set('tab', t.id), p), { replace: true })}
             className={cn('press h-10 rounded-full text-sm font-bold', tab === t.id ? 'bg-ink text-on-ink shadow-[0_6px_16px_-10px_var(--c-shadow)]' : 'text-ink-2 hover:text-ink')}
           >
             {t.label}
@@ -137,7 +141,7 @@ function FoodFeed({ mode }: { mode: 'foryou' | 'recipes' }) {
 
   return (
     <div>
-      {mode === 'foryou' && <CreateLink />}
+      {mode === 'foryou' && (enabled('recipeSuggestions') || enabled('surprise')) && <CreateLink />}
       <div className="sticky top-0 z-20 -mx-4 bg-bg/95 px-4 pb-3 pt-2 backdrop-blur" style={{ top: 'var(--safe-top)' }}>
         <SearchInput value={q} onChange={setQ} placeholder={mode === 'recipes' ? 'Search recipes' : 'Search meals'} label={mode === 'recipes' ? 'Search recipes' : 'Search meals'} />
         <div className="mt-3 flex items-center gap-1.5">

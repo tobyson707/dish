@@ -60,3 +60,25 @@ export function streakMessage(current: number, best: number): string {
   if (current === 1) return best > 1 ? `Your best streak is ${best} days.` : "You're on a 1-day streak."
   return best > 0 ? `Your best streak is ${best} day${best > 1 ? 's' : ''}.` : 'Ready to plan your next meal?'
 }
+
+/** Milestones for a count of real actions (meals logged, plans created, recipes saved). */
+export const MILESTONES = [1, 5, 10, 25, 50, 100, 250, 500, 1000] as const
+
+export interface Milestone {
+  /** the next round number to reach, or null once past the last one */
+  target: number | null
+  /** the last milestone already reached (0 if none) */
+  reached: number
+  remaining: number
+  /** progress from the last milestone to the next, 0..1 */
+  fraction: number
+}
+
+/** Where a count stands between milestones. Only ever derived from a stored count. */
+export function milestoneFor(count: number): Milestone {
+  const n = Math.max(0, Math.floor(count))
+  const target = MILESTONES.find((m) => m > n) ?? null
+  const reached = [...MILESTONES].reverse().find((m) => m <= n) ?? 0
+  if (target == null) return { target: null, reached, remaining: 0, fraction: 1 }
+  return { target, reached, remaining: target - n, fraction: (n - reached) / (target - reached) }
+}

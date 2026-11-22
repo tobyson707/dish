@@ -1,3 +1,4 @@
+import { FEATURES } from '../../src/lib/v1'
 import { test, expect } from '@playwright/test'
 import { collectConsoleErrors, completeOnboardingFor, createUser, expectNoHorizontalScroll, signIn, uniqueEmail, pickCategory } from './helpers'
 
@@ -85,11 +86,9 @@ test('section actions: plan, diary, shopping dock, discover preview, profile app
   await signIn(page, email)
   await expect(page.getByRole('heading', { name: /^Good (morning|afternoon|evening)/ })).toBeVisible()
 
-  // Diary: floating actions lead to the real add/scan flows
+  // Diary: the floating action leads to the real add flow (scanning is deferred in v1)
   await page.goto('/diary')
-  await page.getByRole('link', { name: 'Scan food' }).last().click()
-  await expect(page).toHaveURL(/\/scan/)
-  await page.goto('/diary')
+  await expect(page.getByRole('link', { name: 'Scan food' })).toHaveCount(FEATURES.scan ? 2 : 0)
   await page.getByRole('link', { name: 'Add food' }).last().click()
   await expect(page).toHaveURL(/\/diary\/add/)
 

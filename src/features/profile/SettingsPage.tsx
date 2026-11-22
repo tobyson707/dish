@@ -64,13 +64,13 @@ export function SettingsPage() {
         <div className="rounded-lg bg-elevated px-4">
           <Toggle
             label="Progress feedback"
-            description="Show small XP, level and achievement notes after you plan or log meals."
+            description="Show achievement and streak notes after you plan or log meals."
             checked={g.data?.feedback_enabled ?? true}
             disabled={!g.data}
             onChange={(v) => setFeedback.mutate(v, { onError: (e) => toast.error(friendlyError(e)) })}
           />
         </div>
-        <p className="mt-2 text-sm text-muted">Your XP and achievements are still recorded when feedback is off.</p>
+        <p className="mt-2 text-sm text-muted">Your streak and achievements are still recorded when feedback is off.</p>
       </Section>
       <Section title="Time format">
         <Segmented<ClockPreference>

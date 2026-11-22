@@ -64,6 +64,7 @@ export function GroceryPage() {
   return (
     <div>
       <PageHeader
+        back
         eyebrow={list?.range_start ? `${dayLabel(list.range_start, today)} – ${dayLabel(list.range_end!, today)}` : 'Shopping'}
         title={list?.name ?? 'Shopping list'}
         actions={lists.data && lists.data.length > 0 && <IconButton icon="dots" label="Manage lists" onClick={() => setManageOpen(true)} />}

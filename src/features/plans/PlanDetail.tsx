@@ -48,6 +48,7 @@ import { PlanActions } from './PlanActions'
 import { ShareSheet } from './ShareSheet'
 import { PublishSheet } from './PublishSheet'
 import { PlanCover } from './PlanCover'
+import { enabled } from '@/lib/v1'
 import { PeopleList, initials } from './PeopleList'
 
 type Tab = 'plan' | 'people' | 'activity' | 'versions'
@@ -84,7 +85,8 @@ export function PlanDetail() {
   const [menu, setMenu] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [groceryOpen, setGroceryOpen] = useState(false)
-  const tab = (params.get('tab') as Tab) || 'plan'
+  // v1: one plan view; people, activity and versions return with collaboration
+  const tab: Tab = enabled('collaboration') ? ((params.get('tab') as Tab) || 'plan') : 'plan'
   const setTab = (t: Tab) => setParams((p) => (p.set('tab', t), p), { replace: true })
   const panel = params.get('panel')
   const closePanel = () => setParams((p) => (p.delete('panel'), p), { replace: true })
@@ -116,8 +118,8 @@ export function PlanDetail() {
         title={plan.title}
         actions={
           <>
-            {owner && <IconButton icon="users" label="Share" onClick={() => setParams((p) => (p.set('panel', 'share'), p))} />}
-            {!owner && <IconButton icon="download" label="Export" onClick={() => setExportOpen(true)} />}
+            {owner && enabled('collaboration') && <IconButton icon="users" label="Share" onClick={() => setParams((p) => (p.set('panel', 'share'), p))} />}
+            {(!owner || !enabled('collaboration')) && <IconButton icon="download" label="Export" onClick={() => setExportOpen(true)} />}
             <IconButton icon="cart" label="Shopping list for this plan" onClick={() => setGroceryOpen(true)} />
             <IconButton icon="dots" label="Plan actions" onClick={() => setMenu(true)} />
           </>
@@ -158,13 +160,13 @@ export function PlanDetail() {
         }}>Make it my current plan</Button>
       )}
 
-      <div role="tablist" aria-label="Plan sections" className="-mx-4 mt-5 flex gap-1.5 overflow-x-auto px-4 pb-1">
+      {enabled('collaboration') && <div role="tablist" aria-label="Plan sections" className="-mx-4 mt-5 flex gap-1.5 overflow-x-auto px-4 pb-1">
         {(['plan', 'people', 'activity', 'versions'] as const).map((t) => (
           <button key={t} type="button" role="tab" aria-selected={tab === t} onClick={() => setTab(t)} className={cn('press h-9 shrink-0 rounded-full px-4 text-sm font-semibold capitalize transition-colors', tab === t ? 'bg-ink text-on-ink' : 'bg-elevated text-ink-2 hover:text-ink')}>
             {t === 'plan' ? 'Meals' : t}
           </button>
         ))}
-      </div>
+      </div>}
 
       {tab === 'plan' && <PlanBoard plan={plan} role={role} canEdit={canEdit && plan.status !== 'archived'} />}
       {tab === 'people' && <PeopleTab planId={plan.id} owner={owner} people={people.data} me={uid} onInvite={() => setParams((p) => (p.set('panel', 'share'), p))} />}
@@ -174,8 +176,8 @@ export function PlanDetail() {
       <PlanActions plan={menu ? { ...plan, role } : null} onClose={() => setMenu(false)} from="detail" />
       <ExportSheet open={exportOpen} onClose={() => setExportOpen(false)} anchorDate={plan.start_date} plan={plan} />
       <PlanGrocerySheet plan={plan} open={groceryOpen} onClose={() => setGroceryOpen(false)} />
-      {owner && <ShareSheet plan={plan} open={panel === 'share'} onClose={closePanel} onPublish={() => setParams((p) => (p.set('panel', 'publish'), p), { replace: true })} onExport={() => { closePanel(); setExportOpen(true) }} />}
-      {owner && <PublishSheet plan={plan} open={panel === 'publish'} onClose={closePanel} />}
+      {owner && enabled('collaboration') && <ShareSheet plan={plan} open={panel === 'share'} onClose={closePanel} onPublish={() => setParams((p) => (p.set('panel', 'publish'), p), { replace: true })} onExport={() => { closePanel(); setExportOpen(true) }} />}
+      {owner && enabled('community') && <PublishSheet plan={plan} open={panel === 'publish'} onClose={closePanel} />}
     </div>
   )
 }
@@ -188,7 +190,9 @@ function PlanBoard({ plan, role, canEdit }: { plan: MealPlan; role: PlanRole; ca
   const gen = useGeneratePlan()
   const { fill, progress, running } = usePlanFill()
   const [params, setParams] = useSearchParams()
-  const view = (params.get('view') as View) || 'week'
+  const asked = params.get('view') as View | null
+  // v1: day and week; month and custom ranges return later
+  const view: View = asked === 'day' || ((asked === 'month' || asked === 'custom') && enabled('monthView')) ? asked : 'week'
   const date = clamp((params.get('date') as ISODate) || today, plan)
   const set = (k: string, v: string) => setParams((p) => (p.set(k, v), p), { replace: true })
   const [custom, setCustom] = useState<{ from: ISODate; to: ISODate }>({ from: plan.start_date, to: clamp(addDays(plan.start_date, 13), plan) })
@@ -240,7 +244,7 @@ function PlanBoard({ plan, role, canEdit }: { plan: MealPlan; role: PlanRole; ca
 
   return (
     <div className="mt-4">
-      <Segmented label="View" hideLabel value={view} onChange={(v) => set('view', v)} options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, { value: 'month', label: 'Month' }, { value: 'custom', label: 'Custom' }]} />
+      <Segmented label="View" hideLabel value={view} onChange={(v) => set('view', v)} options={[{ value: 'day', label: 'Day' }, { value: 'week', label: 'Week' }, ...(enabled('monthView') ? [{ value: 'month' as View, label: 'Month' }, { value: 'custom' as View, label: 'Custom' }] : [])]} />
       <div className="mt-4">
         {view === 'month' ? (
           <div className="rounded-[24px] bg-elevated p-4 sm:p-5">

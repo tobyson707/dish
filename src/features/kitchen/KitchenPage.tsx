@@ -34,7 +34,7 @@ export function KitchenPage() {
 
   return (
     <div>
-      <PageHeader title="Kitchen" large />
+      <PageHeader back title="Kitchen" large />
       <PillarTabs label="Kitchen" sections={KITCHEN_SECTIONS} />
       <div className="grid grid-cols-2 gap-2">
         <Button icon="plus" onClick={() => setEditing('new')}>Add ingredient</Button>

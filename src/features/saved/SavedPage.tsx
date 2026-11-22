@@ -12,6 +12,7 @@ import { EmptyState, ErrorState } from '@/components/ui/States'
 import { SaveToggle } from '@/components/ui/ActionButton'
 import { RecipePreviewWorkspace } from '@/components/canvas/RecipePreviewWorkspace'
 import { PlanCover } from '@/features/plans/PlanCover'
+import { enabled } from '@/lib/v1'
 import { REVEAL, SavedPlansGhost, SquareMealsGhost } from '@/components/ui/Ghost'
 
 /**
@@ -20,7 +21,7 @@ import { REVEAL, SavedPlansGhost, SquareMealsGhost } from '@/components/ui/Ghost
  */
 export function SavedPage() {
   const [params] = useSearchParams()
-  return <Navigate to={params.get('tab') === 'plans' ? '/plans?tab=saved' : '/discover?tab=saved'} replace />
+  return <Navigate to={params.get('tab') === 'plans' ? (enabled('community') ? '/plans?tab=saved' : '/plans') : '/discover?tab=saved'} replace />
 }
 
 /** Meals (and their recipes) you hearted: one favourites list, the stored saves. */

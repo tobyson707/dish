@@ -6,6 +6,7 @@ import { useUserId } from '@/features/auth/AuthProvider'
 import { Icon } from '@/components/ui/Icon'
 import { AchievementBadge } from '@/components/gamification/Achievements'
 import { onGamificationCheck } from './bus'
+import { enabled } from '@/lib/v1'
 import { queueLevelCelebration } from './Celebrations'
 
 type Notice =
@@ -71,7 +72,10 @@ export function GamificationNotifier() {
     () =>
       onGamificationCheck(() => {
         if (timer.current) clearTimeout(timer.current)
-        timer.current = setTimeout(() => void qc.invalidateQueries({ queryKey: gamKeys.summary(uid) }), 350)
+        timer.current = setTimeout(() => {
+          void qc.invalidateQueries({ queryKey: gamKeys.summary(uid) })
+          void qc.invalidateQueries({ queryKey: ['activity-stats', uid] })
+        }, 350)
       }),
     [qc, uid],
   )
@@ -90,9 +94,10 @@ export function GamificationNotifier() {
       const { notices: fresh, seen: next } = diffAwards(s, seen)
       writeSeen(uid, next)
       if (!s.feedback_enabled) return
-      for (const f of fresh) if (f.kind === 'level') queueLevelCelebration({ id: f.id, title: f.title, at: new Date().toISOString() })
+      // v1: no XP or levels on screen (still recorded); achievements and streak notes stay
+      if (enabled('xp')) for (const f of fresh) if (f.kind === 'level') queueLevelCelebration({ id: f.id, title: f.title, at: new Date().toISOString() })
       // achievements and level-ups get a full celebration; small notes stay small
-      const small = fresh.filter((f) => f.kind === 'xp' || f.kind === 'streak')
+      const small = fresh.filter((f) => (f.kind === 'xp' && enabled('xp')) || f.kind === 'streak')
       if (small.length) setNotices((n) => [...n, ...small].slice(-3))
     }
     return qc.getQueryCache().subscribe((e) => {

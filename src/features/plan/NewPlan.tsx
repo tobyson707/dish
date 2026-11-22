@@ -19,6 +19,7 @@ import { PageHeader } from '@/components/ui/Layout'
 import { Notice } from '@/components/ui/States'
 import { Toggle } from '@/components/ui/Inputs'
 import { useToast } from '@/components/ui/Toast'
+import { enabled } from '@/lib/v1'
 import { useSyncState } from '@/offline/useSync'
 
 const HINT: Record<PlanDuration, string> = {
@@ -112,7 +113,7 @@ export function NewPlan() {
           {!online && <Notice tone="warning" icon="offline">Creating a plan needs an internet connection.</Notice>}
           {err && <Notice tone="error">{err}</Notice>}
           <div role="radiogroup" aria-label="Plan length" className="grid gap-2 sm:grid-cols-2">
-            {PLAN_DURATIONS.map((d) => (
+            {PLAN_DURATIONS.filter((d) => enabled('longPlans') || d === 'day' || d === 'week').map((d) => (
               <ChoiceCard key={d} selected={duration === d} onClick={() => setDuration(d)} title={PLAN_DURATION_LABEL[d]} description={HINT[d]} />
             ))}
           </div>

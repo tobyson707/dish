@@ -304,3 +304,22 @@ Profile holds only preferences, goals, account, settings and privacy. The naviga
 ### RINE (Recipe Intelligence Engine)
 
 RINE is the internal name for DISH's intelligence layer: the shared domain logic (`supabase/functions/_shared/domain/`: planner, allergens, kitchen matching, recipe validation, budget), the provider-independent AI interface (`_shared/ai/provider.ts`) and the server functions that use them (`plan-generate`, `meal-replace`, `surprise`, `kitchen-suggest`, `scan-food`, `recipe-generate`). It never appears in the interface as a destination, assistant or badge. Copy describes what people get (recommended for you, recipe suggestions, kitchen suggestions, food recognition) and describes rule-based steps (allergy filtering, ingredient matching, budgets) as what they are. Estimated nutrition keeps its own provenance label (Auto estimate, shown as "Automatic estimate" in lists). The privacy policy still states plainly when an AI provider processes data, and catalogue photos made by image generation keep their photo credit.
+
+## DISH v1 scope (`src/lib/v1.ts`)
+
+v1 is a scope reduction, not a rebuild. Deferred features are switched off by flags in `src/lib/v1.ts`. Their routes, components, data, RLS policies and server functions all stay, so turning one back on is a one-line change. No table, record or policy was removed.
+
+| Area | v1 | Deferred (flag) |
+| --- | --- | --- |
+| Navigation | Home, Plan, Diary, Discover, Profile. Kitchen and the shopping list open from Home (fridge button) and from Plan (shopping list), and sit under Plan in the menu. | |
+| Home | Today's meals or suggestions, search, add a meal, kitchen, streak | |
+| Discover | Recipes (browse, search, category filter), Saved, recipe pages, save/unsave | For You feed and community Meal plans (`community`), Create a recipe / alternatives / variations (`recipeSuggestions`), Surprise me (`surprise`) |
+| Plan | Create a plan (a day or a week), add, edit, replace, remove meals, day and week views, your plan library, export, per-plan shopping list | Plans longer than a week (`longPlans`, existing ones still open), month and custom views (`monthView`), sharing, invites, people, activity, versions (`collaboration`), publishing, remixing, saved community plans (`community`) |
+| Kitchen | Inventory, leftovers, quantities, Use what you have, shopping lists, add missing to list | Food scanning (`scan`) |
+| Diary | Log, edit and delete meals, planned vs eaten, weekly summary, History | Spending and budget reports (`spending`) |
+| Profile | Account, food preferences, allergies and diet, goals, settings, privacy, My progress | |
+| Progress | Streak (a day counts when you log or plan), activity counts (meals logged, plans created, recipes saved, achievements), next milestones, achievement badges, streak and achievement notes | XP and levels (`xp`; still recorded by the database, never shown) |
+
+Deferred addresses (`/community`, `/community/:id`, `/invite/:token`, `/scan`, `/budget`, `/surprise`, `/create`) still resolve. `Deferred` (`src/app/Deferred.tsx`) shows a short notice with a way back, never a 404, and says anything saved before is kept. `/saved` forwards to Discover → Saved, and `/saved?tab=plans` to the plan library.
+
+Activity counts (`useActivityStats`) are exact counts of the person's own rows (`food_diary_entries`, `meal_plans`, `favourite_meals`, filtered to `user_id`). Milestones (`milestoneFor` in `_shared/domain/gamification.ts`) are derived from those counts only. Streaks and achievements come from the existing database triggers, so progress can't move without a real action.

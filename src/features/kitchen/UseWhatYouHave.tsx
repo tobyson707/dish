@@ -19,6 +19,7 @@ import { Stepper } from '@/components/ui/Inputs'
 import { FoodImage } from '@/components/ui/FoodImage'
 import { Icon } from '@/components/ui/Icon'
 import { Notice } from '@/components/ui/States'
+import { enabled } from '@/lib/v1'
 import { useToast } from '@/components/ui/Toast'
 
 /**
@@ -113,11 +114,11 @@ export function UseWhatYouHave({ items, onEdit }: { items: KitchenItemRow[]; onE
           )}
         </div>
       )}
-      <Link to="/create?mode=use_ingredients" className="press mt-5 flex items-center gap-3 rounded-lg bg-elevated px-4 py-3 text-sm ring-1 ring-inset ring-line hover:ring-accent-border">
+      {enabled('recipeSuggestions') && <Link to="/create?mode=use_ingredients" className="press mt-5 flex items-center gap-3 rounded-lg bg-elevated px-4 py-3 text-sm ring-1 ring-inset ring-line hover:ring-accent-border">
         <Icon name="wand" size={18} className="shrink-0" />
         <span className="min-w-0 flex-1"><span className="font-bold">Create a recipe from these</span><span className="text-muted"> with as few extras as possible</span></span>
         <Icon name="right" size={16} className="shrink-0 text-muted" />
-      </Link>
+      </Link>}
     </section>
   )
 }

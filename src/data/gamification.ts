@@ -77,3 +77,32 @@ export function useSetGamificationFeedback() {
     onSettled: () => qc.invalidateQueries({ queryKey: gamKeys.summary(uid) }),
   })
 }
+
+export interface ActivityStats {
+  mealsLogged: number
+  plansCreated: number
+  recipesSaved: number
+}
+
+/**
+ * Counts of real actions, straight from the person's own rows (RLS-scoped and filtered to
+ * them): diary entries, plans they created, recipes they saved. Nothing is estimated.
+ */
+export function useActivityStats() {
+  const uid = useUserId()
+  return useQuery({
+    queryKey: ['activity-stats', uid],
+    meta: persistMeta(uid),
+    staleTime: 60_000,
+    enabled: !!uid,
+    queryFn: async (): Promise<ActivityStats> => {
+      const count = async (table: string) => {
+        const { count: n, error } = await supabase.from(table).select('*', { count: 'exact', head: true }).eq('user_id', uid)
+        if (error) throw error
+        return n ?? 0
+      }
+      const [mealsLogged, plansCreated, recipesSaved] = await Promise.all([count('food_diary_entries'), count('meal_plans'), count('favourite_meals')])
+      return { mealsLogged, plansCreated, recipesSaved }
+    },
+  })
+}

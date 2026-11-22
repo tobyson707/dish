@@ -9,7 +9,7 @@ const glassBtn = 'press flex h-11 w-11 items-center justify-center rounded-full 
  * Compact streak: flame + the user's real current streak (server-computed by the
  * existing gamification rules). Links to My progress in Profile.
  */
-function StreakChip() {
+export function StreakChip() {
   const g = useGamification()
   if (g.isPending) return <span aria-hidden="true" className="h-9 w-12 animate-pulse rounded-full bg-glass" />
   if (!g.data) return null // never block the header if progress can't load
@@ -25,7 +25,7 @@ function StreakChip() {
 
 /**
  * Floating controls along the top of the canvas (no header bar): the wordmark, then search,
- * add and the streak. Favourites and reminders live in Discover and Profile.
+ * add a meal, the kitchen (with the shopping list) and the streak. Favourites and reminders live in Discover and Profile.
  */
 export function FloatingToolbar({ className, style, onSearch, onAdd }: { className?: string; style?: React.CSSProperties; onSearch: () => void; onAdd: () => void }) {
   return (
@@ -40,6 +40,9 @@ export function FloatingToolbar({ className, style, onSearch, onAdd }: { classNa
         <button type="button" onClick={onAdd} aria-label="Add a meal" title="Add a meal" className={glassBtn}>
           <Icon name="plus" size={20} />
         </button>
+        <Link to="/kitchen" aria-label="Kitchen and shopping list" title="Kitchen" className={glassBtn}>
+          <Icon name="fridge" size={20} />
+        </Link>
         <StreakChip />
       </div>
     </div>

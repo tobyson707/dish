@@ -1,3 +1,4 @@
+import { FEATURES } from '../../src/lib/v1'
 import { expect, test, type Page } from '@playwright/test'
 import { API, SERVICE_KEY, collectConsoleErrors, completeOnboardingFor, createUser, signIn, uniqueEmail } from './helpers'
 
@@ -32,6 +33,7 @@ const DURATIONS: [string, string, number | null][] = [
 ]
 
 test('every plan length is created, fully saved, retrievable and navigable', async ({ page }) => {
+  test.skip(!FEATURES.longPlans, 'deferred in v1 (longPlans)')
   test.setTimeout(240_000)
   const errors = collectConsoleErrors(page)
   const uid = await setUp(page, 'durations')
@@ -68,6 +70,7 @@ test('every plan length is created, fully saved, retrievable and navigable', asy
 })
 
 test('an interrupted long plan keeps what was saved and resumes without duplicates', async ({ page }) => {
+  test.skip(!FEATURES.longPlans, 'deferred in v1 (longPlans)')
   test.setTimeout(180_000)
   const uid = await setUp(page, 'resume')
   let calls = 0

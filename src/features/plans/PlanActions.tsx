@@ -14,6 +14,7 @@ import { Icon, type IconName } from '@/components/ui/Icon'
 import { useToast } from '@/components/ui/Toast'
 import { ExportSheet } from '@/features/plan/export/ExportSheet'
 import { cn } from '@/lib/cn'
+import { enabled } from '@/lib/v1'
 import { CoverEditor } from './CoverEditor'
 
 export type ActionPlan = MealPlan & { role: PlanRole | null }
@@ -75,7 +76,7 @@ export function PlanActions({ plan, onClose, from = 'list', initial = 'menu' }: 
         <ul className="grid grid-cols-2 gap-2" aria-label="Plan actions">
           {from === 'list' && <Primary icon="plan" label="Open" onClick={() => nav(`/plans/${plan.id}`)} />}
           {owner && <Primary icon="edit" label="Rename" onClick={() => { setFocus('title'); setDialog('edit') }} />}
-          {owner && <Primary icon="share" label="Share" onClick={() => { close(); nav(`/plans/${plan.id}?panel=share`) }} />}
+          {owner && enabled('collaboration') && <Primary icon="share" label="Share" onClick={() => { close(); nav(`/plans/${plan.id}?panel=share`) }} />}
           <Primary icon="download" label="Export" onClick={() => setDialog('export')} />
           {owner && plan.status !== 'archived' && <Primary icon="archive" label="Archive" onClick={() => setDialog('archive')} />}
           {owner && plan.status === 'archived' && <Primary icon="refresh" label="Restore" onClick={() => void run(() => setStatus.mutateAsync({ id: plan.id, status: 'draft' }), 'Restored. It’s back in your plan library as a draft.')} />}
@@ -92,7 +93,7 @@ export function PlanActions({ plan, onClose, from = 'list', initial = 'menu' }: 
             {owner && <Action icon="image" label={plan.cover_path ? 'Change cover image' : 'Add a cover image'} hint={plan.cover_path ? undefined : 'Until then, the cover is a collage of its meals.'} onClick={() => file.current?.click()} />}
             {owner && plan.cover_path && <Action icon="move" label="Adjust cover" hint="Move or zoom the current image." onClick={() => setDialog('cover')} />}
             {owner && plan.cover_path && <Action icon="x" label="Remove cover image" onClick={() => void run(() => setCover.mutateAsync({ plan, file: null }), 'Cover removed.')} />}
-            <Action icon="history" label="View activity" onClick={() => { close(); nav(`/plans/${plan.id}?tab=activity`) }} />
+            {enabled('collaboration') && <Action icon="history" label="View activity" onClick={() => { close(); nav(`/plans/${plan.id}?tab=activity`) }} />}
             {!owner && plan.role && <Action icon="logout" label="Leave this plan" onClick={() => setDialog('leave')} />}
             {owner && <Action icon="trash" label="Delete" hint="Permanently, for everyone." danger onClick={() => setDialog('delete')} />}
           </ul>
