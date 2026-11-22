@@ -1,3 +1,4 @@
+import { FEATURES } from '../../src/lib/v1'
 // Launch screen and ghost loading: the brand moment on a fresh launch (text only, never
 // during navigation, never before the session is known), and placeholders shaped like the
 // content while it first loads, then the real content, empty states only once known, errors
@@ -151,12 +152,14 @@ test('ghosts: each major screen shows placeholders shaped like its content, then
   await shot(page, 'ghost-plan-week')
   await expect(page.getByText('Jollof rice').first()).toBeVisible()
   await expect(page.getByRole('status', { name: 'Loading meals' })).toHaveCount(0)
-  await page.getByRole('radio', { name: 'Month' }).click()
-  const grid = page.getByRole('grid')
-  await expect(grid).toHaveAttribute('aria-busy', 'true')
-  for (const w of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) await expect(grid.getByRole('columnheader', { name: w })).toBeVisible()
-  await shot(page, 'ghost-plan-month')
-  await expect(grid).not.toHaveAttribute('aria-busy', 'true')
+  if (FEATURES.monthView) {
+    await page.getByRole('radio', { name: 'Month' }).click()
+    const grid = page.getByRole('grid')
+    await expect(grid).toHaveAttribute('aria-busy', 'true')
+    for (const w of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']) await expect(grid.getByRole('columnheader', { name: w })).toBeVisible()
+    await shot(page, 'ghost-plan-month')
+    await expect(grid).not.toHaveAttribute('aria-busy', 'true')
+  }
   await page.unroute('**/rest/v1/planned_meals*')
 })
 

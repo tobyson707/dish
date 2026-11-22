@@ -1,3 +1,4 @@
+import { FEATURES } from '../../src/lib/v1'
 import { expect, test, type Page } from '@playwright/test'
 import { API, ANON_KEY, SERVICE_KEY, collectConsoleErrors, completeOnboardingFor, createUser, signIn, uniqueEmail } from './helpers'
 
@@ -83,10 +84,10 @@ test('navigator, onboarding preview, simulated clock and previews never change r
   await expect(con.getByText('Preview only')).toBeVisible() // a regular account: no simulation
 
   // navigator: search and jump
-  await con.getByRole('searchbox', { name: 'Search tools and screens' }).fill('budget')
-  await con.getByRole('button', { name: 'Food budget', exact: true }).click()
-  await expect(page).toHaveURL(/\/budget$/)
-  await expect(page.getByRole('heading', { name: 'Food budget' })).toBeVisible()
+  await con.getByRole('searchbox', { name: 'Search tools and screens' }).fill('history')
+  await con.getByRole('button', { name: 'History and favourites', exact: true }).click()
+  await expect(page).toHaveURL(/\/history$/)
+  await expect(page.getByRole('heading', { name: 'History' })).toBeVisible()
 
   // an onboarding step without redoing onboarding, and nothing is saved
   const before = await (await fetch(`${API}/rest/v1/profiles?id=eq.${uid}&select=onboarding_step,onboarding_completed_at`, { headers: h })).json()
@@ -159,8 +160,13 @@ test('simulation refuses real accounts on the server, and runs the real logic on
   await con.getByRole('button', { name: 'Jump to Level 3' }).click()
   await expect(con.getByText(/^3 · /)).toBeVisible()
   await con.getByRole('button', { name: 'Close Developer Mode' }).click()
-  await expect(page.locator('dialog[data-celebration][open]')).toContainText('New level', { timeout: 15_000 })
-  await page.locator('dialog[data-celebration][open]').getByRole('button', { name: 'Done' }).click()
+  if (FEATURES.xp) {
+    await expect(page.locator('dialog[data-celebration][open]')).toContainText('New level', { timeout: 15_000 })
+    await page.locator('dialog[data-celebration][open]').getByRole('button', { name: 'Done' }).click()
+  } else {
+    await page.waitForTimeout(3000)
+    await expect(page.locator('dialog[data-celebration][open]')).toHaveCount(0) // levels aren't shown in v1
+  }
 
   // duplicate unlock is prevented by the real constraint
   await launcher(page).click()

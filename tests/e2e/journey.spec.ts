@@ -1,3 +1,4 @@
+import { FEATURES } from '../../src/lib/v1'
 import { expect, test } from '@playwright/test'
 import { autoDismissCelebrations, collectConsoleErrors, completeOnboardingFor, createUser, expectNoHorizontalScroll, mailLink, signIn, uniqueEmail } from './helpers'
 
@@ -295,11 +296,13 @@ test('discover, recipe detail, surprise, kitchen, budget, profile @responsive', 
   await page.screenshot({ path: shots('recipe'), fullPage: true })
   await expectNoHorizontalScroll(page)
 
-  await page.goto('/surprise')
-  await page.getByRole('button', { name: 'Surprise me', exact: true }).click()
-  await expect(page.locator('main li').first()).toBeVisible({ timeout: 20_000 })
-  await expect(page.locator('main li')).toHaveCount(3)
-  await page.screenshot({ path: shots('surprise'), fullPage: true })
+  if (FEATURES.surprise) {
+    await page.goto('/surprise')
+    await page.getByRole('button', { name: 'Surprise me', exact: true }).click()
+    await expect(page.locator('main li').first()).toBeVisible({ timeout: 20_000 })
+    await expect(page.locator('main li')).toHaveCount(3)
+    await page.screenshot({ path: shots('surprise'), fullPage: true })
+  }
 
   await page.goto('/kitchen')
   for (const item of ['Eggs', 'Ripe plantain', 'Onion']) {
@@ -311,12 +314,14 @@ test('discover, recipe detail, surprise, kitchen, budget, profile @responsive', 
   await expect(page.getByText(/Missing \d+ ingredient|You have every listed/).first()).toBeVisible({ timeout: 20_000 })
   await page.screenshot({ path: shots('kitchen'), fullPage: true })
 
-  await page.goto('/budget')
-  await page.getByRole('button', { name: 'Record spending' }).first().click()
-  await page.getByLabel('Amount').fill('2500')
-  await page.getByRole('button', { name: 'Save' }).click()
-  await expect(page.getByText(/(₦|\$|NGN\s?|USD\s?)2,500/).first()).toBeVisible() // in the account's currency
-  await page.screenshot({ path: shots('budget'), fullPage: true })
+  if (FEATURES.spending) {
+    await page.goto('/budget')
+    await page.getByRole('button', { name: 'Record spending' }).first().click()
+    await page.getByLabel('Amount').fill('2500')
+    await page.getByRole('button', { name: 'Save' }).click()
+    await expect(page.getByText(/(₦|\$|NGN\s?|USD\s?)2,500/).first()).toBeVisible() // in the account's currency
+    await page.screenshot({ path: shots('budget'), fullPage: true })
+  }
 
   await page.goto('/profile')
   await expect(page.getByRole('link', { name: /Food preferences/ })).toBeVisible()

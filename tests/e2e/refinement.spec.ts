@@ -171,13 +171,15 @@ test('meal plan workspace: four clear meal actions, remove with undo, swipe to r
   await expect.poll(async () => (await meals()).some((m) => m.id === victim.id)).toBe(false)
   await expect(page.getByText(`Removed ${victim.name}.`)).toBeVisible()
 
-  // month: days with meals are softly filled; partial days carry a small mark
-  await page.getByRole('radio', { name: 'Month' }).click()
-  const grid = page.getByRole('grid')
-  await expect(grid.locator('[data-coverage="full"], [data-coverage="partial"]').first()).toBeVisible()
-  await expect(grid.locator('[data-coverage="partial"]').first()).toBeVisible() // the day we removed a meal from
-  await expect(page.getByRole('list', { name: 'Key' })).toContainText('Partly planned')
-  await shot(page, 'plan-month')
+  // month: days with meals are softly filled; partial days carry a small mark (month view is deferred in v1)
+  if (FEATURES.monthView) {
+    await page.getByRole('radio', { name: 'Month' }).click()
+    const grid = page.getByRole('grid')
+    await expect(grid.locator('[data-coverage="full"], [data-coverage="partial"]').first()).toBeVisible()
+    await expect(grid.locator('[data-coverage="partial"]').first()).toBeVisible() // the day we removed a meal from
+    await expect(page.getByRole('list', { name: 'Key' })).toContainText('Partly planned')
+    await shot(page, 'plan-month')
+  } else await expect(page.getByRole('radio', { name: 'Month' })).toHaveCount(0)
 
   // the plan menu: primary actions first, everything else under More (Delete among them, styled as destructive)
   await page.getByRole('button', { name: 'Plan actions' }).click()
