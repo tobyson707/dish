@@ -35,6 +35,13 @@
   /* surfaces */
   --c-bg: #ffffff; /* application background */
   --c-elevated: #f4f4f4; /* primary surface: cards and panels on white */
+  /* Home backdrop: warm orange-to-peach washes on the neutral surface (light) */
+  --home-top: #fdf1ea;
+  --home-g1: rgba(255, 107, 53, 0.46);
+  --home-g2: rgba(255, 184, 149, 0.62);
+  --home-g3: rgba(255, 184, 149, 0.70);
+  --home-glow-a: rgba(255, 107, 53, 0.42);
+  --home-glow-b: rgba(255, 147, 102, 0.36);
   --c-surface: #eaeaea; /* muted surface: chips, tracks, placeholders */
   --c-input: #ffffff;
   --c-input-border: #8f8f8f; /* 3.3:1 — form controls stay identifiable */
@@ -128,6 +135,13 @@
 :root[data-theme='dark'] {
   --c-bg: #111111;
   --c-elevated: #1c1c1c;
+  /* Home backdrop (dark): embers of the same orange in the near-black */
+  --home-top: #22160f;
+  --home-g1: rgba(255, 107, 53, 0.42);
+  --home-g2: rgba(185, 56, 25, 0.45);
+  --home-g3: rgba(217, 71, 30, 0.34);
+  --home-glow-a: rgba(255, 107, 53, 0.34);
+  --home-glow-b: rgba(237, 85, 38, 0.28);
   --c-surface: #262626;
   --c-input: #1c1c1c;
   --c-input-border: #6f6f6f; /* 3.3:1 */
@@ -561,8 +575,41 @@ html:has(dialog[open]), html[data-overlay] { overflow: hidden; }
   border-radius: var(--canvas-r);
   overflow: hidden;
   isolation: isolate;
-  background: var(--c-elevated);
+  background:
+    radial-gradient(120% 70% at 100% 100%, var(--home-g1) 0%, transparent 60%),
+    radial-gradient(90% 60% at 0% 100%, var(--home-g2) 0%, transparent 65%),
+    radial-gradient(85% 60% at 100% 0%, var(--home-g3) 0%, transparent 62%),
+    linear-gradient(165deg, var(--home-top) 0%, var(--c-elevated) 60%);
   animation: fade var(--dur-panel) var(--ease-enter) both;
+}
+/* Two soft, slow-drifting glows behind everything: warmth without decoration. Composite-only
+   (transform/opacity), paused for reduced motion, and kept away from the greeting's text. */
+.home-canvas::before,
+.home-canvas::after {
+  content: '';
+  position: absolute;
+  z-index: -1;
+  border-radius: 9999px;
+  filter: blur(60px);
+  pointer-events: none;
+  will-change: transform;
+}
+.home-canvas::before {
+  width: 70vmax; height: 70vmax;
+  right: -28vmax; bottom: -30vmax;
+  background: radial-gradient(circle, var(--home-glow-a) 0%, transparent 65%);
+  animation: home-drift-a 22s ease-in-out infinite alternate;
+}
+.home-canvas::after {
+  width: 52vmax; height: 52vmax;
+  left: -22vmax; top: 28%;
+  background: radial-gradient(circle, var(--home-glow-b) 0%, transparent 65%);
+  animation: home-drift-b 28s ease-in-out infinite alternate;
+}
+@keyframes home-drift-a { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(-6vmax, -4vmax, 0) scale(1.08); } }
+@keyframes home-drift-b { from { transform: translate3d(0, 0, 0) scale(1); } to { transform: translate3d(5vmax, -3vmax, 0) scale(1.1); } }
+@media (prefers-reduced-motion: reduce) {
+  .home-canvas::before, .home-canvas::after { animation: none; }
 }
 .home-greet { position: absolute; left: 22px; right: calc(var(--notch-depth) + 14px); top: calc(var(--safe-top) + 112px); }
 .feat-hero { left: 50%; top: 48%; width: min(60vw, 330px, 24dvh); transform: translate(-58%, -50%); }
