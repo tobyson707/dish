@@ -183,7 +183,7 @@ test("ghosts on a cold start: Home's featured meal and Discover, while the catal
   // Discover, reached before the catalogue arrives: meal-shaped ghosts, never "Nothing matches"
   await page.getByRole('button', { name: /^Navigation/ }).click()
   await page.getByRole('navigation', { name: 'Main' }).getByRole('link', { name: 'Discover' }).click()
-  const feed = page.getByRole('status', { name: 'Loading meal ideas' })
+  const feed = page.getByRole('status', { name: /^Loading (meal ideas|recipes)$/ })
   await expect(feed).toBeVisible()
   expect(await feed.locator('li').first().locator('.ghost').first().evaluate((el) => getComputedStyle(el).aspectRatio)).toBe('4 / 3')
   await expect(page.getByText('Nothing matches')).toHaveCount(0)

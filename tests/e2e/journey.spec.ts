@@ -190,10 +190,12 @@ test('planned vs eaten, locking, regenerate, grocery list, and offline sync', as
   await page.locator('dialog li button').first().click()
   await expect(page.getByText(/^Swapped /)).toBeVisible({ timeout: 20_000 })
 
-  // Month view renders the dot calendar
-  await page.getByRole('radio', { name: 'Month' }).click()
-  await expect(page.getByRole('grid')).toBeVisible()
-  await page.screenshot({ path: shots('plan-month'), fullPage: true })
+  // Month view renders the dot calendar (deferred in v1: day and week only)
+  if (FEATURES.monthView) {
+    await page.getByRole('radio', { name: 'Month' }).click()
+    await expect(page.getByRole('grid')).toBeVisible()
+    await page.screenshot({ path: shots('plan-month'), fullPage: true })
+  } else await expect(page.getByRole('radio', { name: 'Month' })).toHaveCount(0)
 
   // Grocery list from plan
   await page.goto('/grocery')
@@ -240,10 +242,12 @@ test('planned vs eaten, locking, regenerate, grocery list, and offline sync', as
   await page.goto('/grocery')
   await expect(page.getByRole('checkbox', { name: /Untick Bottled water/ })).toBeVisible()
 
-  // Scanner: honest unavailable state when AI isn't configured
+  // Scanner: honest unavailable state (deferred in v1: the address says so plainly)
   await page.goto('/scan')
-  await expect(page.getByText(/scanning isn't set up on this server/)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Take photo' })).toBeDisabled()
+  if (FEATURES.scan) {
+    await expect(page.getByText(/scanning isn't set up on this server/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Take photo' })).toBeDisabled()
+  } else await expect(page.getByRole('heading', { name: 'Food scanning is coming later' })).toBeVisible()
   await expectNoHorizontalScroll(page)
   expect(errors).toEqual([])
 })
@@ -270,17 +274,17 @@ test('discover, recipe detail, surprise, kitchen, budget, profile @responsive', 
   await expect.poll(() => feed.getByRole('listitem').count()).toBeGreaterThan(firstPage)
   const names = await feed.getByRole('heading').allTextContents()
   expect(new Set(names).size).toBe(names.length)
-  await page.getByRole('searchbox', { name: 'Search meals' }).fill('suya')
+  await page.getByRole('searchbox', { name: /^Search (meals|recipes)$/ }).fill('suya')
   await expect(page.getByText('Nothing matches')).toBeVisible() // suya contains peanut
   await expectNoHorizontalScroll(page)
   // categories narrow the feed
-  await page.getByRole('searchbox', { name: 'Search meals' }).fill('')
+  await page.getByRole('searchbox', { name: /^Search (meals|recipes)$/ }).fill('')
   await page.getByRole('tab', { name: 'Breakfast' }).click()
   await expect(feed.getByText(/· Breakfast$/).first()).toBeVisible()
   await expect(feed.getByText(/· Dinner$/)).toHaveCount(0)
   await page.getByRole('tab', { name: 'All' }).click()
   // add straight to today's plan from the feed
-  await page.getByRole('searchbox', { name: 'Search meals' }).fill('jollof rice with chicken')
+  await page.getByRole('searchbox', { name: /^Search (meals|recipes)$/ }).fill('jollof rice with chicken')
   await feed.getByRole('button', { name: /^Add Jollof rice with chicken to today's/ }).click()
   await expect(feed.getByRole('button', { name: 'Jollof rice with chicken added' })).toBeVisible()
   // cards open a side preview first; the full recipe is one tap further

@@ -32,7 +32,7 @@ test('desktop: F9 twice reveals the launcher (one press, or typing, does not); E
   await expect(launcher(page)).toHaveCount(0) // a single press does nothing
   // typing in a field never triggers it
   await page.goto('/discover')
-  await page.getByRole('searchbox', { name: 'Search meals' }).focus()
+  await page.getByRole('searchbox', { name: /^Search (meals|recipes)$/ }).focus()
   await f9Twice(page)
   await page.waitForTimeout(400)
   await expect(launcher(page)).toHaveCount(0)

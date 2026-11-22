@@ -184,11 +184,12 @@ test('meal plan workspace: four clear meal actions, remove with undo, swipe to r
   // the plan menu: primary actions first, everything else under More (Delete among them, styled as destructive)
   await page.getByRole('button', { name: 'Plan actions' }).click()
   const menu = page.getByRole('dialog').filter({ has: page.getByRole('list', { name: 'Plan actions' }) })
-  for (const n of ['Rename', 'Share', 'Export', 'Archive']) await expect(menu.getByRole('button', { name: n, exact: true })).toBeVisible()
+  for (const n of ['Rename', ...(FEATURES.collaboration ? ['Share'] : []), 'Export', 'Archive']) await expect(menu.getByRole('button', { name: n, exact: true })).toBeVisible()
+  await expect(menu.getByRole('button', { name: 'Share', exact: true })).toHaveCount(FEATURES.collaboration ? 1 : 0)
   await expect(menu.getByRole('button', { name: /^Delete/ })).toHaveCount(0)
   await menu.getByRole('button', { name: 'More', exact: true }).click()
   await expect(menu.getByRole('button', { name: /^Delete/ })).toHaveClass(/text-error/)
-  for (const n of [/^Duplicate/, /^Add a description/, /^Add a cover image/, /^View activity/]) await expect(menu.getByRole('button', { name: n })).toBeVisible()
+  for (const n of [/^Duplicate/, /^Add a description/, /^Add a cover image/, ...(FEATURES.collaboration ? [/^View activity/] : [])]) await expect(menu.getByRole('button', { name: n })).toBeVisible()
 })
 
 test('cover framing, publishing and Discover: one composition everywhere, private until published, then saved by someone else', async ({ page, browser }) => {

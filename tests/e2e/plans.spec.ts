@@ -94,6 +94,7 @@ test('an interrupted long plan keeps what was saved and resumes without duplicat
 })
 
 test('a partly saved plan can be finished from the Plan screen @responsive', async ({ page }) => {
+  test.skip(!FEATURES.longPlans, 'deferred in v1 (longPlans): needs a plan longer than a week')
   test.setTimeout(120_000)
   const uid = await setUp(page, 'finish')
   // simulate an older plan that only has its first week (as plans were before)
