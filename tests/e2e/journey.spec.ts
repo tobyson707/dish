@@ -46,69 +46,55 @@ test('first-time user: sign up, verify email, onboard, get a plan', async ({ pag
   await page.goto(await mailLink(email))
   await expect(page).toHaveURL(/\/onboarding/, { timeout: 20_000 })
 
-  // Name, prefilled from sign-up, on the underlined field
+  // 1 of 4: name (prefilled from sign-up) and country on one screen
   await expect(page.getByRole('heading', { name: 'What should we call you?' })).toBeVisible()
   await expect(page.getByLabel('Your first name')).toHaveValue('Ada')
   await page.getByLabel('Your first name').fill('')
   await page.getByRole('button', { name: 'Continue' }).click()
   await expect(page.getByText('Add a name so DISH can greet you')).toBeVisible()
   await page.getByLabel('Your first name').fill('Ada')
-  await page.screenshot({ path: shots('onboarding-1') })
-  await page.getByRole('button', { name: 'Continue' }).click()
-
-  // Country and currency are separate; choosing a country suggests its currency
-  await expect(page.getByRole('heading', { name: 'Where are you based?' })).toBeVisible()
+  // country and currency are separate; choosing a country suggests its currency
   await page.getByRole('button', { name: /^Country/ }).click()
   await page.getByRole('combobox', { name: /Search countries/ }).fill('niger')
   await page.getByRole('option', { name: /^Nigeria\b/ }).click()
   await expect(page.getByRole('button', { name: /^Currency/ })).toContainText('Nigerian Naira')
-  await page.screenshot({ path: shots('onboarding-place') })
+  await page.screenshot({ path: shots('onboarding-1') })
   await page.getByRole('button', { name: 'Continue' }).click()
 
-  // Goals: several, optional
-  await page.getByRole('button', { name: 'Plan my meals ahead' }).click()
-  await page.getByRole('button', { name: 'Eat more balanced meals' }).click()
-  await expect(page.getByRole('button', { name: 'Eat more balanced meals' })).toHaveAttribute('aria-pressed', 'true')
-  await page.getByRole('button', { name: 'Continue' }).click()
-
-  // Leave and come back: progress is preserved
-  await expect(page.getByRole('heading', { name: 'Which cuisines do you enjoy?' })).toBeVisible()
+  // 2 of 4: cuisines, then allergies (open from the start), diet and foods to avoid
+  const food = 'What do you like, and what should we avoid?'
+  await expect(page.getByRole('heading', { name: food })).toBeVisible()
+  // leave and come back: progress is preserved
   await page.waitForTimeout(800)
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Which cuisines do you enjoy?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: food })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Open to anything' })).toHaveAttribute('aria-pressed', 'true')
   await page.getByRole('button', { name: 'Nigerian' }).click()
   await page.getByRole('button', { name: 'Spanish' }).click()
   await expect(page.getByRole('button', { name: 'Open to anything' })).toHaveAttribute('aria-pressed', 'false')
-  await page.getByRole('button', { name: 'Continue' }).click()
-
-  // Allergies and restrictions: one category at a time
-  await page.getByRole('button', { name: /^Allergies/ }).click()
+  await expect(page.getByRole('button', { name: /^Allergies/ })).toHaveAttribute('aria-expanded', 'true')
   await page.getByRole('button', { name: 'Peanuts / groundnuts' }).click()
   await page.getByRole('button', { name: /Shellfish/ }).click()
   await page.getByRole('button', { name: /^Dietary preferences/ }).click()
   await page.getByRole('radio', { name: 'No pork' }).click()
-  await page.screenshot({ path: shots('onboarding-allergies'), fullPage: true })
+  await page.screenshot({ path: shots('onboarding-food'), fullPage: true })
   await page.getByRole('button', { name: 'Continue' }).click()
-  // Taste: five spice levels
-  await expect(page.getByRole('radiogroup', { name: 'How much heat do you enjoy?' }).getByRole('radio')).toHaveCount(5)
-  await page.getByRole('radio', { name: 'Very hot' }).click()
-  await page.getByRole('button', { name: 'Continue' }).click()
-  await page.getByRole('radio', { name: /A mix of both/ }).click()
-  await page.getByRole('button', { name: 'Continue' }).click() // cooking
-  await page.getByLabel(/Roughly how much per day/).fill('6000')
-  await page.getByRole('button', { name: 'Continue' }).click() // budget
-  await page.getByRole('button', { name: 'Continue' }).click() // planning
 
-  // Profile card, with a way back into each section
+  // 3 of 4: cook or buy, time, and meals to plan
+  await expect(page.getByRole('heading', { name: 'How do you eat?' })).toBeVisible()
+  await page.getByRole('radio', { name: /A mix of both/ }).click()
+  await page.screenshot({ path: shots('onboarding-routine'), fullPage: true })
+  await page.getByRole('button', { name: 'Continue' }).click()
+
+  // 4 of 4: profile card, with a way back into each section
   await expect(page.getByRole('heading', { name: 'Does this look right?' })).toBeVisible()
   const card = page.getByRole('article', { name: 'Your profile' })
   await expect(card.getByText('Peanuts / groundnuts, Shellfish & crustaceans')).toBeVisible()
   await expect(card.getByText(/Nigeria · NGN/)).toBeVisible()
-  await expect(card.getByText('Plan my meals ahead · Eat more balanced meals')).toBeVisible()
-  await expect(card.getByText(/Very hot/)).toBeVisible()
+  await expect(card.getByText(/A mix/)).toBeVisible()
+  await expect(page.getByText(/Fine-tune them, or anything above, any time in Profile/)).toBeVisible()
   await card.getByRole('button', { name: 'Edit cuisines' }).click()
-  await expect(page.getByRole('heading', { name: 'Which cuisines do you enjoy?' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: food })).toBeVisible()
   await page.getByRole('button', { name: 'Spanish' }).click()
   await page.getByRole('button', { name: 'Back to my profile' }).click()
   await expect(card.getByText(/^Nigerian/)).toBeVisible()

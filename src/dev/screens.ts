@@ -19,15 +19,9 @@ export interface ScreenEntry {
 }
 
 const ONBOARDING: [string, string, string][] = [
-  ['name', 'Name', 'first name'],
-  ['place', 'Country and currency', 'country currency units time zone'],
-  ['goals', 'Food goals', 'planning goals'],
-  ['cuisines', 'Cuisine selection', 'cuisines favourites'],
-  ['avoid', 'Allergies, dislikes and dietary preferences', 'allergies dislikes diet restrictions'],
-  ['taste', 'Spice preference', 'spice richness taste'],
-  ['cooking', 'Cooking and preparation', 'cook buy time skill'],
-  ['budget', 'Food budget preferences', 'budget'],
-  ['planning', 'Meal schedule', 'meal times days variety leftovers'],
+  ['you', 'Name and country', 'first name country currency'],
+  ['food', 'Cuisines, allergies and restrictions', 'cuisines allergies dislikes diet restrictions'],
+  ['routine', 'Cooking and meals to plan', 'cook buy time meals'],
   ['summary', 'Profile preview', 'does this look right profile card'],
 ]
 

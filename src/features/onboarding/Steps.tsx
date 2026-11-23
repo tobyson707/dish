@@ -94,22 +94,27 @@ export function StepGoals({ d, set }: StepProps) {
 }
 
 /** Step 4: cuisines (multi, or open to anything) and optional favourites. */
+function CuisineChips({ d, set }: StepProps) {
+  return (
+    <div role="group" aria-label="Cuisines" className="flex flex-wrap gap-2">
+      <Chip selected={d.cuisines.length === 0} onClick={() => set({ cuisines: [] })}>
+        Open to anything
+      </Chip>
+      {CUISINES.map((c) => (
+        <Chip key={c} selected={d.cuisines.includes(c)} onClick={() => set({ cuisines: d.cuisines.includes(c) ? d.cuisines.filter((x) => x !== c) : [...d.cuisines, c] })}>
+          {c}
+        </Chip>
+      ))}
+    </div>
+  )
+}
+
 export function StepCuisines({ d, set, mealNames = [] }: StepProps) {
-  const open = d.cuisines.length === 0
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
         <p className="text-ink-2">Pick as many as you like, or stay open to anything.</p>
-        <div role="group" aria-label="Cuisines" className="flex flex-wrap gap-2">
-          <Chip selected={open} onClick={() => set({ cuisines: [] })}>
-            Open to anything
-          </Chip>
-          {CUISINES.map((c) => (
-            <Chip key={c} selected={d.cuisines.includes(c)} onClick={() => set({ cuisines: d.cuisines.includes(c) ? d.cuisines.filter((x) => x !== c) : [...d.cuisines, c] })}>
-              {c}
-            </Chip>
-          ))}
-        </div>
+        <CuisineChips d={d} set={set} />
       </div>
       <TagInput label="Favourite meals (optional)" value={d.favourite_meals} onChange={(favourite_meals) => set({ favourite_meals })} suggestions={mealNames} placeholder="For example, jollof rice" />
     </div>
@@ -146,15 +151,15 @@ function Disclosure({ title, summary, open, onToggle, children, tone }: { title:
 }
 
 /** Step 5: allergies, dislikes, dietary preferences and other restrictions, one category at a time. */
-export function StepAvoid({ d, set, ingredientNames = [] }: StepProps) {
-  const [open, setOpen] = useState<string | null>(null)
+export function StepAvoid({ d, set, ingredientNames = [], firstOpen = null, intro = true }: StepProps & { firstOpen?: string | null; intro?: boolean }) {
+  const [open, setOpen] = useState<string | null>(firstOpen)
   const toggle = (k: string) => setOpen((o) => (o === k ? null : k))
   const allergyList = [...d.allergies.map((a) => ALLERGEN_LABEL[a]), ...d.custom_allergies]
   const allergySummary = d.allergy_status !== 'listed' ? ALLERGY_ANSWERS.find((a) => a.value === d.allergy_status)!.label : allergyList.join(', ') || 'Nothing added yet'
   const setAllergies = (patch: Partial<Pick<Draft, 'allergies' | 'custom_allergies'>>) => set({ ...patch, allergy_status: 'listed' })
   return (
     <div className="flex flex-col gap-3">
-      <p className="text-ink-2">Open any that apply. Everything here is optional.</p>
+      {intro && <p className="text-ink-2">Open any that apply. Everything here is optional.</p>}
       <Disclosure title="Allergies" summary={allergySummary} open={open === 'allergies'} onToggle={() => toggle('allergies')} tone="danger">
         <div role="radiogroup" aria-label="Quick answer" className="flex flex-wrap gap-2">
           {ALLERGY_ANSWERS.map((a) => (
@@ -224,9 +229,10 @@ export function StepTaste({ d, set }: StepProps) {
   )
 }
 
-export function StepCooking({ d, set }: StepProps) {
+const cookTimeOptions = COOK_TIMES.map((t) => ({ value: t, label: COOK_TIME_LABEL[t].replace(' min', 'm').replace('Under ', '<').replace('Over an hour', '60m+') }))
+
+function CookingMode({ d, set }: StepProps) {
   return (
-    <div className="flex flex-col gap-6">
       <div role="radiogroup" aria-label="Cook or buy" className="flex flex-col gap-2">
         {(
           [
@@ -239,7 +245,14 @@ export function StepCooking({ d, set }: StepProps) {
           <ChoiceCard key={v} selected={d.cooking_mode === v} onClick={() => set({ cooking_mode: v })} title={t} description={s} />
         ))}
       </div>
-      <Segmented label="Time you usually have to cook" value={d.cook_time} onChange={(cook_time) => set({ cook_time })} options={COOK_TIMES.map((t) => ({ value: t, label: COOK_TIME_LABEL[t].replace(' min', 'm').replace('Under ', '<').replace('Over an hour', '60m+') }))} />
+  )
+}
+
+export function StepCooking({ d, set }: StepProps) {
+  return (
+    <div className="flex flex-col gap-6">
+      <CookingMode d={d} set={set} />
+      <Segmented label="Time you usually have to cook" value={d.cook_time} onChange={(cook_time) => set({ cook_time })} options={cookTimeOptions} />
       <Segmented label="Cooking confidence (optional)" value={d.cooking_skill ?? ('none' as never)} onChange={(v) => set({ cooking_skill: v === ('none' as never) ? null : v })} options={[{ value: 'none' as never, label: 'Skip' }, { value: 'beginner', label: 'New' }, { value: 'confident', label: 'Okay' }, { value: 'expert', label: 'Pro' }]} />
     </div>
   )
@@ -254,14 +267,20 @@ export function StepBudget({ d, set, errors }: StepProps) {
   )
 }
 
+function MealsToPlan({ d, set, errors }: StepProps) {
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-sm font-semibold">Which meals should we plan?</span>
+      <ChipGroup label="Meals to plan" options={MEAL_SLOTS.map((s) => ({ value: s, label: SLOT_LABEL[s] }))} value={d.meal_slots} onChange={(meal_slots) => set({ meal_slots: MEAL_SLOTS.filter((s) => meal_slots.includes(s)) })} />
+      {errors?.meal_slots && <p role="alert" className="text-footnote font-medium text-error">{errors.meal_slots}</p>}
+    </div>
+  )
+}
+
 export function StepPlanning({ d, set, errors }: StepProps) {
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-2">
-        <span className="text-sm font-semibold">Which meals should we plan?</span>
-        <ChipGroup label="Meals to plan" options={MEAL_SLOTS.map((s) => ({ value: s, label: SLOT_LABEL[s] }))} value={d.meal_slots} onChange={(meal_slots) => set({ meal_slots: MEAL_SLOTS.filter((s) => meal_slots.includes(s)) })} />
-        {errors?.meal_slots && <p role="alert" className="text-footnote font-medium text-error">{errors.meal_slots}</p>}
-      </div>
+      <MealsToPlan d={d} set={set} errors={errors} />
       <div className="grid grid-cols-2 gap-3">
         {d.meal_slots.map((s: MealSlot) => (
           <TimeField key={s} label={`${SLOT_LABEL[s]} time`} value={d.meal_times[s] || null} fallback={({ breakfast: '08:00', lunch: '13:00', snack: '16:00', dinner: '19:00', drink: '15:00' } as Record<MealSlot, string>)[s]} onChange={(v) => set({ meal_times: { ...d.meal_times, [s]: v ?? '' } })} optional />
@@ -287,10 +306,59 @@ export function StepPlanning({ d, set, errors }: StepProps) {
   )
 }
 
+
+// ---- Short onboarding: three questions, everything else has a sensible default ----
+
+// countries that mostly use imperial units for body measurements
+const IMPERIAL = new Set(['US', 'LR', 'MM'])
+
+/** Onboarding 1: name, then country and currency. Units follow the country (editable in Profile). */
+export function StepAbout(props: StepProps) {
+  const { d, set } = props
+  return (
+    <div className="flex flex-col gap-8">
+      <StepName {...props} />
+      <CountryCurrencyFields
+        value={{ country_code: d.country_code, currency: d.currency, currency_source: d.currency_source }}
+        onChange={(v) => set({ ...v, ...(v.country_code && v.country_code !== d.country_code ? { units: IMPERIAL.has(v.country_code) ? 'imperial' : 'metric' } : {}) })}
+      />
+    </div>
+  )
+}
+
+/** Onboarding 2: cuisines, then allergies (open first: they are strict), diet and foods to avoid. */
+export function StepFood(props: StepProps) {
+  return (
+    <div className="flex flex-col gap-8">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold">Cuisines you enjoy</h2>
+        <CuisineChips {...props} />
+      </div>
+      <div className="flex flex-col gap-2">
+        <h2 className="text-sm font-semibold">Allergies and things to avoid</h2>
+        <StepAvoid {...props} firstOpen="allergies" intro={false} />
+      </div>
+    </div>
+  )
+}
+
+/** Onboarding 3: cook or buy, time to cook, and which meals to plan. */
+export function StepRoutine(props: StepProps) {
+  const { d, set } = props
+  return (
+    <div className="flex flex-col gap-6">
+      <CookingMode {...props} />
+      <Segmented label="Time you usually have to cook" value={d.cook_time} onChange={(cook_time) => set({ cook_time })} options={cookTimeOptions} />
+      <MealsToPlan {...props} />
+    </div>
+  )
+}
+
 export function validateStep(key: string, d: Draft): Record<string, string> {
   const e: Record<string, string> = {}
-  if (key === 'name' && !d.display_name.trim()) e.display_name = 'Add a name so DISH can greet you'
+  if ((key === 'name' || key === 'you') && !d.display_name.trim()) e.display_name = 'Add a name so DISH can greet you'
   if (key === 'budget' && d.budget_amount != null && (d.budget_amount < 0 || d.budget_amount > 10_000_000)) e.budget_amount = 'Enter a realistic amount'
+  if (key === 'routine' && d.meal_slots.length === 0) e.meal_slots = 'Choose at least one meal'
   if (key === 'planning') {
     if (d.meal_slots.length === 0) e.meal_slots = 'Choose at least one meal'
     if (d.plan_days.length === 0) e.plan_days = 'Choose at least one day'

@@ -14,6 +14,6 @@ describe('Developer Mode screen navigator', () => {
     for (const s of SCREENS) if (s.path.includes('/:') && s.id !== 'invite') expect(s.needs, s.id).toBeTruthy()
   })
   it('includes every onboarding step', () => {
-    expect(SCREENS.filter((s) => s.path.startsWith('/onboarding?dev-step=')).length).toBe(10)
+    expect(SCREENS.filter((s) => s.path.startsWith('/onboarding?dev-step=')).length).toBe(4)
   })
 })

@@ -15,22 +15,16 @@ import { ErrorState, Notice } from '@/components/ui/States'
 import { useToast } from '@/components/ui/Toast'
 import { Splash } from '@/features/auth/Splash'
 import { friendlyError } from '@/lib/errors'
-import { formatMoney } from '@/lib/format'
 import { countryByCode, currencyByCode } from '@/lib/geo'
-import { PLANNING_GOAL_LABEL } from '@/types/db'
 import { draftFrom, persistDraft, saveProgress, type Draft } from './draft'
-import { SPICE_LEVELS, StepAvoid, StepBudget, StepCooking, StepCuisines, StepGoals, StepName, StepPlace, StepPlanning, StepTaste, validateStep } from './Steps'
+import { StepAbout, StepFood, StepRoutine, validateStep } from './Steps'
 
+// Three short questions and a check. Everything else (goals, taste, budget, meal times,
+// days, variety, leftovers, units) starts from a sensible default and is tuned in Profile.
 const STEPS = [
-  { key: 'name', eyebrow: 'Welcome', title: 'What should we call you?' },
-  { key: 'place', eyebrow: 'Where you are', title: 'Where are you based?' },
-  { key: 'goals', eyebrow: 'Your goals', title: 'What would you like help with?' },
-  { key: 'cuisines', eyebrow: 'Food you love', title: 'Which cuisines do you enjoy?' },
-  { key: 'avoid', eyebrow: 'Allergies and restrictions', title: 'Anything we should avoid?' },
-  { key: 'taste', eyebrow: 'Taste', title: 'How do you like it?' },
-  { key: 'cooking', eyebrow: 'Cooking', title: 'Cook, buy, or both?' },
-  { key: 'budget', eyebrow: 'Budget', title: "What's your food budget?" },
-  { key: 'planning', eyebrow: 'Planning', title: 'How should we plan?' },
+  { key: 'you', eyebrow: 'Welcome', title: 'What should we call you?' },
+  { key: 'food', eyebrow: 'Your food', title: 'What do you like, and what should we avoid?' },
+  { key: 'routine', eyebrow: 'Your routine', title: 'How do you eat?' },
   { key: 'summary', eyebrow: 'Your profile', title: 'Does this look right?' },
 ] as const
 type StepKey = (typeof STEPS)[number]['key']
@@ -110,7 +104,7 @@ function Flow({ initial, initialStep, preview }: { initial: Draft; initialStep: 
     }
     setSaving(true)
     try {
-      await persistDraft(uid, d, { complete: true })
+      await persistDraft(uid, d.plan_days.length ? d : { ...d, plan_days: [0, 1, 2, 3, 4, 5, 6] }, { complete: true })
       afterOnboarding = '/plan/first'
       await Promise.all([qc.invalidateQueries({ queryKey: qk.profile(uid) }), qc.invalidateQueries({ queryKey: qk.prefs(uid) }), qc.invalidateQueries({ queryKey: qk.goal(uid) })])
       nav(afterOnboarding, { replace: true })
@@ -149,15 +143,9 @@ function Flow({ initial, initialStep, preview }: { initial: Draft; initialStep: 
           {s.title}
         </h1>
         <div className="mt-8">
-          {s.key === 'name' && <StepName {...props} />}
-          {s.key === 'place' && <StepPlace {...props} />}
-          {s.key === 'goals' && <StepGoals {...props} />}
-          {s.key === 'cuisines' && <StepCuisines {...props} />}
-          {s.key === 'avoid' && <StepAvoid {...props} />}
-          {s.key === 'taste' && <StepTaste {...props} />}
-          {s.key === 'cooking' && <StepCooking {...props} />}
-          {s.key === 'budget' && <StepBudget {...props} />}
-          {s.key === 'planning' && <StepPlanning {...props} />}
+          {s.key === 'you' && <StepAbout {...props} />}
+          {s.key === 'food' && <StepFood {...props} />}
+          {s.key === 'routine' && <StepRoutine {...props} />}
           {s.key === 'summary' && <ProfileCard d={d} onEdit={edit} />}
         </div>
       </main>
@@ -168,7 +156,7 @@ function Flow({ initial, initialStep, preview }: { initial: Draft; initialStep: 
               <Button size="lg" block loading={saving} iconRight="arrow" onClick={finish}>
                 Looks good, plan my meals
               </Button>
-              <Button size="lg" block variant="ghost" onClick={() => edit('name')} disabled={saving}>
+              <Button size="lg" block variant="ghost" onClick={() => edit('you')} disabled={saving}>
                 Edit profile
               </Button>
             </div>
@@ -206,7 +194,7 @@ function ProfileCard({ d, onEdit }: { d: Draft; onEdit: (key: StepKey) => void }
   const initial = d.display_name.trim().charAt(0).toUpperCase() || 'D'
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-ink-2">This is what DISH will use to plan. You can change any of it later in Profile.</p>
+      <p className="text-ink-2">This is what DISH will use to plan.</p>
       <article aria-label="Your profile" className="overflow-hidden rounded-[28px] bg-elevated ring-1 ring-inset ring-line">
         <div className="flex items-center gap-4 bg-ink px-5 py-5 text-on-ink">
           <span aria-hidden="true" className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-accent text-title-3 text-accent-ink">
@@ -218,22 +206,20 @@ function ProfileCard({ d, onEdit }: { d: Draft; onEdit: (key: StepKey) => void }
               {country ? `${country.flag} ${country.name}` : 'Country not set'} · {currency ? `${currency.code}` : d.currency}
             </p>
           </div>
-          <button type="button" onClick={() => onEdit('place')} className="press shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold text-on-ink underline-offset-2 hover:underline" aria-label="Edit country and currency">
+          <button type="button" onClick={() => onEdit('you')} className="press shrink-0 rounded-full px-3 py-1.5 text-sm font-semibold text-on-ink underline-offset-2 hover:underline" aria-label="Edit country and currency">
             Edit
           </button>
         </div>
         <div className="px-5">
-          <Row label="Goals" value={d.planning_goals.map((g) => PLANNING_GOAL_LABEL[g]).join(' · ') || 'No particular goal'} onEdit={() => onEdit('goals')} />
-          <Row label="Cuisines" value={[d.cuisines.join(', ') || 'Open to anything', ...d.favourite_meals].join(' · ')} onEdit={() => onEdit('cuisines')} />
-          <Row label="Allergies (strict)" value={allergyText} onEdit={() => onEdit('avoid')} tone={allergies.length && d.allergy_status === 'listed' ? 'danger' : undefined} />
-          <Row label="Avoid" value={[...d.dislikes, ...d.excluded_foods].join(', ') || 'Nothing'} onEdit={() => onEdit('avoid')} />
-          <Row label="Dietary preference" value={d.diet_pattern === 'none' ? 'No preference' : DIET_LABEL[d.diet_pattern]} onEdit={() => onEdit('avoid')} />
-          <Row label="Taste" value={`${SPICE_LEVELS[d.spice_pref] ?? 'Medium'} · ${['Light', 'Some richness', 'Rich', 'Loves rich food'][d.richness_pref] ?? ''}`} onEdit={() => onEdit('taste')} />
-          <Row label="Cooking" value={`${{ cook: 'Mostly cook', buy: 'Mostly buy', mix: 'A mix', quick: 'Quick or no-cook' }[d.cooking_mode]} · ${COOK_TIME_LABEL[d.cook_time]}`} onEdit={() => onEdit('cooking')} />
-          <Row label="Budget" value={d.budget_amount ? `${formatMoney(d.budget_amount, d.currency)} per ${d.budget_period}` : 'Not set'} onEdit={() => onEdit('budget')} />
-          <Row label="Planning" value={`${d.meal_slots.map((s) => SLOT_LABEL[s]).join(', ')} · ${d.plan_days.length === 7 ? 'Every day' : d.plan_days.map((i) => WEEKDAY_ABBR[i]).join(', ')}`} onEdit={() => onEdit('planning')} />
+          <Row label="Cuisines" value={[d.cuisines.join(', ') || 'Open to anything', ...d.favourite_meals].join(' · ')} onEdit={() => onEdit('food')} />
+          <Row label="Allergies (strict)" value={allergyText} onEdit={() => onEdit('food')} tone={allergies.length && d.allergy_status === 'listed' ? 'danger' : undefined} />
+          <Row label="Avoid" value={[...d.dislikes, ...d.excluded_foods].join(', ') || 'Nothing'} onEdit={() => onEdit('food')} />
+          <Row label="Dietary preference" value={d.diet_pattern === 'none' ? 'No preference' : DIET_LABEL[d.diet_pattern]} onEdit={() => onEdit('food')} />
+          <Row label="Cooking" value={`${{ cook: 'Mostly cook', buy: 'Mostly buy', mix: 'A mix', quick: 'Quick or no-cook' }[d.cooking_mode]} · ${COOK_TIME_LABEL[d.cook_time]}`} onEdit={() => onEdit('routine')} />
+          <Row label="Meals to plan" value={`${d.meal_slots.map((s) => SLOT_LABEL[s]).join(', ')} · ${d.plan_days.length === 7 ? 'Every day' : d.plan_days.map((i) => WEEKDAY_ABBR[i]).join(', ')}`} onEdit={() => onEdit('routine')} />
         </div>
       </article>
+      <p className="text-footnote text-muted">Taste, budget, meal times and planning days start with sensible defaults. Fine-tune them, or anything above, any time in Profile, Food preferences.</p>
       {allergies.length > 0 && d.allergy_status === 'listed' && <Notice tone="warning" icon="shield">We'll exclude meals containing your allergens, and meals whose ingredients we can't confirm. Please still check labels and ask vendors.</Notice>}
     </div>
   )
