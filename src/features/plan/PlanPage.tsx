@@ -31,6 +31,7 @@ import { useAutoExtendPlan } from '@/features/home/Home'
 import { useUserId } from '@/features/auth/AuthProvider'
 import { PlanWalkthrough, walkthroughSeen } from './PlanWalkthrough'
 import { enabled } from '@/lib/v1'
+import { Processing } from '@/components/ui/Processing'
 import { daysSaved, isComplete, planDays, usePlanFill } from './usePlanFill'
 
 type View = 'day' | 'week' | 'month'
@@ -50,6 +51,7 @@ export function PlanPage() {
   const [actionsFor, setActionsFor] = useState<PlannedMeal | null>(null)
   const remove = useRemoveMeal(null)
   const [regen, setRegen] = useState<null | { from: ISODate; to: ISODate; label: string }>(null)
+  const [regenerating, setRegenerating] = useState<string | null>(null)
   const plan = useActivePlan()
   const prefs = usePreferences()
   const gen = useGeneratePlan()
@@ -83,14 +85,17 @@ export function PlanPage() {
 
   async function doRegen() {
     if (!regen || !p) return
+    const target = regen
+    setRegen(null) // the dialog closes at once; the meals area shows the work in progress
+    setRegenerating(target.label)
     try {
-      const r = await gen.mutateAsync({ plan_id: p.id, regenerate: { from: regen.from, to: regen.to }, today })
+      const r = await gen.mutateAsync({ plan_id: p.id, regenerate: { from: target.from, to: target.to }, today })
       toast.show(r.kept_locked ? `Fresh picks are in. Kept ${r.kept_locked} locked meal${r.kept_locked > 1 ? 's' : ''}.` : 'Fresh picks are in.', { tone: 'success' })
       if (r.notice) toast.show(r.notice)
     } catch (e) {
       toast.error(friendlyError(e))
     }
-    setRegen(null)
+    setRegenerating(null)
   }
 
   return (
@@ -126,7 +131,9 @@ export function PlanPage() {
             )}
           </div>
 
-          {meals.isPending ? (
+          {regenerating ? (
+            <Processing className="mt-4 rounded-[24px] bg-elevated" label={`Choosing fresh meals for ${regenerating}`} sub="Checking your allergies, diet, budget and variety" />
+          ) : meals.isPending ? (
             <div className="mt-4"><DayBlocksGhost days={view === 'week' ? 2 : 1} rows={prefs.data?.meal_slots?.length ?? 3} compact={view === 'week'} /></div>
           ) : meals.isError && !meals.data ? (
             <ErrorState className="mt-6" message={friendlyError(meals.error)} onRetry={() => meals.refetch()} />

@@ -131,8 +131,11 @@ test('meal plan workspace: four clear meal actions, remove with undo, swipe to r
   const label = (await days.getAttribute('aria-label'))!.replace(/^Days, /, '')
   await expect(page.getByText(label, { exact: true })).toBeVisible()
   await expect(days.getByRole('option', { name: /meals? of \d planned/ }).first()).toBeVisible()
+  // the week moves, but never past the plan: a one-week plan that runs Monday to Sunday has no next week
+  const [{ end_date }] = await rest<{ end_date: string }[]>(`meal_plans?id=eq.${plan}&select=end_date`)
   await page.getByRole('button', { name: 'Next week' }).click()
-  await expect(page.getByRole('listbox', { name: /^Days, / })).not.toHaveAttribute('aria-label', `Days, ${label}`)
+  const moved = (await page.getByRole('listbox', { name: /^Days, / }).getAttribute('aria-label')) !== `Days, ${label}`
+  if (!moved) expect(end_date <= new Date(Date.now() + 7 * 86400_000).toISOString().slice(0, 10)).toBe(true)
   await page.getByRole('button', { name: 'Previous week' }).click()
   await shot(page, 'plan-week')
 

@@ -6,8 +6,10 @@ import { prefersReducedMotion } from '@/styles/motion'
 const SEEN_KEY = 'dish-launched'
 
 /**
- * The launch moment, typography only: DISH, then GOOD FOOD. LESS THINKING., a short hold,
- * and a soft hand-over to the app. It belongs to the page load, not to navigation, so it
+ * The launch moment, typography only: the letters of DISH rise in turn out of a blur, the
+ * orange dot drops in, a warm glow blooms behind them, then GOOD FOOD. LESS THINKING.
+ * settles in; a short hold, and a soft hand-over to the app. If signing in takes longer,
+ * the dot breathes gently until it's done. It belongs to the page load, not to navigation, so it
  * never returns while you move around DISH.
  *
  * - First launch: the full sequence (about 1.5 s).
@@ -83,8 +85,12 @@ export function BootSplash() {
   return createPortal(
     <div className="boot-splash" data-phase={phase} data-returning={returning || undefined} role="status" aria-label="DISH is starting">
       <div className="boot-stack" aria-hidden="true">
+        <span className="boot-glow" />
         <p className="boot-mark">
-          DISH<span className="boot-dot">.</span>
+          {'DISH'.split('').map((l, i) => (
+            <span key={i} className="boot-l" style={{ ['--i' as string]: i }}>{l}</span>
+          ))}
+          <span className="boot-dot">.</span>
         </p>
         <p className="boot-tag">Good food. Less thinking.</p>
       </div>
