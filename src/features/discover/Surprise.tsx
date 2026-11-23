@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { budgetMealsPerDay } from '@domain/budget.ts'
 import { ALLERGEN_LABEL, MEAL_SLOTS, SLOT_LABEL, type Allergen, type MealSlot } from '@domain/types.ts'
@@ -21,6 +21,8 @@ import { EmptyState, ErrorState, Notice } from '@/components/ui/States'
 import { MealDetailGhost } from '@/components/ui/Ghost'
 import { slotForNow } from '@/components/canvas/useRankedMeals'
 import { AddToPlanSheet } from '@/features/recipes/RecipeDetail'
+import { Processing } from '@/components/ui/Processing'
+import { prefersReducedMotion } from '@/styles/motion'
 
 /**
  * Surprise Me: one random meal from the real catalogue, filtered by the person's allergies,
@@ -37,6 +39,13 @@ export function Surprise() {
   const [seen, setSeen] = useState<Record<string, string[]>>({})
   const [current, setCurrent] = useState<Record<string, string | null>>({})
   const [cycled, setCycled] = useState(false)
+  // a short, honest moment of "choosing" when a meal is opened or changed, then the reveal
+  const [revealed, setRevealed] = useState<MealSlot | null>(null)
+  const intro = revealed !== slot
+  const [shuffling, setShuffling] = useState(false)
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const reduced = useRef(prefersReducedMotion())
+  useEffect(() => () => { if (timer.current) clearTimeout(timer.current) }, [])
 
   const pool = useMemo(() => {
     if (!cat.data || !prefs.data) return null
@@ -49,15 +58,30 @@ export function Surprise() {
   }, [cat.data, prefs.data, profile.data?.currency, goal.data?.goal, slot])
 
   const next = () => {
-    if (!pool) return
+    if (!pool || shuffling) return
     const shown = new Set(seen[slot] ?? [])
     const r = pickSurprise(pool.meals, shown, Math.random, current[slot])
     if (!r.meal) return
-    setCycled(r.cycled)
-    setSeen((s) => ({ ...s, [slot]: r.cycled ? [r.meal!.id] : [...(s[slot] ?? []), r.meal!.id] }))
-    setCurrent((c) => ({ ...c, [slot]: r.meal!.id }))
-    play('select')
+    const apply = () => {
+      setCycled(r.cycled)
+      setSeen((s) => ({ ...s, [slot]: r.cycled ? [r.meal!.id] : [...(s[slot] ?? []), r.meal!.id] }))
+      setCurrent((c) => ({ ...c, [slot]: r.meal!.id }))
+      setShuffling(false)
+      play('select')
+    }
+    play('tap')
+    if (reduced.current) return apply()
+    setShuffling(true)
+    timer.current = setTimeout(apply, 650)
   }
+
+  // the first reveal for each meal (and when the page opens)
+  const poolReady = !!pool
+  useEffect(() => {
+    if (!poolReady || revealed === slot) return
+    const t = setTimeout(() => setRevealed(slot), reduced.current ? 0 : 750)
+    return () => clearTimeout(t)
+  }, [poolReady, slot, revealed])
 
   // the first pick for a slot happens as soon as its pool is known
   const currentId = current[slot]
@@ -91,15 +115,17 @@ export function Surprise() {
             message="No recipe in the catalogue fits your allergies, diet and excluded foods for this meal. Try another meal, or review your food preferences."
             action={<Link to="/profile/preferences" className="press inline-flex h-11 items-center rounded-full bg-ink px-5 text-sm font-bold text-on-ink">Food preferences</Link>}
           />
+        ) : intro ? (
+          <Processing label={`Choosing a ${SLOT_LABEL[slot].toLowerCase()} for you`} sub="From recipes that fit your allergies and diet" />
         ) : food ? (
-          <SurpriseCard key={food.id} foodId={food.id} slot={slot} onAnother={next} canRepeat={pool.meals.length > 1} cycled={cycled} relaxed={pool.relaxed} count={pool.meals.length} />
+          <SurpriseCard key={food.id} foodId={food.id} slot={slot} onAnother={next} shuffling={shuffling} canRepeat={pool.meals.length > 1} cycled={cycled} relaxed={pool.relaxed} count={pool.meals.length} />
         ) : null}
       </div>
     </div>
   )
 }
 
-function SurpriseCard({ foodId, slot, onAnother, canRepeat, cycled, relaxed, count }: { foodId: string; slot: MealSlot; onAnother: () => void; canRepeat: boolean; cycled: boolean; relaxed: boolean; count: number }) {
+function SurpriseCard({ foodId, slot, onAnother, shuffling, canRepeat, cycled, relaxed, count }: { foodId: string; slot: MealSlot; onAnother: () => void; shuffling: boolean; canRepeat: boolean; cycled: boolean; relaxed: boolean; count: number }) {
   const cat = useCatalogue()
   const favs = useFavourites()
   const fav = useToggleFavourite()
@@ -108,11 +134,16 @@ function SurpriseCard({ foodId, slot, onAnother, canRepeat, cycled, relaxed, cou
   const recipe = f.recipe
   const mins = f.prep_minutes + f.cook_minutes
   return (
-    <article aria-label={f.name} data-testid="surprise-meal" className="ghost-reveal">
+    <article aria-label={f.name} data-testid="surprise-meal" data-shuffling={shuffling || undefined} aria-busy={shuffling || undefined} className="surprise-land">
       <div className="relative">
-        <Link to={`/recipes/${f.slug}`} aria-label={`Open ${f.name}`} className="press block">
-          <FoodImage path={f.image_path} alt={f.image_alt} name={f.name} slug={f.slug} className="aspect-[4/3] w-full rounded-[28px]" width={900} priority />
+        <Link to={`/recipes/${f.slug}`} aria-label={`Open ${f.name}`} className="press block overflow-hidden rounded-[28px]">
+          <FoodImage path={f.image_path} alt={f.image_alt} name={f.name} slug={f.slug} className="surprise-photo aspect-[4/3] w-full rounded-[28px]" width={900} priority />
         </Link>
+        {shuffling && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <Processing compact label="Finding another" className="rounded-[24px] bg-glass px-6 ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-md" />
+          </div>
+        )}
         <SaveToggle
           on={!!favs.data?.includes(f.id)}
           onToggle={(on) => fav.mutateAsync({ foodItemId: f.id, on })}
@@ -120,6 +151,7 @@ function SurpriseCard({ foodId, slot, onAnother, canRepeat, cycled, relaxed, cou
           className="absolute right-3 top-3 bg-glass ring-1 ring-inset ring-[var(--c-glass-line)] backdrop-blur-md"
         />
       </div>
+      <div className="surprise-body">
       <h2 className="mt-4 text-title-1 leading-tight">{f.name}</h2>
       <p className="num mt-1 text-footnote text-muted">
         {[f.cuisine, SLOT_LABEL[slot], f.can_cook ? formatMinutes(mins) : 'Ready to buy', f.calories != null ? `≈ ${formatKcal(f.calories)}` : null].filter(Boolean).join(' · ')}
@@ -128,7 +160,7 @@ function SurpriseCard({ foodId, slot, onAnother, canRepeat, cycled, relaxed, cou
 
       <div className="mt-5 grid grid-cols-2 gap-2">
         <Button icon="plus" onClick={() => setPlanOpen(true)}>Add to plan</Button>
-        <Button variant="secondary" icon="refresh" disabled={!canRepeat} onClick={onAnother}>Another one</Button>
+        <Button variant="secondary" icon="refresh" disabled={!canRepeat || shuffling} onClick={onAnother}>Another one</Button>
       </div>
       {cycled && <p className="mt-2 text-center text-footnote text-muted">You've seen all {count} ideas for this meal, so they're coming round again.</p>}
       {relaxed && <div className="mt-3"><Notice icon="info">Nothing matched every preference, so cooking time, budget and cook-or-buy were set aside. Allergies, diet and excluded foods still apply.</Notice></div>}
@@ -171,6 +203,7 @@ function SurpriseCard({ foodId, slot, onAnother, canRepeat, cycled, relaxed, cou
       <Link to={`/recipes/${f.slug}`} className="mt-4 inline-flex items-center gap-1 text-sm font-semibold underline-offset-2 hover:underline">
         Open the full recipe <Icon name="right" size={14} />
       </Link>
+      </div>
       <AddToPlanSheet open={planOpen} onClose={() => setPlanOpen(false)} foodId={f.id} defaultSlot={slot} />
     </article>
   )

@@ -49,6 +49,7 @@ import { ShareSheet } from './ShareSheet'
 import { PublishSheet } from './PublishSheet'
 import { PlanCover } from './PlanCover'
 import { enabled } from '@/lib/v1'
+import { Processing } from '@/components/ui/Processing'
 import { PeopleList, initials } from './PeopleList'
 
 type Tab = 'plan' | 'people' | 'activity' | 'versions'
@@ -199,6 +200,7 @@ function PlanBoard({ plan, role, canEdit }: { plan: MealPlan; role: PlanRole; ca
   const [actionsFor, setActionsFor] = useState<PlannedMeal | null>(null)
   const [adding, setAdding] = useState<{ date: ISODate; slot?: MealSlot } | null>(null)
   const [regen, setRegen] = useState<{ from: ISODate; to: ISODate; label: string } | null>(null)
+  const [regenerating, setRegenerating] = useState<string | null>(null)
 
   const range = useMemo(() => {
     if (view === 'custom') return custom
@@ -232,14 +234,17 @@ function PlanBoard({ plan, role, canEdit }: { plan: MealPlan; role: PlanRole; ca
 
   async function doRegen() {
     if (!regen) return
+    const target = regen
+    setRegen(null) // the dialog closes at once; the meals area shows the work in progress
+    setRegenerating(target.label)
     try {
-      const r = await gen.mutateAsync({ plan_id: plan.id, regenerate: { from: regen.from, to: regen.to }, today })
+      const r = await gen.mutateAsync({ plan_id: plan.id, regenerate: { from: target.from, to: target.to }, today })
       toast.show(r.kept_locked ? `Fresh picks are in. Kept ${r.kept_locked} locked meal${r.kept_locked > 1 ? 's' : ''}.` : 'Fresh picks are in.', { tone: 'success' })
       void meals.refetch()
     } catch (e) {
       toast.error(friendlyError(e))
     }
-    setRegen(null)
+    setRegenerating(null)
   }
 
   return (
@@ -257,7 +262,9 @@ function PlanBoard({ plan, role, canEdit }: { plan: MealPlan; role: PlanRole; ca
         )}
       </div>
 
-      {meals.isPending ? (
+      {regenerating ? (
+        <Processing className="mt-4 rounded-[24px] bg-elevated" label={`Choosing fresh meals for ${regenerating}`} sub="Checking your allergies, diet, budget and variety" />
+      ) : meals.isPending ? (
         <div className="mt-4"><DayBlocksGhost days={view === 'day' || view === 'month' ? 1 : 2} rows={slots.length} compact={!(view === 'day' || view === 'month')} /></div>
       ) : meals.isError && !meals.data ? (
         <ErrorState className="mt-6" message={friendlyError(meals.error)} onRetry={() => meals.refetch()} />
