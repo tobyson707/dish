@@ -92,9 +92,9 @@ test('navigator, onboarding preview, simulated clock and previews never change r
   // an onboarding step without redoing onboarding, and nothing is saved
   const before = await (await fetch(`${API}/rest/v1/profiles?id=eq.${uid}&select=onboarding_step,onboarding_completed_at`, { headers: h })).json()
   await launcher(page).click()
-  await con.getByRole('searchbox', { name: 'Search tools and screens' }).fill('spice')
-  await con.getByRole('button', { name: /^Spice preference/ }).click()
-  await expect(page.getByRole('heading', { name: 'How do you like it?' })).toBeVisible()
+  await con.getByRole('searchbox', { name: 'Search tools and screens' }).fill('cooking and meals')
+  await con.getByRole('button', { name: /^Cooking and meals to plan/ }).click()
+  await expect(page.getByRole('heading', { name: 'How do you eat?' })).toBeVisible()
   await expect(page.getByText('Preview · not saved')).toBeVisible()
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.waitForTimeout(800)

@@ -83,7 +83,7 @@ Device access is isolated in `src/platform/*` (camera, notifications, haptics). 
 | --- | --- | --- |
 | Auth: sign-up, email verification, sign-in, password reset, sign-out, persistent session | ✅ | Playwright through the UI with real emails (Mailpit) against a local GoTrue |
 | Google sign-in | ⚙️ Implemented, behind `VITE_ENABLE_GOOGLE_AUTH` | Not exercised; needs Google OAuth credentials |
-| Onboarding (9 steps, back/forward, resumes after reload, summary with edit) | ✅ | Playwright |
+| Onboarding (3 questions + summary, back/forward, resumes after reload, summary with edit) | ✅ | Playwright |
 | Catalogue: 66 meals / 131 ingredients, Nigerian and West African focus plus international | ✅ | Seed validation script; domain tests over the real catalogue |
 | Meal plans (day → year, weekly blocks), replace, lock, regenerate, move, portion, eaten/skipped, favourites | ✅ | Playwright, Edge Function calls, integration tests |
 | Calendar: day / week / dot-month | ✅ | Playwright |
@@ -186,7 +186,7 @@ A compact vertical wheel in the right-edge notch: five icon slots visible, a fix
 
 ## Onboarding, profile card and first plan
 Flow: Welcome → Sign up → Check email (the "I've confirmed my email" button asks the auth server, it never assumes) → Sign in → Onboarding → Profile card → First plan.
-Onboarding steps (`src/features/onboarding/`): name (underlined field) · country and currency · meal-planning goals (multi, optional) · cuisines (multi or "Open to anything") · allergies and restrictions (four collapsible categories; None / Not sure / Prefer not to specify) · taste (five spice levels) · cooking · budget · planning · "Does this look right?" profile card with per-section Edit and "Back to my profile".
+Onboarding (`src/features/onboarding/`) is three short screens and a check: (1) name (underlined field) with country and currency, units following the country · (2) cuisines (multi or "Open to anything") with allergies (opened first, strict; None / Not sure / Prefer not to specify), dietary preference, dislikes and never-suggest foods · (3) cook or buy, usual cooking time, and meals to plan · "Does this look right?" profile card with per-section Edit and "Back to my profile". Planning goals, taste, budget, meal times, plan days (every day), variety and leftovers start from defaults and are tuned in Profile → Food preferences (which reuses the full step components).
 "Looks good, plan my meals" saves and opens `/plan/first` (`FirstPlan.tsx`), which reuses an existing active plan, fills a created-but-empty one, or creates one week; retries never create a duplicate. The Plan screen then shows an optional three-tip tour (`PlanWalkthrough.tsx`, dismissal kept per user in localStorage).
 The calorie estimate moved out of onboarding into Profile → Goals & targets (optional).
 
